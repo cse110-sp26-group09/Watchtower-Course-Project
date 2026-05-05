@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WatchTower Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/style.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="4" y="14" width="4" height="10" rx="1" fill="#6366f1"/>
+        <rect x="12" y="8" width="4" height="16" rx="1" fill="#6366f1"/>
+        <rect x="20" y="4" width="4" height="20" rx="1" fill="#6366f1"/>
+        <circle cx="6" cy="10" r="2" fill="#f43f5e"/>
+        <circle cx="14" cy="4" r="2" fill="#22c55e"/>
+        <circle cx="22" cy="1" r="2" fill="#eab308"/>
+      </svg>
+      <h1>WatchTower</h1>
+    </div>
+    <div class="status">
+      <span id="connection-dot" class="dot offline"></span>
+      <span id="connection-text">Connecting...</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-label">Active Users</span>
+        <span id="active-users" class="stat-value">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Total Events</span>
+        <span id="total-events" class="stat-value">0</span>
+      </div>
+      <div class="stat-card error-card">
+        <span class="stat-label">Errors</span>
+        <span id="total-errors" class="stat-value">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Versions Tracked</span>
+        <span id="version-count" class="stat-value">0</span>
+      </div>
+    </section>
+
+    <section class="panels">
+      <div class="panel error-panel">
+        <h2>Error Feed</h2>
+        <div id="error-feed" class="feed"></div>
+      </div>
+
+      <div class="panel chart-panel">
+        <h2>Latency per Route</h2>
+        <canvas id="latency-chart" width="600" height="280"></canvas>
+        <div id="latency-legend" class="legend"></div>
+      </div>
+    </section>
+
+    <section class="panels">
+      <div class="panel version-panel">
+        <h2>Errors by Deploy Version</h2>
+        <div id="version-errors" class="version-list"></div>
+      </div>
+
+      <div class="panel activity-panel">
+        <h2>Recent Activity</h2>
+        <div id="activity-feed" class="feed"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/dashboard/app.js"></script>
+</body>
+</html>
