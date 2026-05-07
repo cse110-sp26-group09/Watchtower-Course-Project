@@ -4,7 +4,7 @@ Alexis - prototype
 Daniel - testing software prototype
 
 Research 
-Aditya - User Stories / Personas
+Everyone
 
 
 # Roles
