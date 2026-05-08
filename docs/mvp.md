@@ -8,3 +8,4 @@
 7. Filter or separate events by type
 8. Connect events to a mock deployment or build version
 9. Use a deployed website that explains and demonstrates the project
+10. Notifications that can be disabled
