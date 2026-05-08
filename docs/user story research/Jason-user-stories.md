@@ -6,4 +6,4 @@
 
 4. As a developer, I want different usage statistics to connect to each other so that I can clearly understand how different pathways can lead to more subscriptions and purchases. (connected usage statistics)
 
-5. As a development lead at a large tech firm, I want a feature-rich application with a clear dashboard and error tracking to easily assign issues to and align my team.
+5. As a development lead at a large tech firm, I want a feature-rich application with a clear dashboard and error tracking to easily assign issues to and align my team. (features, clear UI, error tracking)
