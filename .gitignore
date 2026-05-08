@@ -1,1 +1,62 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
+# Build outputs
+dist/
+build/
+.out/
+.cache/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing artifacts
+test-results/
+playwright-report/
+cypress/videos/
+cypress/screenshots/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Generated files
+*.min.js
+*.map
+
+# Package manager lock files
+# Keep package-lock.json if the team uses npm consistently.
+# Uncomment only if your team decides not to commit lock files.
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Local data / prototype storage
+local-data/
+mock-output/
