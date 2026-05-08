@@ -1,5 +1,7 @@
 # Course-Project
 
+Task sheet: https://docs.google.com/spreadsheets/d/1YbTkdP8IoodHzIj99lgunic5pRqk6BzqM248CaaaCRw/edit?gid=0#gid=0
+
 ## WatchTower
 
 WatchTower is a web application monitoring tool that captures real user events, errors, performance metrics, and user interactions to provide insights through a real-time dashboard.
