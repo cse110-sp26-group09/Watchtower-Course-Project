@@ -104,6 +104,18 @@ jobs:
           if [ -z "$CSS_FILES" ]; then
             echo "No CSS files found. Skipping CSS validation."
           else
+            echo "Creating temporary Stylelint config..."
+            cat > /tmp/stylelint-config.json <<'EOF'
+          {
+            "rules": {
+              "block-no-empty": true,
+              "color-no-invalid-hex": true,
+              "declaration-block-no-duplicate-properties": true,
+              "no-invalid-double-slash-comments": true
+            }
+          }
+          EOF
+
             echo "Validating CSS files with Stylelint..."
-            npx --yes stylelint "$CSS_FILES" --config '{"rules":{"block-no-empty":true,"color-no-invalid-hex":true,"declaration-block-no-duplicate-properties":true,"no-invalid-double-slash-comments":true}}'
+            npx --yes stylelint $CSS_FILES --config /tmp/stylelint-config.json
           fi
