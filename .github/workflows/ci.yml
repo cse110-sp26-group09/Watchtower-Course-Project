@@ -51,6 +51,9 @@ jobs:
 
           echo "GitHub workflow structure exists."
 
+      - name: Basic repository checks complete
+        run: echo "Basic repository checks passed."
+
   html-validation:
     name: HTML Validation
     runs-on: ubuntu-latest
@@ -67,7 +70,9 @@ jobs:
 
       - name: Download Nu HTML Checker
         run: |
+          echo "Downloading Nu HTML Checker..."
           curl -L -o vnu.jar https://github.com/validator/validator/releases/download/latest/vnu.jar
+          echo "Nu HTML Checker downloaded."
 
       - name: Validate HTML files
         run: |
@@ -78,8 +83,13 @@ jobs:
           if [ -z "$HTML_FILES" ]; then
             echo "No HTML files found. Skipping HTML validation."
           else
+            echo "HTML files found:"
+            echo "$HTML_FILES"
+
             echo "Validating HTML files with Nu HTML Checker..."
             java -jar vnu.jar --skip-non-html $HTML_FILES
+
+            echo "HTML validation completed successfully."
           fi
 
   css-validation:
@@ -104,6 +114,9 @@ jobs:
           if [ -z "$CSS_FILES" ]; then
             echo "No CSS files found. Skipping CSS validation."
           else
+            echo "CSS files found:"
+            echo "$CSS_FILES"
+
             echo "Creating temporary Stylelint config..."
             cat > /tmp/stylelint-config.json <<'EOF'
           {
@@ -118,4 +131,6 @@ jobs:
 
             echo "Validating CSS files with Stylelint..."
             npx --yes stylelint $CSS_FILES --config /tmp/stylelint-config.json
+
+            echo "CSS validation completed successfully."
           fi
