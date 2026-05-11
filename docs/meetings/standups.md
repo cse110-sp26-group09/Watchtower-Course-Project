@@ -1,5 +1,12 @@
-# Meeting Minutes - Akatsuki 5/5
-
+# Standups 
+[Sprint 1](#sprint-1)\
+---
+# Sprint 1
+[05/05](#05052026)\
+[05/07](#05072026)\
+[05/08](#05082026)\
+---
+## 05/05/2026
 **Team Number:** Group 09  
 **Team Name:** Akatsuki  
 **Meeting Type:** Stand-Up Meeting  
@@ -157,7 +164,7 @@ Meeting concluded at 6:38 PM.
 
 ---
 
-# Meeting Minutes - Akatsuki 5/7
+## 05/07/2026
 
 **Team Number:** Group 09  
 **Team Name:** Akatsuki  
@@ -276,7 +283,7 @@ Meeting adjourned at 6:42 PM
 
 ---
 
-# Meeting Minutes - Akatsuki 5/8
+## 05/08/2026
 
 **Team Number:** Group 09  
 **Team Name:** Akatsuki  
