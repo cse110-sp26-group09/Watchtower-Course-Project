@@ -1,3 +1,5 @@
+# User Stories
+
 1. As a founder of a startup, I want to be able to quickly deploy testing and analytics to kickstart development with minimal learning overhead. I also want to be able to work with fast feature-flagging to be able to roll out features as soon as possible. (simplicity, speed)
 
 2. As a UI/UX designer, I want clear usage analytics with the UI elements and A/B testing to be able to deploy different versions of the site and modify layouts based on user feedback. (UI analytics, A/B testing)
