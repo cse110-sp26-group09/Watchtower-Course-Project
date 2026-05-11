@@ -11,11 +11,12 @@ We mainly focused on...
 ## Contents
 
 ### User Personas & Product Notes
-User stories, stakeholder needs, and user persona research, including...
-- DevOps engineers
-- Web developers
-- On-call engineers
-- Startup founders
-- Product owners
+User stories, stakeholder needs, and user persona research.
+[Woosik Research
+](docs/research/Woosik-research.md)
+[Jason Research
+](docs/research/Jason-research.md)
+[Hemendra Research
+](docs/research/Hemendra-research.md)
 
- This is what we plan on using to come up with product decisions, features, dashboard design, and workflows.
+This is what we plan on using to come up with product decisions, features, dashboard design, and workflows.
