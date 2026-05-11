@@ -57,7 +57,7 @@ As a developer, I want different usage statistics to connect to each other so th
 
 ---
 
-### 5. Vector -- Development Lead
+### 5. Vector — Development Lead
 
 [Source](https://posthog.com/docs/error-tracking)
 
