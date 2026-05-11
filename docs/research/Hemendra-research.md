@@ -120,6 +120,8 @@ and overall system health across all projects in one place.
 As a freelance consultant, I want a centralized monitoring dashboard for all client projects so that I can 
 proactively manage issues without increasing operational overhead.
 
+# Research Index
+
 ## Key Takeaways
 
 - **Logs are security signals.**
