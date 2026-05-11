@@ -1,4 +1,5 @@
 ### 1. Maya — Security & Compliance Officer
+[Source](https://www.datadoghq.com/product/cloud-security-management/)
 
 #### Main Need
 Identify if system anomalies are operational failures or potential security incidents.
@@ -22,6 +23,7 @@ and API activity so that I can quickly determine whether an issue is a system fa
 ---
 
 ### 2. Jordan — Customer Support Lead
+[Source](https://www.datadoghq.com/product/real-user-monitoring/)
 
 #### Main Need
 Quickly verify customer-reported issues without waiting on engineering.
@@ -46,6 +48,7 @@ quickly confirm customer reports and provide accurate updates without waiting fo
 ---
 
 ### 3. Elena — Growth Marketer
+(Same source as for Jordan)
 
 #### Main Need
 Understand how frontend performance impacts user behavior and conversions.
@@ -70,6 +73,7 @@ understand how frontend changes affect campaign performance and revenue.
 ---
 
 ### 4. Marcus — QA / Automation Engineer
+[Source](https://support.pagerduty.com/main/docs/user-roles)
 
 #### Main Need
 Understand why bugs pass testing but still appear in production.
@@ -94,11 +98,12 @@ gaps in testing coverage before users are affected.
 ---
 
 ### 5. Sam — Freelance Consultant
+[Source](https://www.ssa.group/competencies/devops/)
 
 #### Main Need
 Monitor multiple client applications from one simple dashboard.
 
-Sam manages websites and applications for several clients at the same time.  
+Sam manages websites and applications for several clients simultaneously.  
 He does not want to maintain separate monitoring platforms or pay enterprise-level pricing 
 for every small client project.
 
