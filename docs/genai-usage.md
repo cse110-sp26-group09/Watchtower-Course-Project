@@ -1,8 +1,8 @@
 # Generative AI Usage Documentation
 
-(Format)[#genai-usage-format]
-(Example)[#example]
-(Sprint 1)[#sprint-1]
+[Format](#genai-usage-format)
+[Example](#example)
+[Sprint 1](#sprint-1)
 ---
 ## GenAI Usage format:
 - **Name**:
