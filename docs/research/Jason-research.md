@@ -9,3 +9,30 @@
 4. As a developer, I want different usage statistics to connect to each other so that I can clearly understand how different pathways can lead to more subscriptions and purchases. (connected usage statistics)
 
 5. As a development lead at a large tech firm, I want a feature-rich application with a clear dashboard and error tracking to easily assign issues to and align my team. (features, clear UI, error tracking)
+
+# Research Index
+---
+
+## Key Takeaways
+
+- **Not just errors, context matters more**  
+  UX and Sales are inextricably tied together. A “bug” might lose a sale. 
+
+- **People care about paths, not isolated stats**  
+  Devs don’t want 50 metrics. They want to see *how users actually move through the product* -> landing page -> click -> signup -> purchase.
+
+- **Control is so very important**  
+  Feature flags and A/B tests control risk. If something breaks, they want to shut it off immediately, not investigate for hours.
+
+---
+
+## Open Questions
+
+- **Feature flags vs performance**  
+  How do we add feature flags without slowing down page load or making the system heavier than it needs to be?
+
+- **Keep it simple while scaling up**  
+  Can we really keep onboarding simple while also supporting enterprise-level debugging + error tracking?
+
+- **A/B testing UX**  
+  What’s the cleanest way to show results so it actually leads to decisions, not just charts no one reads?
