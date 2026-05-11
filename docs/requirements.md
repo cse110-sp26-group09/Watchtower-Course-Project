@@ -1,6 +1,6 @@
 # WatchTower Requirements
-(Functional)[# Functional Requirements]
-(Non-functional)
+(Functional)[#Functional-Requirements]
+(Non-functional)[#Non-Functional-Requirements]
 
 # Functional Requirements
 
