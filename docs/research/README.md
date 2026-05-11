@@ -13,9 +13,11 @@ We mainly focused on...
 ### User Personas & Product Notes
 User stories, stakeholder needs, and user persona research.
 [Woosik Research
-](docs/research/Woosik-research.md)
+](docs/research/Woosik-research.md)\
+
 [Jason Research
-](docs/research/Jason-research.md)
+](docs/research/Jason-research.md)\
+
 [Hemendra Research
 ](docs/research/Hemendra-research.md)
 
