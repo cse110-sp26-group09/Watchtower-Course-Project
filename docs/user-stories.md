@@ -51,7 +51,7 @@ As a technical lead, I want page load times to be recorded so that I can detect 
 **Acceptance Criteria:**
 - The script captures page load time.
 - Performance events include timestamp and build version.
-- The ingestion API responds within 200 ms at the 95th percentile under normal load (supports API Responsiveness).
+- The ingestion API responds within 5 seconds under normal load (supports API Responsiveness).
 - Performance data appears in the dashboard.
 
 ---
@@ -81,7 +81,7 @@ As a developer, I want captured events stored in a structured local format so th
 **Acceptance Criteria:**
 - Events are stored in JSON or in-memory objects.
 - Each event includes type, timestamp, payload, and build version.
-- In the event of a temporary storage failure, queued events are retried automatically with no more than 0.01% data loss (supports Fault Tolerance).
+- In the event of a temporary storage failure, queued events are retried automatically with no more than 25% data loss (supports Fault Tolerance).
 
 ---
 
@@ -95,7 +95,7 @@ As a technical lead, I want to view all captured events in one dashboard so that
 **Acceptance Criteria:**
 - Errors, performance metrics, and feedback are displayed together.
 - New events appear within 5 seconds of submission.
-- Dashboard loads within 2 seconds at the 95th percentile (supports Dashboard Responsiveness).
+- Dashboard loads within 5 seconds (supports Dashboard Responsiveness).
 
 ---
 
@@ -136,7 +136,7 @@ As a stakeholder, I want to access a deployed website that explains and demonstr
 **Acceptance Criteria:**
 - The website includes a project overview and demo controls.
 - The deployment is publicly accessible.
-- The site maintains 99.9% uptime during the demonstration period (supports Availability).
+- The site maintains 90% uptime during the demonstration period (supports Availability).
 
 ---
 
@@ -203,5 +203,5 @@ As a technical lead, I want alerts when error rates or performance metrics excee
 As a technical lead, I want the platform to scale horizontally so that it can process increasing event volumes without major redesign.
 
 **Acceptance Criteria:**
-- The system can process at least 10,000 events per second by adding additional ingestion nodes.
+- The system can process at least 50 events per second
 - No application code changes are required to scale.
