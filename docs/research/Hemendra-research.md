@@ -119,3 +119,28 @@ and overall system health across all projects in one place.
 #### User Story
 As a freelance consultant, I want a centralized monitoring dashboard for all client projects so that I can 
 proactively manage issues without increasing operational overhead.
+
+## Key Takeaways
+
+- **Logs are security signals.**
+  Maya’s use case shows that spikes in errors, failed logins, and weird API traffic = an early warning system for security stuff.
+
+- **“Works in staging” is still a real problem.**
+  Marcus needs a clean way to compare staging vs prod so we can actually see what broke, not guess.
+
+- **Simple but powerful**
+  Sam doesn’t need Datadog-level complexity, but also outgrows basic uptime tools. Freelancers are stuck in between.
+
+---
+
+## Open Questions
+
+- **Security vs simplicity**  
+  How much user data do we actually store to support security use cases (IPs, auth logs, request traces)? And how do we keep that safe without overengineering it?
+
+- **Multi-tenant setup (Sam problem)**  
+  Do we need real project isolation + switching in the UI?  
+  And how strict do we make data separation between clients?
+
+- **Support-friendly mode (Jordan)**  
+  Can we build a clean read-only view so support can see what’s happening without touching config or drowning in technical noise?
