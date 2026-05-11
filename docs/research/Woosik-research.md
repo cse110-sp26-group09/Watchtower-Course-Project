@@ -135,7 +135,7 @@ Watch Tower helps Alex understand the product's health and communicate with deve
 
 ---
 
-## Best Overall User Stories
+## Best Stories
 
 1. As a **DevOps engineer**, I want to receive alerts when the website goes down or has major errors so that I can respond quickly and reduce downtime.
 2. As a **web developer**, I want to see frontend errors connected to the latest build so that I can quickly fix bugs caused by my code changes.
@@ -150,3 +150,29 @@ Watch Tower helps Alex understand the product's health and communicate with deve
 **Primary personas:** DevOps Engineer · Web Developer · On-call Engineer
 
 **Secondary personas:** Startup Founder · Product Owner / CEO
+
+## Research Index
+### Key Takeaways
+
+- Linking errors to deployments is probably the most important feature.  
+  People want to know *what changed* when things break.
+
+- Nobody wants to dig through random logs.  
+  Technical users want enough detail to debug fast, and non-technical users just want a clear status.
+
+- Too many alerts = useless alerts.  
+  If WatchTower sends notifications for everything, people will ignore them.
+
+
+---
+
+### Open Questions
+
+- What counts as a real issue vs noise?  
+  Custom thresholds? Automatic detection?
+
+- Where should alerts go?  
+  Slack, Discord, SMS, email, phone? Different sources for different alerts?
+
+- How do we handle technical vs non-technical users?  
+  One dashboard with toggles or separate views?
