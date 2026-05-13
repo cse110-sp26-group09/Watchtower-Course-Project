@@ -11,6 +11,7 @@ The primary prototype demonstrating core WatchTower functionality using vanilla 
 **What's inside:**
 - `dashboard/` – Real-time monitoring dashboard
 - `demo/` – Interactive demo page with example events
+- `hosted_demo/` – Static-hostable ShopDemo variant for online traffic checks
 - `sdk/` – JavaScript SDK (`watchtower.js`) for error and event capture
 - `server/` – Backend API for receiving and storing events
 - `package.json` – Dependencies and scripts
