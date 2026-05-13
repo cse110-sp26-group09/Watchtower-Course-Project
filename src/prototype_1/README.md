@@ -24,6 +24,11 @@ prototype_1/
 │   ├── app.js          # Demo app logic
 │   ├── index.html      # Demo page with test events
 │   └── style.css       # Demo styling
+├── hosted_demo/        # Standalone static demo for public hosting
+│   ├── app.js          # Hosted demo app logic
+│   ├── index.html      # Static-host-friendly demo page
+│   ├── README.md       # Deploy and sync instructions
+│   └── style.css       # Hosted demo styling
 ├── sdk/                # JavaScript monitoring SDK
 │   └── watchtower.js   # Core SDK for error/event capture
 ├── server/             # Backend API
@@ -105,6 +110,10 @@ Simple Node.js backend that receives events and serves the dashboard.
 2. Open `http://localhost:3000/demo` in your browser
 3. Interact with the demo page (trigger errors, navigate, etc.)
 4. Switch to the dashboard tab to see real-time updates
+
+## Hosted Demo
+
+For a static-hostable ShopDemo that can be used online without a WatchTower backend, see [hosted_demo/README.md](hosted_demo/README.md).
 
 ## Testing
 
