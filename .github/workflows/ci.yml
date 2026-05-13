@@ -134,3 +134,72 @@ jobs:
 
             echo "CSS validation completed successfully."
           fi
+
+  javascript-validation:
+    name: JavaScript Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate JavaScript files
+        run: |
+          echo "Searching for JavaScript files..."
+
+          JS_FILES=$(find . -name "*.js" -not -path "./node_modules/*")
+
+          if [ -z "$JS_FILES" ]; then
+            echo "No JavaScript files found. Skipping JavaScript validation."
+          else
+            echo "JavaScript files found:"
+            echo "$JS_FILES"
+
+            echo "Creating temporary ESLint config..."
+            cat > /tmp/eslint.config.mjs <<'EOF'
+          export default [
+            {
+              files: ["**/*.js"],
+              languageOptions: {
+                ecmaVersion: "latest",
+                sourceType: "script",
+                globals: {
+                  window: "readonly",
+                  document: "readonly",
+                  console: "readonly",
+                  localStorage: "readonly",
+                  sessionStorage: "readonly",
+                  navigator: "readonly",
+                  performance: "readonly",
+                  fetch: "readonly",
+                  setTimeout: "readonly",
+                  clearTimeout: "readonly",
+                  setInterval: "readonly",
+                  clearInterval: "readonly",
+                  module: "readonly",
+                  require: "readonly",
+                  process: "readonly",
+                  __dirname: "readonly"
+                }
+              },
+              rules: {
+                "no-unused-vars": "warn",
+                "no-undef": "error",
+                "no-console": "off",
+                "semi": ["warn", "always"],
+                "quotes": ["warn", "single", { "avoidEscape": true }]
+              }
+            }
+          ];
+          EOF
+
+            echo "Validating JavaScript files with ESLint..."
+            npx --yes eslint $JS_FILES --config /tmp/eslint.config.mjs
+
+            echo "JavaScript validation completed successfully."
+          fi
