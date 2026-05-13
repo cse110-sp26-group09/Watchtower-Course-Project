@@ -76,7 +76,3 @@ Before you start work:
 3. Understand your role and sprint goals in [planning docs](docs/planning/)
 
 See [docs/README.md](docs/README.md) for complete documentation guidance.
-
-## Issue tracker 
-
-Task sheet: https://docs.google.com/spreadsheets/d/1YbTkdP8IoodHzIj99lgunic5pRqk6BzqM248CaaaCRw/edit?gid=0#gid=0
