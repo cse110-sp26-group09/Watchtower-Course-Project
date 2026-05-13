@@ -14,12 +14,12 @@ We mainly focused on...
 User stories, stakeholder needs, and user persona research.
 
 [Woosik Research
-](/Woosik-research.md)
+](./Woosik-research.md)
 
 [Jason Research
-](/Jason-research.md)
+](./Jason-research.md)
 
 [Hemendra Research
-](/Hemendra-research.md)
+](./Hemendra-research.md)
 
 This is what we plan on using to come up with product decisions, features, dashboard design, and workflows.
