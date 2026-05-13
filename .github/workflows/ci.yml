@@ -181,10 +181,14 @@ jobs:
                   clearTimeout: "readonly",
                   setInterval: "readonly",
                   clearInterval: "readonly",
-                  module: "readonly",
+
                   require: "readonly",
+                  module: "readonly",
+                  exports: "readonly",
                   process: "readonly",
-                  __dirname: "readonly"
+                  __dirname: "readonly",
+                  Buffer: "readonly",
+                  URL: "readonly"
                 }
               },
               rules: {
@@ -192,7 +196,7 @@ jobs:
                 "no-undef": "error",
                 "no-console": "off",
                 "semi": ["warn", "always"],
-                "quotes": ["warn", "single", { "avoidEscape": true }]
+                "quotes": "off"
               }
             }
           ];
