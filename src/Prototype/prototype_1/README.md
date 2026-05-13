@@ -1,5 +1,0 @@
-- Prompt: Create a WatchTower app using vanilla web technologies like HTML, CSS, JavaScript, and platform APIs. The app should monitor a small live web app by capturing real user events that can handle errors thrown, page load times, and user interactions like logins and clicks. Build a lightweight backend API to receive and store these events, and a real-time dashboard that displays an error feed, a latency chart per route, and an active user count. Tie each error to the deploy version that introduced it so you know which push started the fire.
-
--Objective: Show WatchTower features on a fast made prototype
-
-- Observations: In order to test in a real environment, I would create another iteration of the prototype with custom software implementation. Since this prototype uses test software to showcase features, it does not reflect real example of the product. Some areas for improvement include more detailed error documentation, a log history for each error, and detection of common patterns that could flag potential issues such as latency spikes and user log-off.
