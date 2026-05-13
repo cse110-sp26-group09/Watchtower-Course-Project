@@ -1,6 +1,7 @@
 # Hosted ShopDemo
-
 This is the standalone, hostable variant of ShopDemo. It can be deployed as a static site for checking visits and traffic.
+
+Link [here](https://courseproject-8qkfva2k4-akatsuki9.vercel.app/)
 
 ## Deploy
 
