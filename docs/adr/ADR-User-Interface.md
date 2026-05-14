@@ -24,9 +24,9 @@ Accepted by Hieu
 Simplifying the settings
 
 ## Decision
-We want users to be able to access the settings with as few button presses as possible. As a consequence, since we do not have many settings, we can simplify the settings and just make it all in one page rather than multiple pages. 
+We want users to be able to access the settings with as few button presses as possible. As a consequence, since we do not have many settings, we can simplify the settings and just make it all in one page in 3 dropdowns so the user will not get lost. 
 
-## Consequences
+## Consequences 
 This may make the settings somewhat cluttered but it will result in less button taps for the user which creates less friction. 
 
 ## Alternatives Considered
