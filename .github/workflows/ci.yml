@@ -4,9 +4,38 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "docs/product/**"
+      - "docs/planning/**"
+      - "docs/process/**"
+      - "docs/README.md"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.js"
+      - ".gitignore"
+      - "CHANGELOG.md"
+      - ".github/workflows/ci.yml"
+
   pull_request:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "docs/product/**"
+      - "docs/planning/**"
+      - "docs/process/**"
+      - "docs/README.md"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.js"
+      - ".gitignore"
+      - "CHANGELOG.md"
+      - ".github/workflows/ci.yml"
+
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -87,6 +116,7 @@ jobs:
   html-validation:
     name: HTML Validation
     runs-on: ubuntu-latest
+    needs: repo-structure
 
     steps:
       - name: Checkout repository
@@ -125,6 +155,7 @@ jobs:
   css-validation:
     name: CSS Validation
     runs-on: ubuntu-latest
+    needs: repo-structure
 
     steps:
       - name: Checkout repository
@@ -167,6 +198,7 @@ jobs:
   javascript-lint:
     name: JavaScript Lint
     runs-on: ubuntu-latest
+    needs: repo-structure
 
     steps:
       - name: Checkout repository
@@ -260,6 +292,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: javascript-lint
 
     steps:
       - name: Checkout repository
@@ -286,6 +319,11 @@ jobs:
   e2e-tests:
     name: End-to-End Tests
     runs-on: ubuntu-latest
+    needs:
+      - html-validation
+      - css-validation
+      - javascript-lint
+      - unit-tests
 
     steps:
       - name: Checkout repository
@@ -352,6 +390,7 @@ jobs:
   jsdoc-check:
     name: JSDoc Check
     runs-on: ubuntu-latest
+    needs: javascript-lint
 
     steps:
       - name: Checkout repository
@@ -384,6 +423,7 @@ jobs:
   dependency-audit:
     name: Dependency Security Audit
     runs-on: ubuntu-latest
+    needs: repo-structure
 
     steps:
       - name: Checkout repository
