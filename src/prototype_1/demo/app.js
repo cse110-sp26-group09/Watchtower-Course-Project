@@ -1,3 +1,11 @@
+/**
+ * WatchTower demo application ("ShopDemo").
+ *
+ * A small SPA that simulates user interactions, navigation, and errors
+ * so the WatchTower SDK has realistic events to capture and report.
+ *
+ * @module demo/app
+ */
 (function () {
   "use strict";
 
@@ -26,6 +34,13 @@
     { id: 6, name: "Laptop Stand", price: 34.99, desc: "Aluminum, ergonomic angle" },
   ];
 
+  /**
+   * Forward a DOM click to the WatchTower SDK with a short selector
+   * description and trimmed visible text.
+   *
+   * @param {HTMLElement} el - The clicked element.
+   * @returns {void}
+   */
   function trackClick(el) {
     var text = el.textContent || el.innerText || "";
     var target = el.tagName + (el.className ? "." + el.className.split(" ")[0] : "");
@@ -45,6 +60,12 @@
     });
   });
 
+  /**
+   * Render the requested SPA "page" and update the nav highlight.
+   *
+   * @param {("home"|"products"|"cart"|"account")} page - Page identifier.
+   * @returns {void}
+   */
   function navigate(page) {
     document.querySelectorAll(".nav-links a").forEach(function (a) {
       a.classList.toggle("active", a.getAttribute("data-page") === page);

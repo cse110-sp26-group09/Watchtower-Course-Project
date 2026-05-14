@@ -1,3 +1,12 @@
+/**
+ * WatchTower dashboard front-end script.
+ *
+ * Connects to the server's Server-Sent Events stream for real-time
+ * event updates, polls aggregated stats periodically, and renders the
+ * error feed, activity feed, version chart, and latency chart.
+ *
+ * @module dashboard/app
+ */
 (function () {
   "use strict";
 
@@ -16,6 +25,12 @@
   var $connDot = document.getElementById("connection-dot");
   var $connText = document.getElementById("connection-text");
 
+  /**
+   * Open a Server-Sent Events connection for live event updates and
+   * route incoming events into the activity and error feeds.
+   *
+   * @returns {void}
+   */
   function connectSSE() {
     var source = new EventSource("/api/events/stream");
 
@@ -45,6 +60,12 @@
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   }
 
+  /**
+   * Build a single feed-item DOM node for the given event.
+   *
+   * @param {Object} ev - WatchTower event from the API or SSE stream.
+   * @returns {HTMLDivElement} A rendered `.feed-item` element.
+   */
   function createFeedItem(ev) {
     var div = document.createElement("div");
     div.className = "feed-item " + ev.type;
@@ -81,6 +102,12 @@
     return div;
   }
 
+  /**
+   * Escape an arbitrary string so it can be safely inserted as HTML.
+   *
+   * @param {string} str - Untrusted string value.
+   * @returns {string} HTML-escaped version of `str`.
+   */
   function escapeHtml(str) {
     var el = document.createElement("span");
     el.textContent = str;
@@ -109,6 +136,13 @@
     if (empty) empty.remove();
   }
 
+  /**
+   * Refresh the dashboard stat cards and dependent panels using a
+   * `/api/stats` response.
+   *
+   * @param {Object} stats - Response body from `GET /api/stats`.
+   * @returns {void}
+   */
   function updateStats(stats) {
     $activeUsers.textContent = stats.activeUsers;
     $totalEvents.textContent = stats.totalEvents;
@@ -143,6 +177,13 @@
       .join("");
   }
 
+  /**
+   * Render the per-route latency chart on the dashboard canvas.
+   *
+   * @param {Object<string, {points: Array<Object>, p50: number, p95: number}>} byRoute
+   *   Latency summary keyed by route.
+   * @returns {void}
+   */
   function renderLatencyChart(byRoute) {
     var canvas = $latencyChart;
     var ctx = canvas.getContext("2d");
