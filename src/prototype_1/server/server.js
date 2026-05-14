@@ -1,3 +1,18 @@
+/**
+ * WatchTower prototype server.
+ *
+ * A small Node.js HTTP server that:
+ *   - serves the dashboard, demo, and SDK static files
+ *   - accepts JSON event payloads on `POST /api/events`
+ *   - returns stored events and aggregated stats over JSON
+ *   - streams new events to connected dashboards via Server-Sent Events
+ *
+ * The server is intentionally framework-free so the prototype stays
+ * easy to read and run for an undergraduate course project.
+ *
+ * @module server
+ */
+
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -9,6 +24,10 @@ const ACTIVE_USER_WINDOW = 5 * 60 * 1000;
 const events = [];
 const sseClients = new Set();
 
+/**
+ * File extension to MIME type mapping for the static file handler.
+ * @type {Object<string, string>}
+ */
 const MIME = {
   ".html": "text/html",
   ".css": "text/css",
@@ -18,18 +37,38 @@ const MIME = {
   ".svg": "image/svg+xml",
 };
 
+/**
+ * Apply permissive CORS headers so the SDK can post events from any origin.
+ *
+ * @param {http.ServerResponse} res - HTTP response object.
+ * @returns {void}
+ */
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
+/**
+ * Send a JSON response to the client.
+ *
+ * @param {http.ServerResponse} res - HTTP response object.
+ * @param {number} status - HTTP status code.
+ * @param {Object} data - Response payload that will be JSON-serialized.
+ * @returns {void}
+ */
 function json(res, status, data) {
   cors(res);
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
 }
 
+/**
+ * Read a request body and parse it as JSON.
+ *
+ * @param {http.IncomingMessage} req - Incoming HTTP request.
+ * @returns {Promise<Object>} Resolves with the parsed body, or rejects on invalid JSON.
+ */
 function readBody(req) {
   return new Promise(function (resolve, reject) {
     var chunks = [];
@@ -42,6 +81,12 @@ function readBody(req) {
   });
 }
 
+/**
+ * Broadcast a batch of events to every connected SSE client.
+ *
+ * @param {Array<Object>} eventList - Newly ingested events.
+ * @returns {void}
+ */
 function broadcast(eventList) {
   var data = JSON.stringify(eventList);
   sseClients.forEach(function (res) {
@@ -49,6 +94,18 @@ function broadcast(eventList) {
   });
 }
 
+/**
+ * Serve a static file from the prototype root, with a small set of
+ * friendly URL aliases for the dashboard and demo pages.
+ *
+ * The function applies basic path-traversal protection so that requests
+ * cannot escape the prototype directory.
+ *
+ * @param {http.IncomingMessage} req - Incoming HTTP request.
+ * @param {http.ServerResponse} res - HTTP response object.
+ * @param {string} urlPath - URL pathname (without query string).
+ * @returns {void}
+ */
 function serveStatic(req, res, urlPath) {
   var root = path.join(__dirname, "..");
 
@@ -76,6 +133,27 @@ function serveStatic(req, res, urlPath) {
   });
 }
 
+/**
+ * Compute dashboard statistics from the in-memory event buffer.
+ *
+ * Returned fields:
+ *   - `activeUsers`: count of distinct sessions seen in the last 5 minutes.
+ *   - `totalEvents`: total events currently stored.
+ *   - `totalErrors`: count of recent error events (capped at 50).
+ *   - `errorsByVersion`: error counts grouped by `deployVersion`.
+ *   - `latencyByRoute`: per-route latency summary with count, p50, p95,
+ *     average, and the most recent sample points.
+ *   - `recentErrors`: up to 50 most recent error events.
+ *
+ * @returns {{
+ *   activeUsers: number,
+ *   totalEvents: number,
+ *   totalErrors: number,
+ *   errorsByVersion: Object<string, number>,
+ *   latencyByRoute: Object<string, Object>,
+ *   recentErrors: Array<Object>
+ * }}
+ */
 function getStats() {
   var now = Date.now();
   var cutoff = now - ACTIVE_USER_WINDOW;

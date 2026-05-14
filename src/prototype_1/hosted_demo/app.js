@@ -1,3 +1,12 @@
+/**
+ * Static "ShopDemo" hosted demo.
+ *
+ * A self-contained copy of the demo app that runs without the
+ * WatchTower backend, used for public hosting and traffic-checking via
+ * the hosting provider's analytics.
+ *
+ * @module hosted_demo/app
+ */
 (function () {
   "use strict";
 
@@ -23,6 +32,12 @@
     });
   });
 
+  /**
+   * Render the requested SPA "page" and update the nav highlight.
+   *
+   * @param {("home"|"products"|"cart"|"account")} page - Page identifier.
+   * @returns {void}
+   */
   function navigate(page) {
     document.querySelectorAll(".nav-links a").forEach(function (a) {
       a.classList.toggle("active", a.getAttribute("data-page") === page);

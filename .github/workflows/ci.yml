@@ -8,9 +8,19 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  basic-repo-checks:
-    name: Basic Repository Checks
+  repo-structure:
+    name: Repository Structure Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -19,40 +29,60 @@ jobs:
 
       - name: Print repository structure
         run: |
-          echo "Current repository files:"
+          echo "Repository top-level contents:"
           ls -la
 
       - name: Check required root files
         run: |
           echo "Checking required root files..."
-
-          test -f README.md || (echo "README.md is missing" && exit 1)
-          test -f .gitignore || (echo ".gitignore is missing" && exit 1)
-          test -f CHANGELOG.md || (echo "CHANGELOG.md is missing" && exit 1)
-
+          test -f README.md      || (echo "README.md is missing" && exit 1)
+          test -f .gitignore     || (echo ".gitignore is missing" && exit 1)
+          test -f CHANGELOG.md   || (echo "CHANGELOG.md is missing" && exit 1)
+          test -f package.json   || (echo "package.json is missing" && exit 1)
           echo "Required root files exist."
 
-      - name: Check required documentation files
+      - name: Check GitHub configuration
         run: |
-          echo "Checking required documentation files..."
+          echo "Checking GitHub configuration..."
+          test -d .github             || (echo ".github/ is missing" && exit 1)
+          test -d .github/workflows   || (echo ".github/workflows/ is missing" && exit 1)
+          echo "GitHub configuration exists."
 
-          test -d docs || (echo "docs/ folder is missing" && exit 1)
-          test -f docs/workflow.md || (echo "docs/workflow.md is missing" && exit 1)
-          test -f docs/sprint-1-planning.md || (echo "docs/sprint-1-planning.md is missing" && exit 1)
-
-          echo "Required documentation files exist."
-
-      - name: Check GitHub workflow structure
+      - name: Check top-level project folders
         run: |
-          echo "Checking GitHub workflow structure..."
+          echo "Checking top-level project folders..."
+          test -d docs               || (echo "docs/ is missing" && exit 1)
+          test -d src                || (echo "src/ is missing" && exit 1)
+          test -d src/prototype_1    || (echo "src/prototype_1/ is missing" && exit 1)
+          test -d tests              || (echo "tests/ is missing" && exit 1)
+          test -d tests/unit         || (echo "tests/unit/ is missing" && exit 1)
+          test -d tests/e2e          || (echo "tests/e2e/ is missing" && exit 1)
+          echo "Top-level project folders exist."
 
-          test -d .github || (echo ".github/ folder is missing" && exit 1)
-          test -d .github/workflows || (echo ".github/workflows/ folder is missing" && exit 1)
+      - name: Check documentation folders
+        run: |
+          echo "Checking documentation folders..."
+          test -f docs/README.md     || (echo "docs/README.md is missing" && exit 1)
+          test -d docs/product       || (echo "docs/product/ is missing" && exit 1)
+          test -d docs/planning      || (echo "docs/planning/ is missing" && exit 1)
+          test -d docs/process       || (echo "docs/process/ is missing" && exit 1)
+          test -d docs/research      || (echo "docs/research/ is missing" && exit 1)
+          test -d docs/design        || (echo "docs/design/ is missing" && exit 1)
+          test -d docs/meetings      || (echo "docs/meetings/ is missing" && exit 1)
+          test -d docs/adr           || (echo "docs/adr/ is missing" && exit 1)
+          echo "Documentation folders exist."
 
-          echo "GitHub workflow structure exists."
+      - name: Check key documentation files
+        run: |
+          echo "Checking key documentation files..."
+          test -f docs/product/mvp.md                 || (echo "docs/product/mvp.md is missing" && exit 1)
+          test -f docs/product/requirements.md        || (echo "docs/product/requirements.md is missing" && exit 1)
+          test -f docs/planning/sprint-1-planning.md  || (echo "docs/planning/sprint-1-planning.md is missing" && exit 1)
+          test -f docs/process/workflow.md            || (echo "docs/process/workflow.md is missing" && exit 1)
+          echo "Key documentation files exist."
 
-      - name: Basic repository checks complete
-        run: echo "Basic repository checks passed."
+      - name: Repository structure checks complete
+        run: echo "Repository structure checks passed."
 
   html-validation:
     name: HTML Validation
@@ -70,27 +100,27 @@ jobs:
 
       - name: Download Nu HTML Checker
         run: |
-          echo "Downloading Nu HTML Checker..."
-          curl -L -o vnu.jar https://github.com/validator/validator/releases/download/latest/vnu.jar
+          echo "Downloading Nu HTML Checker (vnu.jar)..."
+          curl -sSL -o vnu.jar \
+            https://github.com/validator/validator/releases/download/latest/vnu.jar
           echo "Nu HTML Checker downloaded."
 
-      - name: Validate HTML files
+      - name: Validate HTML files under src/
         run: |
-          echo "Searching for HTML files..."
-
-          HTML_FILES=$(find . -name "*.html" -not -path "./node_modules/*")
+          echo "Searching for HTML files under src/ ..."
+          HTML_FILES=$(find src -type f -name "*.html" -not -path "*/node_modules/*" | sort)
 
           if [ -z "$HTML_FILES" ]; then
-            echo "No HTML files found. Skipping HTML validation."
-          else
-            echo "HTML files found:"
-            echo "$HTML_FILES"
-
-            echo "Validating HTML files with Nu HTML Checker..."
-            java -jar vnu.jar --skip-non-html $HTML_FILES
-
-            echo "HTML validation completed successfully."
+            echo "No HTML files found under src/. Skipping HTML validation."
+            exit 0
           fi
+
+          echo "HTML files found:"
+          echo "$HTML_FILES"
+
+          echo "Validating HTML files with Nu HTML Checker..."
+          java -jar vnu.jar --skip-non-html $HTML_FILES
+          echo "HTML validation completed successfully."
 
   css-validation:
     name: CSS Validation
@@ -103,22 +133,23 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      - name: Validate CSS files
+      - name: Validate CSS files under src/
         run: |
-          echo "Searching for CSS files..."
-
-          CSS_FILES=$(find . -name "*.css" -not -path "./node_modules/*")
+          echo "Searching for CSS files under src/ ..."
+          CSS_FILES=$(find src -type f -name "*.css" -not -path "*/node_modules/*" | sort)
 
           if [ -z "$CSS_FILES" ]; then
-            echo "No CSS files found. Skipping CSS validation."
-          else
-            echo "CSS files found:"
-            echo "$CSS_FILES"
+            echo "No CSS files found under src/. Skipping CSS validation."
+            exit 0
+          fi
 
-            echo "Creating temporary Stylelint config..."
-            cat > /tmp/stylelint-config.json <<'EOF'
+          echo "CSS files found:"
+          echo "$CSS_FILES"
+
+          echo "Creating temporary Stylelint config in the runner..."
+          cat > /tmp/stylelint-config.json <<'EOF'
           {
             "rules": {
               "block-no-empty": true,
@@ -129,14 +160,12 @@ jobs:
           }
           EOF
 
-            echo "Validating CSS files with Stylelint..."
-            npx --yes stylelint $CSS_FILES --config /tmp/stylelint-config.json
+          echo "Validating CSS files with Stylelint..."
+          npx --yes stylelint $CSS_FILES --config /tmp/stylelint-config.json
+          echo "CSS validation completed successfully."
 
-            echo "CSS validation completed successfully."
-          fi
-
-  javascript-validation:
-    name: JavaScript Validation
+  javascript-lint:
+    name: JavaScript Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -146,22 +175,23 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      - name: Validate JavaScript files
+      - name: Lint JavaScript files under src/ and tests/
         run: |
-          echo "Searching for JavaScript files..."
-
-          JS_FILES=$(find . -name "*.js" -not -path "./node_modules/*")
+          echo "Searching for JavaScript files under src/ and tests/ ..."
+          JS_FILES=$(find src tests -type f -name "*.js" -not -path "*/node_modules/*" | sort)
 
           if [ -z "$JS_FILES" ]; then
-            echo "No JavaScript files found. Skipping JavaScript validation."
-          else
-            echo "JavaScript files found:"
-            echo "$JS_FILES"
+            echo "No JavaScript files found. Skipping JavaScript lint."
+            exit 0
+          fi
 
-            echo "Creating temporary ESLint config..."
-            cat > /tmp/eslint.config.mjs <<'EOF'
+          echo "JavaScript files found:"
+          echo "$JS_FILES"
+
+          echo "Creating temporary ESLint config in the runner..."
+          cat > /tmp/eslint.config.mjs <<'EOF'
           export default [
             {
               files: ["**/*.js"],
@@ -177,10 +207,19 @@ jobs:
                   navigator: "readonly",
                   performance: "readonly",
                   fetch: "readonly",
+                  EventSource: "readonly",
+                  FormData: "readonly",
+                  Blob: "readonly",
+                  URLSearchParams: "readonly",
+                  alert: "readonly",
+                  location: "readonly",
+                  Promise: "readonly",
                   setTimeout: "readonly",
                   clearTimeout: "readonly",
                   setInterval: "readonly",
                   clearInterval: "readonly",
+
+                  WatchTower: "readonly",
 
                   require: "readonly",
                   module: "readonly",
@@ -188,22 +227,182 @@ jobs:
                   process: "readonly",
                   __dirname: "readonly",
                   Buffer: "readonly",
-                  URL: "readonly"
+                  URL: "readonly",
+
+                  describe: "readonly",
+                  test: "readonly",
+                  expect: "readonly",
+                  beforeAll: "readonly",
+                  afterAll: "readonly",
+                  beforeEach: "readonly",
+                  afterEach: "readonly"
                 }
               },
               rules: {
-                "no-unused-vars": "warn",
                 "no-undef": "error",
+                "no-unused-vars": "warn",
                 "no-console": "off",
-                "semi": ["warn", "always"],
+                "semi": "warn",
+                "eqeqeq": "warn",
+                "curly": "warn",
+                "no-var": "warn",
+                "prefer-const": "warn",
                 "quotes": "off"
               }
             }
           ];
           EOF
 
-            echo "Validating JavaScript files with ESLint..."
-            npx --yes eslint $JS_FILES --config /tmp/eslint.config.mjs
+          echo "Linting JavaScript files with ESLint..."
+          npx --yes eslint $JS_FILES --config /tmp/eslint.config.mjs
+          echo "JavaScript lint completed successfully."
 
-            echo "JavaScript validation completed successfully."
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Installing with npm ci..."
+            npm ci
+          else
+            echo "Installing with npm install..."
+            npm install
           fi
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Installing with npm ci..."
+            npm ci
+          else
+            echo "Installing with npm install..."
+            npm install
+          fi
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start WatchTower server
+        run: |
+          echo "Starting WatchTower server in the background..."
+          nohup npm start > server.log 2>&1 &
+          echo $! > server.pid
+
+          echo "Waiting for http://localhost:3000 to respond..."
+          for i in $(seq 1 30); do
+            if curl -sSf http://localhost:3000 > /dev/null 2>&1; then
+              echo "Server is up after ${i} attempt(s)."
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Server did not respond in time. Server log:"
+          cat server.log
+          exit 1
+
+      - name: Run end-to-end tests
+        run: npm run test:e2e
+
+      - name: Stop WatchTower server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            echo "Stopping WatchTower server (pid $(cat server.pid))..."
+            kill "$(cat server.pid)" 2>/dev/null || true
+            rm -f server.pid
+          fi
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  jsdoc-check:
+    name: JSDoc Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Installing with npm ci..."
+            npm ci
+          else
+            echo "Installing with npm install..."
+            npm install
+          fi
+
+      - name: Generate JSDoc
+        run: npm run docs:js
+
+      - name: Verify docs/api was generated
+        run: |
+          test -d docs/api || (echo "docs/api was not generated" && exit 1)
+          echo "JSDoc generated successfully:"
+          ls -la docs/api | head -n 20
+
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Installing with npm ci..."
+            npm ci
+          else
+            echo "Installing with npm install..."
+            npm install
+          fi
+
+      - name: Run npm audit (high severity and above)
+        run: npm audit --audit-level=high

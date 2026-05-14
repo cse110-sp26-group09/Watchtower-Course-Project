@@ -41,6 +41,12 @@ playwright-report/
 cypress/videos/
 cypress/screenshots/
 
+# Generated API documentation (run `npm run docs:js`)
+docs/api/
+
+# Local server PID file used by the e2e workflow
+server.pid
+
 # Temporary files
 tmp/
 temp/

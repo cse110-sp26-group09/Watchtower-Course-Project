@@ -229,7 +229,58 @@ Sprint 1 is done when:
 - backlog contains at least 15 issues with owner/support/reviewer fields
 - backlog has been reviewed at least once during team sync
 
-## 18) Communication Expectations
+## 18) Continuous Integration & Quality Pipeline
+
+Every push to `main` and every pull request targeting `main` runs the
+GitHub Actions workflow defined in
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). The
+pipeline is structured as small, independent jobs so failures point
+directly at the responsible area of the codebase.
+
+### CI Jobs
+
+- **Repository structure checks** — verify required root files,
+  documentation folders, and key documentation files exist.
+- **HTML validation** — run Nu HTML Checker (`vnu.jar`) against all
+  `.html` files under `src/`.
+- **CSS validation** — run Stylelint (via `npx`) against all `.css`
+  files under `src/` using a temporary, opinionated rule set.
+- **JavaScript lint** — run ESLint (via `npx`) against all `.js` files
+  under `src/` and `tests/` using a temporary config that supports both
+  browser and Node globals.
+- **Unit tests** — `npm run test:unit` (Jest, tests in `tests/unit/`).
+- **End-to-end tests** — `npm run test:e2e` (Playwright, tests in
+  `tests/e2e/`). The workflow starts the server with `npm start`, waits
+  for `http://localhost:3000`, runs the tests, and stops the server.
+- **JSDoc generation** — `npm run docs:js` produces `docs/api/` so we
+  always know the docs build cleanly.
+- **Dependency security audit** — `npm audit --audit-level=high`.
+
+### Dependency philosophy
+
+- Committed dependencies are intentionally minimal.
+- Only **Jest**, **@playwright/test**, and **JSDoc** are committed as
+  dev dependencies because they directly support testing and
+  documentation requirements.
+- HTML, CSS, and JavaScript validation use CI-runner tooling
+  (`vnu.jar`, `npx stylelint`, `npx eslint`) with temporary configs
+  inside the runner, so we don't add permanent lint config files to the
+  repository unless the team agrees they are needed.
+- The workflow runs on **Node.js 24** (with
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true`) so it stays ahead of the
+  GitHub Actions Node.js 20 deprecation and remains future-ready.
+
+### Running the pipeline locally
+
+```bash
+npm install
+npm run test:unit       # Jest unit tests
+npm run docs:js         # generate docs/api/
+npm start               # start the WatchTower server on :3000
+npm run test:e2e        # Playwright smoke tests (in a separate terminal)
+```
+
+## 19) Communication Expectations
 
 - Keep GitHub issues and PRs up to date as the source of truth.
 - Use slack for communicating any difficulties or schedule conflicts.
