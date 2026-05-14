@@ -1,4 +1,4 @@
-# ADR 0001: Making mobile buttons on the bottom
+# DR 0001: Making mobile buttons on the bottom
 
 ## Status
 Accepted by James
@@ -15,7 +15,7 @@ This will make it easier to navigate but may result in misinputs.
 ## Alternatives Considered
 Dropdown
 
-# ADR 0002: Settings
+# DR 0002: Settings
 
 ## Status
 Accepted by Hieu
