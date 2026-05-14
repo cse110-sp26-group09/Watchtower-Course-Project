@@ -28,15 +28,52 @@ WatchTower helps development teams understand what's happening in production. By
 - **Project Overview** – See [docs/](docs/README.md)
 - **Requirements** – See [docs/product/requirements.md](docs/product/requirements.md)
 - **Sprint Planning** – See [docs/planning/sprint-1-planning.md](docs/planning/sprint-1-planning.md)
+- **Security Policy** - See - [Security Policy](SECURITY.md)
 
 ## Project Structure
 
 ```
-├── docs/              # All project documentation
-├── src/               # Source code and prototypes
-├── tests/             # Test files and testing documentation
-├── CHANGELOG.md       # Project version history
-└── README.md          # This file
+.
+├── .github/                 # GitHub configuration, issue templates, and CI workflows
+│   ├── ISSUE_TEMPLATE/       # GitHub issue templates
+│   ├── workflows/            # GitHub Actions CI workflows
+│   └── dependabot.yml        # Dependabot configuration, if enabled
+│
+├── docs/                     # Project documentation
+│   ├── adr/                  # Architecture decision records
+│   ├── design/               # Wireframes, user flows, and design notes
+│   ├── media/                # Images, diagrams, screenshots, and other media
+│   ├── meetings/             # Standup notes, TA meetings, and team sync notes
+│   ├── planning/             # Sprint plans, backlog notes, and retrospectives
+│   ├── process/              # Workflow, Git process, and GenAI usage documentation
+│   ├── product/              # Project brief, MVP, requirements, and user stories
+│   ├── research/             # Research notes and technical investigations
+│   └── README.md             # Documentation index
+│
+├── src/                      # Source code and prototypes
+│   ├── README.md             # Source code overview
+│   └── prototype_1/           # Main WatchTower prototype
+│       ├── dashboard/         # WatchTower dashboard UI
+│       ├── demo/              # Local demo/test application
+│       ├── hosted_demo/       # Static hosted demo version
+│       ├── sdk/               # Client-side WatchTower SDK/instrumentation
+│       ├── server/            # Prototype Node.js server/API
+│       ├── utils/             # Shared utility functions
+│       └── README.md          # Prototype setup instructions
+│
+├── tests/                    # Testing files and testing documentation
+│   ├── e2e/                  # End-to-end tests
+│   ├── unit/                 # Unit tests
+│   └── README.md             # Testing overview
+│
+├── .gitignore                # Files and folders ignored by Git
+├── CHANGELOG.md              # Project change history
+├── package.json              # Root npm scripts and minimal dev dependencies
+├── package-lock.json         # Locked npm dependency versions
+├── playwright.config.js      # Playwright end-to-end test configuration
+├── README.md                 # Main project overview
+└── SECURITY.md               # Security policy
+
 ```
 
 For a detailed breakdown of the documentation structure, see [docs/README.md](docs/README.md).
