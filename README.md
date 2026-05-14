@@ -25,10 +25,10 @@ WatchTower helps development teams understand what's happening in production. By
 3. Follow the [setup instructions](src/prototype_1/README.md)
 
 ### For Documentation & Project Info
-- **Project Overview** – See [docs/](docs/README.md)
-- **Requirements** – See [docs/product/requirements.md](docs/product/requirements.md)
-- **Sprint Planning** – See [docs/planning/sprint-1-planning.md](docs/planning/sprint-1-planning.md)
-- **Security Policy** - See - [Security Policy](SECURITY.md)
+- **Project Overview** — See [Documentation](docs/README.md)
+- **Requirements** — See [Requirements](docs/product/requirements.md)
+- **Sprint Planning** — See [Sprint 1 Planning](docs/planning/sprint-1-planning.md)
+- **Security Policy** — See [Security Policy](SECURITY.md)
 
 ## Project Structure
 
