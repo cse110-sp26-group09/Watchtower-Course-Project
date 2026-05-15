@@ -1,87 +1,159 @@
 (function () {
   "use strict";
 
-  var viewNames = ["home", "analytics", "settings"];
-  var viewButtons = document.querySelectorAll("[data-view]");
-  var segmentedButtons = document.querySelectorAll(".segmented-control button");
-  var settingsTriggers = document.querySelectorAll(".settings-trigger");
-  var contrastToggle = document.getElementById("contrast-toggle");
-  var textSize = document.getElementById("text-size");
+  var availableViewNames = ["home", "analytics", "settings"];
+  var viewToggleElements = document.querySelectorAll("[data-view]");
+  var timeRangeButtons = document.querySelectorAll(".segmented-control button");
+  var settingsAccordionButtons = document.querySelectorAll(".settings-trigger");
+  var assignmentDropdowns = document.querySelectorAll(".assign-control select");
+  var highContrastToggle = document.getElementById("contrast-toggle");
+  var textSizeSlider = document.getElementById("text-size");
 
-  function setActiveView(viewName) {
-    if (viewNames.indexOf(viewName) === -1) return;
+  /**
+   * Show the selected WatchTower view and update every matching
+   * navigation control to reflect the current selection.
+   *
+   * @param {string} selectedViewName - The target view id prefix.
+   * @returns {void}
+   */
+  function activateView(selectedViewName) {
+    if (availableViewNames.indexOf(selectedViewName) === -1) return;
 
-    viewNames.forEach(function (name) {
-      var view = document.getElementById(name + "-view");
-      var isActive = name === viewName;
-      if (!view) return;
-      view.hidden = !isActive;
-      view.classList.toggle("active", isActive);
+    availableViewNames.forEach(function (viewName) {
+      var targetViewPanel = document.getElementById(viewName + "-view");
+      var isActiveView = viewName === selectedViewName;
+      if (!targetViewPanel) return;
+      targetViewPanel.hidden = !isActiveView;
+      targetViewPanel.classList.toggle("active", isActiveView);
     });
 
-    viewButtons.forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-view") === viewName);
+    viewToggleElements.forEach(function (viewToggleElement) {
+      viewToggleElement.classList.toggle("active", viewToggleElement.getAttribute("data-view") === selectedViewName);
     });
 
-    document.title = "WatchTower - " + viewName.charAt(0).toUpperCase() + viewName.slice(1);
-    window.location.hash = viewName;
+    document.title = "WatchTower - " + selectedViewName.charAt(0).toUpperCase() + selectedViewName.slice(1);
+    window.location.hash = selectedViewName;
   }
 
-  viewButtons.forEach(function (button) {
-    button.addEventListener("click", function (event) {
-      var viewName = button.getAttribute("data-view");
-      if (button.tagName === "A") event.preventDefault();
-      setActiveView(viewName);
-    });
-  });
-
-  segmentedButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      segmentedButtons.forEach(function (item) {
-        item.classList.toggle("active", item === button);
+  /**
+   * Attach click handlers for desktop and mobile navigation controls.
+   *
+   * @returns {void}
+   */
+  function initializeViewNavigation() {
+    viewToggleElements.forEach(function (viewToggleElement) {
+      viewToggleElement.addEventListener("click", function (event) {
+        var selectedViewName = viewToggleElement.getAttribute("data-view");
+        if (viewToggleElement.tagName === "A") event.preventDefault();
+        activateView(selectedViewName);
       });
-    });
-  });
-
-  settingsTriggers.forEach(function (trigger) {
-    trigger.addEventListener("click", function () {
-      var section = trigger.closest(".settings-section");
-      var shouldOpen = !section.classList.contains("open");
-
-      document.querySelectorAll(".settings-section").forEach(function (item) {
-        var itemTrigger = item.querySelector(".settings-trigger");
-        item.classList.remove("open");
-        if (itemTrigger) itemTrigger.setAttribute("aria-expanded", "false");
-      });
-
-      section.classList.toggle("open", shouldOpen);
-      trigger.setAttribute("aria-expanded", String(shouldOpen));
-    });
-  });
-
-  document.querySelectorAll(".assign-control select").forEach(function (select) {
-    select.addEventListener("change", function () {
-      var issue = select.closest(".issue-row");
-      var title = issue ? issue.querySelector("h3") : null;
-      if (!title) return;
-      title.textContent = title.textContent.replace(/\s+\(assigned\)$/i, "") + " (assigned)";
-    });
-  });
-
-  if (contrastToggle) {
-    contrastToggle.addEventListener("change", function () {
-      document.body.classList.toggle("high-contrast", contrastToggle.checked);
     });
   }
 
-  if (textSize) {
-    textSize.addEventListener("input", function () {
+  /**
+   * Keep the analytics time-range control visually in sync with the
+   * button the user most recently selected.
+   *
+   * @returns {void}
+   */
+  function initializeTimeRangeButtons() {
+    timeRangeButtons.forEach(function (timeRangeButton) {
+      timeRangeButton.addEventListener("click", function () {
+        timeRangeButtons.forEach(function (buttonElement) {
+          buttonElement.classList.toggle("active", buttonElement === timeRangeButton);
+        });
+      });
+    });
+  }
+
+  /**
+   * Collapse every settings section so only the clicked accordion panel
+   * remains open.
+   *
+   * @returns {void}
+   */
+  function initializeSettingsAccordions() {
+    settingsAccordionButtons.forEach(function (accordionButton) {
+      accordionButton.addEventListener("click", function () {
+        var parentSettingsSection = accordionButton.closest(".settings-section");
+        var shouldOpenSection = !parentSettingsSection.classList.contains("open");
+
+        document.querySelectorAll(".settings-section").forEach(function (settingsSection) {
+          var sectionButton = settingsSection.querySelector(".settings-trigger");
+          settingsSection.classList.remove("open");
+          if (sectionButton) sectionButton.setAttribute("aria-expanded", "false");
+        });
+
+        parentSettingsSection.classList.toggle("open", shouldOpenSection);
+        accordionButton.setAttribute("aria-expanded", String(shouldOpenSection));
+      });
+    });
+  }
+
+  /**
+   * Mark an issue heading after the user assigns ownership from the
+   * triage dropdown.
+   *
+   * @returns {void}
+   */
+  function initializeAssignmentDropdowns() {
+    assignmentDropdowns.forEach(function (assignmentDropdown) {
+      assignmentDropdown.addEventListener("change", function () {
+        var parentIssueRow = assignmentDropdown.closest(".issue-row");
+        var issueHeading = parentIssueRow ? parentIssueRow.querySelector("h3") : null;
+        if (!issueHeading) return;
+        issueHeading.textContent = issueHeading.textContent.replace(/\s+\(assigned\)$/i, "") + " (assigned)";
+      });
+    });
+  }
+
+  /**
+   * Enable the accessibility high-contrast body class when the related
+   * settings toggle changes.
+   *
+   * @returns {void}
+   */
+  function initializeContrastToggle() {
+    if (!highContrastToggle) return;
+
+    highContrastToggle.addEventListener("change", function () {
+      document.body.classList.toggle("high-contrast", highContrastToggle.checked);
+    });
+  }
+
+  /**
+   * Apply the text-size preference classes driven by the accessibility
+   * range input.
+   *
+   * @returns {void}
+   */
+  function initializeTextSizeSlider() {
+    if (!textSizeSlider) return;
+
+    textSizeSlider.addEventListener("input", function () {
       document.body.classList.remove("text-compact", "text-large");
-      if (textSize.value === "0") document.body.classList.add("text-compact");
-      if (textSize.value === "2") document.body.classList.add("text-large");
+      if (textSizeSlider.value === "0") document.body.classList.add("text-compact");
+      if (textSizeSlider.value === "2") document.body.classList.add("text-large");
     });
   }
 
-  var initialView = window.location.hash.replace("#", "");
-  setActiveView(viewNames.indexOf(initialView) === -1 ? "home" : initialView);
+  /**
+   * Boot the static frontend by wiring all interactive controls and
+   * restoring the initial hash-based view when available.
+   *
+   * @returns {void}
+   */
+  function initializeWatchTowerFrontend() {
+    var initialHashViewName = window.location.hash.replace("#", "");
+
+    initializeViewNavigation();
+    initializeTimeRangeButtons();
+    initializeSettingsAccordions();
+    initializeAssignmentDropdowns();
+    initializeContrastToggle();
+    initializeTextSizeSlider();
+    activateView(availableViewNames.indexOf(initialHashViewName) === -1 ? "home" : initialHashViewName);
+  }
+
+  initializeWatchTowerFrontend();
 })();
