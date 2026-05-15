@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WatchTower Candidate 1</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-shell">
@@ -32,7 +32,7 @@
             <option>Canary</option>
           </select>
         </label>
-        <div class="live-pill" aria-label="Connected to observed software">
+        <div class="live-pill" role="status" aria-label="Connected to observed software">
           <span class="live-dot" aria-hidden="true"></span>
           <span>Live</span>
         </div>
@@ -90,7 +90,7 @@
             <h2>Observed app is reachable with elevated checkout errors.</h2>
             <p>Version <code>v1.2.0-beta</code> is receiving traffic. Error rate is above the warning threshold on checkout routes.</p>
           </div>
-          <div class="summary-metrics" aria-label="Key metrics">
+          <div class="summary-metrics" role="group" aria-label="Key metrics">
             <div class="metric-tile">
               <span class="metric-label">Uptime</span>
               <strong>99.94%</strong>
@@ -295,7 +295,7 @@
             <p class="eyebrow">Long term trends</p>
             <h1 id="analytics-title">Analytics</h1>
           </div>
-          <div class="segmented-control" aria-label="Time range">
+          <div class="segmented-control" role="group" aria-label="Time range">
             <button class="active" type="button">24h</button>
             <button type="button">7d</button>
             <button type="button">30d</button>
@@ -311,7 +311,7 @@
               </div>
               <span class="delta-badge positive">+12.4%</span>
             </div>
-            <div class="bar-chart" aria-label="User count by day">
+            <div class="bar-chart" role="img" aria-label="User count by day">
               <div class="bar" style="--bar-height: 45%"><span>Mon</span></div>
               <div class="bar" style="--bar-height: 52%"><span>Tue</span></div>
               <div class="bar" style="--bar-height: 58%"><span>Wed</span></div>
@@ -330,7 +330,7 @@
               </div>
               <span class="delta-badge positive">+8.1%</span>
             </div>
-            <div class="bar-chart purchase-chart" aria-label="Purchase count by day">
+            <div class="bar-chart purchase-chart" role="img" aria-label="Purchase count by day">
               <div class="bar" style="--bar-height: 40%"><span>Mon</span></div>
               <div class="bar" style="--bar-height: 48%"><span>Tue</span></div>
               <div class="bar" style="--bar-height: 56%"><span>Wed</span></div>
@@ -395,7 +395,7 @@
                 <h2 id="breakdown-title">Event breakdown</h2>
               </div>
             </div>
-            <div class="donut-wrap" aria-label="Event breakdown chart">
+            <div class="donut-wrap" role="img" aria-label="Event breakdown chart">
               <div class="donut" aria-hidden="true"></div>
               <ul class="breakdown-list">
                 <li><span class="legend-dot teal"></span>Performance <strong>48%</strong></li>
@@ -425,7 +425,7 @@
 
         <div class="settings-layout">
           <section class="settings-list" aria-label="Settings sections">
-            <article class="settings-section open">
+            <div class="settings-section open">
               <button class="settings-trigger" type="button" aria-expanded="true">
                 <span class="settings-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -444,7 +444,7 @@
               <div class="settings-content">
                 <div class="field-row">
                   <label for="display-name">Display name</label>
-                  <input id="display-name" type="text" value="Aditya" />
+                  <input id="display-name" type="text" value="Aditya">
                 </div>
                 <div class="split-actions">
                   <button class="primary-button" type="button">Change password</button>
@@ -455,12 +455,12 @@
                     <strong>Two-factor authentication</strong>
                     <small>Require a code when signing in.</small>
                   </span>
-                  <input class="toggle-input" type="checkbox" checked />
+                  <input class="toggle-input" type="checkbox" checked>
                 </label>
               </div>
-            </article>
+            </div>
 
-            <article class="settings-section">
+            <div class="settings-section">
               <button class="settings-trigger" type="button" aria-expanded="false">
                 <span class="settings-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -485,14 +485,14 @@
                     <strong>High contrast</strong>
                     <small>Increase color contrast in dashboards.</small>
                   </span>
-                  <input class="toggle-input" id="contrast-toggle" type="checkbox" />
+                  <input class="toggle-input" id="contrast-toggle" type="checkbox">
                 </label>
                 <label class="range-row" for="text-size">
                   <span>
                     <strong>Text size</strong>
                     <small>Adjust interface density.</small>
                   </span>
-                  <input id="text-size" type="range" min="0" max="2" value="1" />
+                  <input id="text-size" type="range" min="0" max="2" value="1">
                 </label>
                 <label class="field-row" for="language">
                   <span>Language</span>
@@ -503,9 +503,9 @@
                   </select>
                 </label>
               </div>
-            </article>
+            </div>
 
-            <article class="settings-section">
+            <div class="settings-section">
               <button class="settings-trigger" type="button" aria-expanded="false">
                 <span class="settings-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -527,14 +527,14 @@
                     <strong>Critical alerts</strong>
                     <small>Send notifications when thresholds are breached.</small>
                   </span>
-                  <input class="toggle-input" type="checkbox" checked />
+                  <input class="toggle-input" type="checkbox" checked>
                 </label>
                 <label class="toggle-row">
                   <span>
                     <strong>Pause notifications</strong>
                     <small>Snooze non-critical alerts for two hours.</small>
                   </span>
-                  <input class="toggle-input" type="checkbox" />
+                  <input class="toggle-input" type="checkbox">
                 </label>
                 <label class="field-row" for="error-threshold">
                   <span>Error rate threshold</span>
@@ -545,7 +545,7 @@
                   </select>
                 </label>
               </div>
-            </article>
+            </div>
           </section>
 
           <aside class="settings-preview" aria-label="Notification preview">
