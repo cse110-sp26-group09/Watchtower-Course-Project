@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WatchTower Candidate 1</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" focusable="false">
+            <path d="M6 26h20v-2.2l-2.4-1.6V10.6l-2.7-2.7-2.7 2.7v8.2l-2.2-1.4V7.6L13.1 4.8 10.3 7.6v7.8L8.4 14 6 16.1V26Z"></path>
+            <path d="M9 22.8h14"></path>
+          </svg>
+        </span>
+        <span>WatchTower</span>
+      </a>
+
+      <div class="topbar-actions">
+        <button class="alert-pill" type="button" data-view="home">
+          <span class="alert-dot" aria-hidden="true"></span>
+          <span>3 active issues</span>
+        </button>
+        <label class="environment-picker">
+          <span>Environment</span>
+          <select aria-label="Environment">
+            <option>Production</option>
+            <option>Staging</option>
+            <option>Canary</option>
+          </select>
+        </label>
+        <div class="live-pill" aria-label="Connected to observed software">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>Live</span>
+        </div>
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="Primary navigation">
+      <nav class="nav-stack">
+        <button class="nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
+          </svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 19V12"></path>
+            <path d="M10 19V8"></path>
+            <path d="M15 19v-5"></path>
+            <path d="M20 19V5"></path>
+          </svg>
+          <span>Analytics</span>
+        </button>
+        <button class="nav-button" type="button" data-view="settings" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"></path>
+            <path d="M19.2 13.2a7.8 7.8 0 0 0 .1-1.2 7.8 7.8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.1-1.2L14.4 3h-4.8l-.4 2.7a8.4 8.4 0 0 0-2.1 1.2l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.2c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.1 1.2l.4 2.7h4.8l.4-2.7a8.4 8.4 0 0 0 2.1-1.2l2.4 1 2-3.4-2.1-1.5Z"></path>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="content" id="main-content">
+      <section class="view active" id="home-view" aria-labelledby="home-title">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Realtime operations</p>
+            <h1 id="home-title">Production health</h1>
+          </div>
+          <div class="refresh-note">
+            <span>Updated 12 sec ago</span>
+            <button class="icon-button" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 12a8 8 0 1 1-2.3-5.7"></path>
+                <path d="M20 4v6h-6"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <section class="health-summary" aria-label="Simple health summary">
+          <div class="summary-copy">
+            <span class="status-token good">Healthy</span>
+            <h2>Observed app is reachable with elevated checkout errors.</h2>
+            <p>Version <code>v1.2.0-beta</code> is receiving traffic. Error rate is above the warning threshold on checkout routes.</p>
+          </div>
+          <div class="summary-metrics" aria-label="Key metrics">
+            <div class="metric-tile">
+              <span class="metric-label">Uptime</span>
+              <strong>99.94%</strong>
+              <span class="metric-trend positive">+0.02%</span>
+            </div>
+            <div class="metric-tile">
+              <span class="metric-label">P95 latency</span>
+              <strong>184 ms</strong>
+              <span class="metric-trend neutral">stable</span>
+            </div>
+            <div class="metric-tile warning">
+              <span class="metric-label">Error rate</span>
+              <strong>2.8%</strong>
+              <span class="metric-trend negative">+1.1%</span>
+            </div>
+            <div class="metric-tile">
+              <span class="metric-label">Rating</span>
+              <strong>4.3</strong>
+              <span class="metric-trend neutral">1,284 users</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="home-grid">
+          <section class="panel issue-panel" aria-labelledby="issues-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Triage</p>
+                <h2 id="issues-title">Errors by version</h2>
+              </div>
+              <button class="ghost-button" type="button">Export CSV</button>
+            </div>
+
+            <div class="issue-list">
+              <article class="issue-row severity-critical">
+                <div class="issue-main">
+                  <span class="severity-pill">Critical</span>
+                  <h3>Checkout promise rejection</h3>
+                  <p>Payment gateway returned undefined response during cart submit.</p>
+                  <div class="issue-meta">
+                    <span>v1.2.0-beta</span>
+                    <span>prod-us-west</span>
+                    <span>10:42 AM</span>
+                  </div>
+                </div>
+                <label class="assign-control">
+                  <span>Assign</span>
+                  <select aria-label="Assign checkout promise rejection">
+                    <option>Priya</option>
+                    <option>James</option>
+                    <option>Aditya</option>
+                  </select>
+                </label>
+              </article>
+
+              <article class="issue-row severity-warning">
+                <div class="issue-main">
+                  <span class="severity-pill">Warning</span>
+                  <h3>Search latency spike</h3>
+                  <p>P95 response time exceeded 300 ms for authenticated sessions.</p>
+                  <div class="issue-meta">
+                    <span>v1.2.0-beta</span>
+                    <span>prod-us-west</span>
+                    <span>10:36 AM</span>
+                  </div>
+                </div>
+                <label class="assign-control">
+                  <span>Assign</span>
+                  <select aria-label="Assign search latency spike">
+                    <option>Waleed</option>
+                    <option>Hemendra</option>
+                    <option>Jason</option>
+                  </select>
+                </label>
+              </article>
+
+              <article class="issue-row severity-info">
+                <div class="issue-main">
+                  <span class="severity-pill">Info</span>
+                  <h3>Feedback rating dip</h3>
+                  <p>Average rating moved from 4.7 to 4.3 after the latest deploy.</p>
+                  <div class="issue-meta">
+                    <span>v1.2.0-beta</span>
+                    <span>prod-us-west</span>
+                    <span>10:21 AM</span>
+                  </div>
+                </div>
+                <label class="assign-control">
+                  <span>Assign</span>
+                  <select aria-label="Assign feedback rating dip">
+                    <option>Hieu</option>
+                    <option>Fahad</option>
+                    <option>James</option>
+                  </select>
+                </label>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel service-panel" aria-labelledby="services-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Services</p>
+                <h2 id="services-title">Current status</h2>
+              </div>
+            </div>
+            <div class="service-stack">
+              <div class="service-row">
+                <span class="service-dot good" aria-hidden="true"></span>
+                <div>
+                  <strong>Frontend SDK</strong>
+                  <span>10,482 events/min</span>
+                </div>
+                <span class="service-state">Online</span>
+              </div>
+              <div class="service-row">
+                <span class="service-dot warning" aria-hidden="true"></span>
+                <div>
+                  <strong>Ingestion API</strong>
+                  <span>184 ms p95</span>
+                </div>
+                <span class="service-state">Watch</span>
+              </div>
+              <div class="service-row">
+                <span class="service-dot good" aria-hidden="true"></span>
+                <div>
+                  <strong>Event store</strong>
+                  <span>99.99% durable</span>
+                </div>
+                <span class="service-state">Online</span>
+              </div>
+              <div class="service-row">
+                <span class="service-dot danger" aria-hidden="true"></span>
+                <div>
+                  <strong>Alerts</strong>
+                  <span>3 unresolved</span>
+                </div>
+                <span class="service-state">Action</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel build-panel" aria-labelledby="build-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Deploy correlation</p>
+                <h2 id="build-title">Build metadata</h2>
+              </div>
+            </div>
+            <div class="metadata-grid">
+              <div>
+                <span>Build ID</span>
+                <strong>build-4821</strong>
+              </div>
+              <div>
+                <span>Commit</span>
+                <strong>9f31c2a</strong>
+              </div>
+              <div>
+                <span>Branch</span>
+                <strong>release/watchtower</strong>
+              </div>
+              <div>
+                <span>Deployed</span>
+                <strong>May 15, 10:02 AM</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel activity-panel" aria-labelledby="activity-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Stream</p>
+                <h2 id="activity-title">Recent events</h2>
+              </div>
+            </div>
+            <ol class="event-timeline">
+              <li>
+                <span class="timeline-time">10:42</span>
+                <span class="timeline-copy">Unhandled promise rejection on `/checkout`</span>
+              </li>
+              <li>
+                <span class="timeline-time">10:40</span>
+                <span class="timeline-copy">Page load `/products` completed in 142 ms</span>
+              </li>
+              <li>
+                <span class="timeline-time">10:36</span>
+                <span class="timeline-copy">Latency threshold alert on Search API</span>
+              </li>
+              <li>
+                <span class="timeline-time">10:31</span>
+                <span class="timeline-copy">New feedback: "Checkout froze after submit"</span>
+              </li>
+            </ol>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="analytics-view" aria-labelledby="analytics-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Long term trends</p>
+            <h1 id="analytics-title">Analytics</h1>
+          </div>
+          <div class="segmented-control" aria-label="Time range">
+            <button class="active" type="button">24h</button>
+            <button type="button">7d</button>
+            <button type="button">30d</button>
+          </div>
+        </div>
+
+        <div class="analytics-grid">
+          <section class="panel wide-panel" aria-labelledby="user-chart-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Users</p>
+                <h2 id="user-chart-title">User count over time</h2>
+              </div>
+              <span class="delta-badge positive">+12.4%</span>
+            </div>
+            <div class="bar-chart" aria-label="User count by day">
+              <div class="bar" style="--bar-height: 45%"><span>Mon</span></div>
+              <div class="bar" style="--bar-height: 52%"><span>Tue</span></div>
+              <div class="bar" style="--bar-height: 58%"><span>Wed</span></div>
+              <div class="bar" style="--bar-height: 63%"><span>Thu</span></div>
+              <div class="bar" style="--bar-height: 75%"><span>Fri</span></div>
+              <div class="bar" style="--bar-height: 88%"><span>Sat</span></div>
+              <div class="bar highlight" style="--bar-height: 96%"><span>Sun</span></div>
+            </div>
+          </section>
+
+          <section class="panel wide-panel" aria-labelledby="purchase-chart-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Revenue signal</p>
+                <h2 id="purchase-chart-title">Subscriptions and purchases</h2>
+              </div>
+              <span class="delta-badge positive">+8.1%</span>
+            </div>
+            <div class="bar-chart purchase-chart" aria-label="Purchase count by day">
+              <div class="bar" style="--bar-height: 40%"><span>Mon</span></div>
+              <div class="bar" style="--bar-height: 48%"><span>Tue</span></div>
+              <div class="bar" style="--bar-height: 56%"><span>Wed</span></div>
+              <div class="bar" style="--bar-height: 61%"><span>Thu</span></div>
+              <div class="bar" style="--bar-height: 72%"><span>Fri</span></div>
+              <div class="bar" style="--bar-height: 86%"><span>Sat</span></div>
+              <div class="bar highlight" style="--bar-height: 100%"><span>Sun</span></div>
+            </div>
+          </section>
+
+          <section class="panel line-panel" aria-labelledby="latency-chart-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Performance</p>
+                <h2 id="latency-chart-title">Latency by route</h2>
+              </div>
+            </div>
+            <svg class="line-chart" viewBox="0 0 640 260" role="img" aria-labelledby="latency-svg-title">
+              <title id="latency-svg-title">Latency line chart showing checkout above other routes</title>
+              <g class="grid-lines">
+                <path d="M60 40H610"></path>
+                <path d="M60 90H610"></path>
+                <path d="M60 140H610"></path>
+                <path d="M60 190H610"></path>
+                <path d="M60 240H610"></path>
+              </g>
+              <path class="line checkout" d="M60 154 C130 126 170 132 230 102 S345 82 415 96 520 70 610 58"></path>
+              <path class="line search" d="M60 184 C130 170 178 176 235 150 S342 128 415 138 520 120 610 112"></path>
+              <path class="line products" d="M60 204 C132 190 178 196 235 182 S344 164 415 170 520 154 610 146"></path>
+            </svg>
+            <div class="chart-legend">
+              <span><i class="legend-swatch checkout"></i>Checkout</span>
+              <span><i class="legend-swatch search"></i>Search</span>
+              <span><i class="legend-swatch products"></i>Products</span>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="feedback-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Sentiment</p>
+                <h2 id="feedback-title">Feedback counts</h2>
+              </div>
+            </div>
+            <div class="rating-block">
+              <strong>4.3</strong>
+              <span>average rating</span>
+              <div class="rating-bars">
+                <span style="--rating-width: 72%">5 stars</span>
+                <span style="--rating-width: 18%">4 stars</span>
+                <span style="--rating-width: 6%">3 stars</span>
+                <span style="--rating-width: 3%">2 stars</span>
+                <span style="--rating-width: 1%">1 star</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="breakdown-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Environment</p>
+                <h2 id="breakdown-title">Event breakdown</h2>
+              </div>
+            </div>
+            <div class="donut-wrap" aria-label="Event breakdown chart">
+              <div class="donut" aria-hidden="true"></div>
+              <ul class="breakdown-list">
+                <li><span class="legend-dot teal"></span>Performance <strong>48%</strong></li>
+                <li><span class="legend-dot coral"></span>Errors <strong>19%</strong></li>
+                <li><span class="legend-dot amber"></span>Feedback <strong>12%</strong></li>
+                <li><span class="legend-dot blue"></span>Clicks <strong>21%</strong></li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="settings-view" aria-labelledby="settings-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Workspace controls</p>
+            <h1 id="settings-title">Settings</h1>
+          </div>
+          <div class="profile-chip">
+            <span>AD</span>
+            <div>
+              <strong>Aditya</strong>
+              <small>Admin</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-layout">
+          <section class="settings-list" aria-label="Settings sections">
+            <article class="settings-section open">
+              <button class="settings-trigger" type="button" aria-expanded="true">
+                <span class="settings-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
+                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path>
+                  </svg>
+                </span>
+                <span>
+                  <strong>Profile</strong>
+                  <small>Login, password, and 2FA</small>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <div class="settings-content">
+                <div class="field-row">
+                  <label for="display-name">Display name</label>
+                  <input id="display-name" type="text" value="Aditya" />
+                </div>
+                <div class="split-actions">
+                  <button class="primary-button" type="button">Change password</button>
+                  <button class="ghost-button" type="button">Sign out</button>
+                </div>
+                <label class="toggle-row">
+                  <span>
+                    <strong>Two-factor authentication</strong>
+                    <small>Require a code when signing in.</small>
+                  </span>
+                  <input class="toggle-input" type="checkbox" checked />
+                </label>
+              </div>
+            </article>
+
+            <article class="settings-section">
+              <button class="settings-trigger" type="button" aria-expanded="false">
+                <span class="settings-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 4v16"></path>
+                    <path d="M4 8h16"></path>
+                    <path d="M6 20h12"></path>
+                    <path d="M8 8l-3 7h6L8 8Z"></path>
+                    <path d="M16 8l-3 7h6l-3-7Z"></path>
+                  </svg>
+                </span>
+                <span>
+                  <strong>Accessibility</strong>
+                  <small>Contrast, language, and text size</small>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <div class="settings-content">
+                <label class="toggle-row">
+                  <span>
+                    <strong>High contrast</strong>
+                    <small>Increase color contrast in dashboards.</small>
+                  </span>
+                  <input class="toggle-input" id="contrast-toggle" type="checkbox" />
+                </label>
+                <label class="range-row" for="text-size">
+                  <span>
+                    <strong>Text size</strong>
+                    <small>Adjust interface density.</small>
+                  </span>
+                  <input id="text-size" type="range" min="0" max="2" value="1" />
+                </label>
+                <label class="field-row" for="language">
+                  <span>Language</span>
+                  <select id="language">
+                    <option>English</option>
+                    <option>Spanish</option>
+                    <option>French</option>
+                  </select>
+                </label>
+              </div>
+            </article>
+
+            <article class="settings-section">
+              <button class="settings-trigger" type="button" aria-expanded="false">
+                <span class="settings-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"></path>
+                    <path d="M10 21h4"></path>
+                  </svg>
+                </span>
+                <span>
+                  <strong>Notifications</strong>
+                  <small>Alerts, pauses, and thresholds</small>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <div class="settings-content">
+                <label class="toggle-row">
+                  <span>
+                    <strong>Critical alerts</strong>
+                    <small>Send notifications when thresholds are breached.</small>
+                  </span>
+                  <input class="toggle-input" type="checkbox" checked />
+                </label>
+                <label class="toggle-row">
+                  <span>
+                    <strong>Pause notifications</strong>
+                    <small>Snooze non-critical alerts for two hours.</small>
+                  </span>
+                  <input class="toggle-input" type="checkbox" />
+                </label>
+                <label class="field-row" for="error-threshold">
+                  <span>Error rate threshold</span>
+                  <select id="error-threshold">
+                    <option>1%</option>
+                    <option selected>2%</option>
+                    <option>5%</option>
+                  </select>
+                </label>
+              </div>
+            </article>
+          </section>
+
+          <aside class="settings-preview" aria-label="Notification preview">
+            <p class="eyebrow">Preview</p>
+            <h2>Critical condition</h2>
+            <p class="preview-copy">Checkout error rate exceeded 2% on <code>v1.2.0-beta</code>. Priya has been assigned.</p>
+            <div class="preview-actions">
+              <button class="primary-button" type="button">Acknowledge</button>
+              <button class="ghost-button" type="button">Pause</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="Mobile primary navigation">
+      <button class="mobile-nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19V12"></path>
+          <path d="M10 19V8"></path>
+          <path d="M15 19v-5"></path>
+          <path d="M20 19V5"></path>
+        </svg>
+        <span>Analytics</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="settings" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"></path>
+          <path d="M19.2 13.2a7.8 7.8 0 0 0 .1-1.2 7.8 7.8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.1-1.2L14.4 3h-4.8l-.4 2.7a8.4 8.4 0 0 0-2.1 1.2l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.2c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.1 1.2l.4 2.7h4.8l.4-2.7a8.4 8.4 0 0 0 2.1-1.2l2.4 1 2-3.4-2.1-1.5Z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
