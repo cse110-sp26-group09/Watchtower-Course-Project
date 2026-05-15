@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopDemo - Hosted Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav>
+    <div class="brand">ShopDemo</div>
+    <div class="nav-links">
+      <a href="#" data-page="home" class="active">Home</a>
+      <a href="#" data-page="products">Products</a>
+      <a href="#" data-page="cart">Cart</a>
+      <a href="#" data-page="account">Account</a>
+    </div>
+    <div class="nav-right">
+      <span id="user-badge" class="user-badge hidden">Logged in</span>
+      <select id="version-select" title="Simulated deploy version">
+        <option value="v1.0.0">v1.0.0</option>
+        <option value="v1.1.0">v1.1.0</option>
+        <option value="v1.2.0-beta" selected>v1.2.0-beta</option>
+        <option value="v2.0.0-rc1">v2.0.0-rc1</option>
+      </select>
+    </div>
+  </nav>
+
+  <main id="app">
+    <!-- Pages render here -->
+  </main>
+
+  <footer>
+    <p>This is a static hosted demo for checking site visits and traffic.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

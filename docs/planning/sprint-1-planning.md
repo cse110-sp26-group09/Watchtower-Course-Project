@@ -421,7 +421,7 @@ Goals:
 - Review MVP draft as a team
 - Review backlog as a team
 - Identify unclear project expectations
-- Prepare questions for TA Helena and Professor Powell
+- Prepare questions for TA and Professor Powell
 - Review wireframe direction
 
 Deliverables:
@@ -673,7 +673,7 @@ If a team member is blocked, use this escalation path:
    - Product/process blocker: Fahad
    - Instrumentation/backend blocker: Daniel or Waleed
 4. **Ask in the team Slack channel** if the blocker affects multiple people.
-5. **Bring the question to TA Helena** if it affects project expectations, scope, or grading.
+5. **Bring the question to TA ** if it affects project expectations, scope, or grading.
 6. **Bring the question to Professor Powell** if it affects stakeholder expectations or major project direction.
 
 Blockers should be raised early. A task should not stay blocked silently.
@@ -730,7 +730,7 @@ Sprint 1 is considered complete when:
 | Testing may be delayed | Medium | Medium | Create future testing placeholder issue and involve Daniel/Woosik early | Daniel |
 | Team members may work without review | Medium | Medium | Require owner/support/reviewer model for major tasks | Aditya |
 | Communication may become scattered | Medium | Medium | Use Slack for quick coordination and GitHub for official tracking | Fahad |
-| TA/stakeholder expectations may be unclear | High | Medium | Collect questions and bring them to TA Helena or Professor Powell early | Fahad |
+| TA/stakeholder expectations may be unclear | High | Medium | Collect questions and bring them to TA or Professor Powell early | Fahad |
 
 ---
 
@@ -764,7 +764,7 @@ Each team member should acknowledge that they understand:
 
 ---
 
-## Questions for TA Helena / Professor Powell
+## Questions for TA / Professor Powell
 
 The team should collect and refine questions during Sprint 1.
 
