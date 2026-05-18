@@ -6,9 +6,10 @@
   const FLUSH_INTERVAL = 2000; // batch flush every 2 seconds
 
   const sessionId = generateSessionId();
-  const deployVersion = document.querySelector('meta[name="deploy-version"]')?.content || '1.0.0';
+  const deployMeta = document.querySelector('meta[name="deploy-version"]');
+  const deployVersion = (deployMeta && deployMeta.content) || '1.0.0';
 
-  let eventQueue = [];  // events waiting to be sent
+  const eventQueue = [];  // events waiting to be sent
   let flushTimer = null;
 
   /**
@@ -59,7 +60,7 @@
    * @returns {void}
    */
   function flush() {
-    if (eventQueue.length === 0) return;
+    if (eventQueue.length === 0) { return; }
 
     const batch = eventQueue.splice(0);
 
@@ -86,8 +87,8 @@
 
   // Auto-capture page load performance (DNS, TTFB, DOM load, etc.)
   window.addEventListener('load', function () {
-    var perf = performance.getEntriesByType('navigation')[0];
-    if (!perf) return;
+    const perf = performance.getEntriesByType('navigation')[0];
+    if (!perf) { return; }
 
     enqueue(createEvent('performance', ['page-load', 'auto-captured'], {
       dnsLookup: Math.round(perf.domainLookupEnd - perf.domainLookupStart),

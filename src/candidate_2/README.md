@@ -58,6 +58,37 @@ The frontend expects these endpoints when connected to a backend:
 
 The dashboard works without a backend by using seed data loaded on init.
 
+## Manual Testing
+
+All features were manually tested in-browser. Results:
+
+| Feature | Status |
+|---|---|
+| View switching (Home, Analytics, Alerts) | Pass |
+| Hero stat cards display | Pass |
+| Top 3 Issues click navigates to matching alert | Pass |
+| High Latency Windows and Peak Traffic insights | Pass |
+| Version History timeline | Pass |
+| Event Volume bar chart renders | Pass |
+| User Activity bar chart renders | Pass |
+| Latency line chart with threshold line | Pass |
+| Alert feed loads seed data | Pass |
+| Alert row click expands detail panel | Pass |
+| Filter sidebar: status filters | Pass |
+| Filter sidebar: patch version filters | Pass |
+| Filter sidebar: security tag filters | Pass |
+| Filter sidebar: service tag filters | Pass |
+| Filter sidebar: Clear All button | Pass |
+| Alert search bar | Pass |
+| Mute/Unmute toggle | Pass |
+| Settings panel open/close | Pass |
+| Filter sidebar collapse/expand | Pass |
+| SDK auto-captures JS errors | Pass |
+| SDK auto-captures page load performance | Pass |
+| SDK manual tracking via `WatchTowerSDK.track()` | Pass |
+| SDK batched flush every 2 seconds | Pass |
+| Responsive canvas chart on window resize | Pass |
+
 ## How to Run
 
 1. Open `index.html` directly in a browser (no server needed for the UI).

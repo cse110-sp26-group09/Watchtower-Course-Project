@@ -93,7 +93,7 @@
         </header>
 
         <!-- 5-column stat cards: users, errors, latency, uptime -->
-        <section class="hero-stats" id="hero-stats">
+        <div class="hero-stats" id="hero-stats">
           <div class="stat-card">
             <div class="stat-value" id="stat-active-users">1,284</div>
             <div class="stat-label">Active Users</div>
@@ -114,7 +114,7 @@
             <div class="stat-value" id="stat-uptime">99.97%</div>
             <div class="stat-label">Uptime (30d)</div>
           </div>
-        </section>
+        </div>
 
         <section class="home-columns">
           <!-- Left: Insights stacked vertically -->
@@ -122,21 +122,21 @@
             <div class="insight-panel">
               <div class="insight-panel-header">
                 <span class="insight-panel-icon issues">&#9888;</span>
-                <h3 class="insight-title">Top 3 Issues</h3>
+                <h2 class="insight-title">Top 3 Issues</h2>
               </div>
               <div class="insight-list" id="insight-issues"></div>
             </div>
             <div class="insight-panel">
               <div class="insight-panel-header">
                 <span class="insight-panel-icon latency">&#9201;</span>
-                <h3 class="insight-title">High Latency Windows</h3>
+                <h2 class="insight-title">High Latency Windows</h2>
               </div>
               <div class="insight-list" id="insight-latency"></div>
             </div>
             <div class="insight-panel">
               <div class="insight-panel-header">
                 <span class="insight-panel-icon traffic">&#9652;</span>
-                <h3 class="insight-title">Peak Traffic</h3>
+                <h2 class="insight-title">Peak Traffic</h2>
               </div>
               <div class="insight-list" id="insight-traffic"></div>
             </div>
@@ -146,7 +146,7 @@
           <div class="version-panel">
             <div class="insight-panel-header">
               <span class="insight-panel-icon" style="color: var(--morning-sky);">&#9673;</span>
-              <h3 class="insight-title">Version History</h3>
+              <h2 class="insight-title">Version History</h2>
             </div>
             <div class="version-branch" id="version-branch"></div>
           </div>
@@ -192,7 +192,10 @@
       <aside class="filter-sidebar" id="filter-sidebar">
         <div class="filter-sidebar-header">
           <span class="filter-title">Filters</span>
-          <button class="filter-collapse-btn" id="filter-collapse-btn">&#10094;</button>
+          <div class="filter-header-actions">
+            <button class="filter-clear-btn" id="filter-clear-btn">Clear All</button>
+            <button class="filter-collapse-btn" id="filter-collapse-btn">&#10094;</button>
+          </div>
         </div>
         <div class="filter-body">
           <div class="facet-search">
@@ -320,7 +323,7 @@
           </div>
         </div>
 
-        <section class="alerts-feed" id="alerts-feed"></section>
+        <div class="alerts-feed" id="alerts-feed"></div>
       </div>
     </div>
 

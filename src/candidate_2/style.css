@@ -637,6 +637,32 @@ body {
   color: var(--text-secondary);
 }
 
+.filter-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-clear-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.filter-clear-btn:hover {
+  color: var(--honey);
+  border-color: var(--honey);
+}
+
+.filter-sidebar.collapsed .filter-header-actions .filter-clear-btn {
+  display: none;
+}
+
 .filter-collapse-btn {
   background: none;
   border: 1px solid var(--border);

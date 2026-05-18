@@ -2,24 +2,24 @@
 (function () {
   'use strict';
 
-  var STREAM_URL = 'http://localhost:8000/api/events/stream'; // SSE endpoint for live alerts
-  var STATS_URL = 'http://localhost:8000/api/stats';           // REST endpoint for hero stats
+  const STREAM_URL = 'http://localhost:8000/api/events/stream'; // SSE endpoint for live alerts
+  const STATS_URL = 'http://localhost:8000/api/stats';           // REST endpoint for hero stats
 
   /* =========================================
      VIEW SWITCHING (3-way)
      ========================================= */
-  var navHome = document.getElementById('nav-home');
-  var navAnalytics = document.getElementById('nav-analytics');
-  var navAlerts = document.getElementById('nav-alerts');
-  var navSettings = document.getElementById('nav-settings');
-  var viewHome = document.getElementById('view-home');
-  var viewAnalytics = document.getElementById('view-analytics');
-  var viewAlerts = document.getElementById('view-alerts');
-  var settingsPanel = document.getElementById('settings-panel');
-  var settingsClose = document.getElementById('settings-close');
+  const navHome = document.getElementById('nav-home');
+  const navAnalytics = document.getElementById('nav-analytics');
+  const navAlerts = document.getElementById('nav-alerts');
+  const navSettings = document.getElementById('nav-settings');
+  const viewHome = document.getElementById('view-home');
+  const viewAnalytics = document.getElementById('view-analytics');
+  const viewAlerts = document.getElementById('view-alerts');
+  const settingsPanel = document.getElementById('settings-panel');
+  const settingsClose = document.getElementById('settings-close');
 
-  var navItems = [navHome, navAnalytics, navAlerts];
-  var views = [viewHome, viewAnalytics, viewAlerts];
+  const navItems = [navHome, navAnalytics, navAlerts];
+  const views = [viewHome, viewAnalytics, viewAlerts];
 
   navHome.addEventListener('click', function () { switchView(0); });
   navAnalytics.addEventListener('click', function () { switchView(1); });
@@ -51,14 +51,14 @@
     });
     settingsPanel.classList.add('hidden');
     navSettings.classList.remove('active');
-    if (idx === 1) setTimeout(drawLatencyChart, 250);
+    if (idx === 1) { setTimeout(drawLatencyChart, 250); }
   }
 
   /* =========================================
      SETTINGS: Volume slider
      ========================================= */
-  var rangeInput = settingsPanel.querySelector('.settings-range');
-  var rangeValue = settingsPanel.querySelector('.settings-range-value');
+  const rangeInput = settingsPanel.querySelector('.settings-range');
+  const rangeValue = settingsPanel.querySelector('.settings-range-value');
   rangeInput.addEventListener('input', function () {
     rangeValue.textContent = rangeInput.value + '%';
   });
@@ -66,12 +66,27 @@
   /* =========================================
      FILTER SIDEBAR (Alerts view)
      ========================================= */
-  var filterSidebar = document.getElementById('filter-sidebar');
-  var filterCollapseBtn = document.getElementById('filter-collapse-btn');
-  var alertsSearchInput = document.getElementById('alerts-search-input');
+  const filterSidebar = document.getElementById('filter-sidebar');
+  const filterCollapseBtn = document.getElementById('filter-collapse-btn');
+  const filterClearBtn = document.getElementById('filter-clear-btn');
+  const alertsSearchInput = document.getElementById('alerts-search-input');
 
   filterCollapseBtn.addEventListener('click', function () {
     filterSidebar.classList.toggle('collapsed');
+  });
+
+  /**
+   * Remove all active filter selections and clear the search input,
+   * then re-apply filters to show all alerts.
+   *
+   * @returns {void}
+   */
+  filterClearBtn.addEventListener('click', function () {
+    document.querySelectorAll('.status-item.active, .select-item.active').forEach(function (item) {
+      item.classList.remove('active');
+    });
+    alertsSearchInput.value = '';
+    applyFilters();
   });
 
   document.querySelectorAll('.facet-header').forEach(function (header) {
@@ -110,64 +125,64 @@
    * @returns {void}
    */
   function applyFilters() {
-    var activeStatuses = [];
+    const activeStatuses = [];
     document.querySelectorAll('#facet-status .status-item.active').forEach(function (item) {
       activeStatuses.push(item.getAttribute('data-status'));
     });
 
-    var activePatchVersions = [];
+    const activePatchVersions = [];
     document.querySelectorAll('#facet-patch .select-item.active').forEach(function (item) {
       activePatchVersions.push(item.getAttribute('data-value').toLowerCase());
     });
 
-    var activeSecurityTags = [];
+    const activeSecurityTags = [];
     document.querySelectorAll('#facet-security .select-item.active').forEach(function (item) {
       activeSecurityTags.push(item.getAttribute('data-value').toLowerCase());
     });
 
-    var activeServiceTags = [];
+    const activeServiceTags = [];
     document.querySelectorAll('#facet-service .select-item.active').forEach(function (item) {
       activeServiceTags.push(item.getAttribute('data-value').toLowerCase());
     });
 
-    var searchText = alertsSearchInput.value.toLowerCase().trim();
+    const searchText = alertsSearchInput.value.toLowerCase().trim();
 
-    var rows = alertsFeed.querySelectorAll('.alert-row');
-    var visibleCount = 0;
+    const rows = alertsFeed.querySelectorAll('.alert-row');
+    let visibleCount = 0;
 
     rows.forEach(function (row) {
-      var show = true;
+      let show = true;
 
       if (activeStatuses.length > 0) {
-        if (activeStatuses.indexOf(row._eventType) === -1) show = false;
+        if (activeStatuses.indexOf(row._eventType) === -1) { show = false; }
       }
 
       if (show && activePatchVersions.length > 0) {
-        if (activePatchVersions.indexOf(row._eventVersion) === -1) show = false;
+        if (activePatchVersions.indexOf(row._eventVersion) === -1) { show = false; }
       }
 
       if (show && activeSecurityTags.length > 0) {
-        var hasSecurityMatch = activeSecurityTags.some(function (tag) {
+        const hasSecurityMatch = activeSecurityTags.some(function (tag) {
           return row._eventTags.indexOf(tag) !== -1;
         });
-        if (!hasSecurityMatch) show = false;
+        if (!hasSecurityMatch) { show = false; }
       }
 
       if (show && activeServiceTags.length > 0) {
-        var hasServiceMatch = activeServiceTags.some(function (tag) {
+        const hasServiceMatch = activeServiceTags.some(function (tag) {
           return row._eventTags.indexOf(tag) !== -1;
         });
-        if (!hasServiceMatch) show = false;
+        if (!hasServiceMatch) { show = false; }
       }
 
       if (show && searchText) {
-        var rowText = (row._eventTitle || '').toLowerCase() +
+        const rowText = (row._eventTitle || '').toLowerCase() +
           ' ' + (row._eventTags || []).join(' ');
-        if (rowText.indexOf(searchText) === -1) show = false;
+        if (rowText.indexOf(searchText) === -1) { show = false; }
       }
 
       row.style.display = show ? '' : 'none';
-      if (show) visibleCount++;
+      if (show) { visibleCount++; }
     });
 
     alertsCount.textContent = visibleCount + ' of ' + rows.length + ' alerts';
@@ -176,7 +191,7 @@
   /* =========================================
      MUTE ALERTS
      ========================================= */
-  var muteBtn = document.getElementById('mute-btn');
+  const muteBtn = document.getElementById('mute-btn');
   muteBtn.addEventListener('click', function () {
     muteBtn.classList.toggle('muted');
     muteBtn.textContent = muteBtn.classList.contains('muted') ? 'Unmute Alerts' : 'Mute Alerts';
@@ -195,11 +210,11 @@
     fetch(STATS_URL, { mode: 'cors' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d.activeUsers) document.getElementById('stat-active-users').textContent = d.activeUsers.toLocaleString();
-        if (d.maxUsers) document.getElementById('stat-max-users').textContent = d.maxUsers.toLocaleString();
-        if (d.totalErrors) document.getElementById('stat-errors').textContent = d.totalErrors;
-        if (d.avgLatency) document.getElementById('stat-latency').textContent = d.avgLatency;
-        if (d.uptime) document.getElementById('stat-uptime').textContent = d.uptime;
+        if (d.activeUsers) { document.getElementById('stat-active-users').textContent = d.activeUsers.toLocaleString(); }
+        if (d.maxUsers) { document.getElementById('stat-max-users').textContent = d.maxUsers.toLocaleString(); }
+        if (d.totalErrors) { document.getElementById('stat-errors').textContent = d.totalErrors; }
+        if (d.avgLatency) { document.getElementById('stat-latency').textContent = d.avgLatency; }
+        if (d.uptime) { document.getElementById('stat-uptime').textContent = d.uptime; }
         updateSystemStatus(d.totalErrors || 0);
       })
       .catch(function () {});
@@ -213,8 +228,8 @@
    * @returns {void}
    */
   function updateSystemStatus(errors) {
-    var dot = document.querySelector('.system-status-dot');
-    var label = document.querySelector('.system-status-label');
+    const dot = document.querySelector('.system-status-dot');
+    const label = document.querySelector('.system-status-label');
     if (errors > 50) {
       dot.className = 'system-status-dot degraded';
       label.textContent = 'Degraded Performance';
@@ -231,11 +246,11 @@
    * @returns {void}
    */
   function populateInsights() {
-    var issuesEl = document.getElementById('insight-issues');
-    var latencyEl = document.getElementById('insight-latency');
-    var trafficEl = document.getElementById('insight-traffic');
+    const issuesEl = document.getElementById('insight-issues');
+    const latencyEl = document.getElementById('insight-latency');
+    const trafficEl = document.getElementById('insight-traffic');
 
-    var issues = [
+    const issues = [
       {
         title: 'Brute-force login attempts',
         meta: '847 failed attempts in the last hour targeting admin accounts',
@@ -256,7 +271,7 @@
       }
     ];
 
-    var latencyWindows = [
+    const latencyWindows = [
       {
         title: '09:00 – 11:00  |  Peak Morning',
         meta: 'Average 342ms — 2.4x above the 142ms baseline',
@@ -277,7 +292,7 @@
       }
     ];
 
-    var trafficPeaks = [
+    const trafficPeaks = [
       {
         title: '10:00 – 11:00  |  Highest Volume',
         meta: '3,420 events/min — 48% above daily average',
@@ -313,11 +328,11 @@
    * @returns {void}
    */
   function renderInsightList(container, items) {
-    var isIssuesPanel = container.id === 'insight-issues';
+    const isIssuesPanel = container.id === 'insight-issues';
 
     container.innerHTML = '';
     items.forEach(function (item, i) {
-      var el = document.createElement('div');
+      const el = document.createElement('div');
       el.className = 'insight-item severity-' + (item.severity || 'low');
       el.innerHTML =
         '<span class="insight-rank">' + (i + 1) + '</span>' +
@@ -350,26 +365,24 @@
     switchView(2);
 
     setTimeout(function () {
-      var keywords = title.toLowerCase().split(/\s+/).filter(function (w) {
+      const keywords = title.toLowerCase().split(/\s+/).filter(function (w) {
         return w.length > 3;
       });
-      var rows = alertsFeed.querySelectorAll('.alert-row');
-      var bestRow = null;
-      var bestScore = 0;
+      const rows = alertsFeed.querySelectorAll('.alert-row');
+      let bestRow = null;
+      let bestScore = 0;
 
-      for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        if (!row._eventTitle) continue;
-        var alertTitle = row._eventTitle.toLowerCase();
-        var score = 0;
-        keywords.forEach(function (kw) {
-          if (alertTitle.indexOf(kw) !== -1) score++;
-        });
+      rows.forEach(function (row) {
+        if (!row._eventTitle) { return; }
+        const alertTitle = row._eventTitle.toLowerCase();
+        const score = keywords.filter(function (kw) {
+          return alertTitle.indexOf(kw) !== -1;
+        }).length;
         if (score > bestScore) {
           bestScore = score;
           bestRow = row;
         }
-      }
+      });
 
       if (bestRow && bestScore > 0) {
         bestRow.classList.add('expanded');
@@ -389,8 +402,8 @@
    * @returns {void}
    */
   function initVersionBranch() {
-    var container = document.getElementById('version-branch');
-    var versions = [
+    const container = document.getElementById('version-branch');
+    const versions = [
       { tag: 'v2.14.3', date: '2026-05-16', desc: 'Hotfix: auth rate-limit bypass patch', current: true },
       { tag: 'v2.14.2', date: '2026-05-14', desc: 'Fix checkout TypeError on null user session' },
       { tag: 'v2.14.1', date: '2026-05-12', desc: 'Patch connection pool leak under high load' },
@@ -403,10 +416,10 @@
 
     container.innerHTML = '';
     versions.forEach(function (v) {
-      var node = document.createElement('div');
+      const node = document.createElement('div');
       node.className = 'version-node';
-      if (v.current) node.classList.add('current');
-      if (v.major) node.classList.add('major');
+      if (v.current) { node.classList.add('current'); }
+      if (v.major) { node.classList.add('major'); }
       node.innerHTML =
         '<div class="version-tag">' + v.tag + '</div>' +
         '<div class="version-date">' + v.date + '</div>' +
@@ -425,22 +438,22 @@
    * @returns {void}
    */
   function initVolumeChart() {
-    var container = document.getElementById('volume-chart');
-    var xAxis = document.getElementById('volume-x-axis');
+    const container = document.getElementById('volume-chart');
+    const xAxis = document.getElementById('volume-x-axis');
 
-    for (var i = 0; i < 48; i++) {
-      var bar = document.createElement('div');
+    for (let i = 0; i < 48; i++) {
+      const bar = document.createElement('div');
       bar.className = 'volume-bar';
-      var h = Math.random() * 75 + 10;
-      if (i >= 18 && i <= 22) h = Math.random() * 30 + 70;
-      if (i >= 28 && i <= 32) h = Math.random() * 30 + 65;
+      let h = Math.random() * 75 + 10;
+      if (i >= 18 && i <= 22) { h = Math.random() * 30 + 70; }
+      if (i >= 28 && i <= 32) { h = Math.random() * 30 + 65; }
       bar.style.height = h + '%';
-      if (h > 85) bar.classList.add('spike');
+      if (h > 85) { bar.classList.add('spike'); }
       container.appendChild(bar);
     }
 
     ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'].forEach(function (t) {
-      var s = document.createElement('span');
+      const s = document.createElement('span');
       s.textContent = t;
       xAxis.appendChild(s);
     });
@@ -456,25 +469,25 @@
    * @returns {void}
    */
   function initUserVolumeChart() {
-    var container = document.getElementById('user-volume-chart');
-    var xAxis = document.getElementById('user-volume-x-axis');
+    const container = document.getElementById('user-volume-chart');
+    const xAxis = document.getElementById('user-volume-x-axis');
 
-    for (var i = 0; i < 48; i++) {
-      var bar = document.createElement('div');
+    for (let i = 0; i < 48; i++) {
+      const bar = document.createElement('div');
       bar.className = 'user-volume-bar';
-      var h;
-      if (i < 12) h = 10 + i * 5 + Math.random() * 10;
-      else if (i < 24) h = 55 + Math.random() * 35;
-      else if (i < 36) h = 70 + Math.random() * 25;
-      else h = 80 - (i - 36) * 5 + Math.random() * 10;
+      let h;
+      if (i < 12) { h = 10 + i * 5 + Math.random() * 10; }
+      else if (i < 24) { h = 55 + Math.random() * 35; }
+      else if (i < 36) { h = 70 + Math.random() * 25; }
+      else { h = 80 - (i - 36) * 5 + Math.random() * 10; }
       h = Math.min(h, 100);
       bar.style.height = h + '%';
-      if (h > 85) bar.classList.add('peak');
+      if (h > 85) { bar.classList.add('peak'); }
       container.appendChild(bar);
     }
 
     ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'].forEach(function (t) {
-      var s = document.createElement('span');
+      const s = document.createElement('span');
       s.textContent = t;
       xAxis.appendChild(s);
     });
@@ -483,7 +496,7 @@
   /* =========================================
      ANALYTICS: LATENCY LINE CHART (Canvas)
      ========================================= */
-  var latencyData = [];
+  let latencyData = [];
 
   /**
    * Generate 24 hourly latency data points with simulated morning
@@ -493,10 +506,10 @@
    */
   function generateLatencyData() {
     latencyData = [];
-    for (var i = 0; i < 24; i++) {
-      var base = 100 + Math.sin(i * 0.4) * 30;
-      var spike = (i >= 9 && i <= 11) || (i >= 14 && i <= 16);
-      var val = spike ? base + Math.random() * 150 + 80 : base + Math.random() * 60;
+    for (let i = 0; i < 24; i++) {
+      const base = 100 + Math.sin(i * 0.4) * 30;
+      const spike = (i >= 9 && i <= 11) || (i >= 14 && i <= 16);
+      const val = spike ? base + Math.random() * 150 + 80 : base + Math.random() * 60;
       latencyData.push(Math.min(Math.round(val), 420));
     }
   }
@@ -510,32 +523,32 @@
    * @returns {void}
    */
   function drawLatencyChart() {
-    var canvas = document.getElementById('latency-canvas');
-    if (!canvas) return;
+    const canvas = document.getElementById('latency-canvas');
+    if (!canvas) { return; }
 
-    var container = canvas.parentElement;
-    var rect = container.getBoundingClientRect();
-    var dpr = window.devicePixelRatio || 1;
+    const container = canvas.parentElement;
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
 
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     canvas.style.width = rect.width + 'px';
     canvas.style.height = rect.height + 'px';
 
-    var ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    var w = rect.width;
-    var h = rect.height;
-    var padLeft = 44;
-    var padRight = 16;
-    var padTop = 12;
-    var padBottom = 28;
-    var chartW = w - padLeft - padRight;
-    var chartH = h - padTop - padBottom;
+    const w = rect.width;
+    const h = rect.height;
+    const padLeft = 44;
+    const padRight = 16;
+    const padTop = 12;
+    const padBottom = 28;
+    const chartW = w - padLeft - padRight;
+    const chartH = h - padTop - padBottom;
 
-    var maxVal = 450;
-    var ySteps = [0, 150, 300, 450];
+    const maxVal = 450;
+    const ySteps = [0, 150, 300, 450];
 
     ctx.clearRect(0, 0, w, h);
 
@@ -543,7 +556,7 @@
     ctx.strokeStyle = 'rgba(86, 145, 200, 0.15)';
     ctx.lineWidth = 1;
     ySteps.forEach(function (val) {
-      var y = padTop + chartH - (val / maxVal) * chartH;
+      const y = padTop + chartH - (val / maxVal) * chartH;
       ctx.beginPath();
       ctx.moveTo(padLeft, y);
       ctx.lineTo(padLeft + chartW, y);
@@ -555,14 +568,14 @@
     ctx.font = '10px monospace';
     ctx.textAlign = 'right';
     ySteps.forEach(function (val) {
-      var y = padTop + chartH - (val / maxVal) * chartH;
+      const y = padTop + chartH - (val / maxVal) * chartH;
       ctx.fillText(val + 'ms', padLeft - 8, y + 4);
     });
 
     // X-axis labels
     ctx.textAlign = 'center';
-    for (var xi = 0; xi < 24; xi += 4) {
-      var xPos = padLeft + (xi / 23) * chartW;
+    for (let xi = 0; xi < 24; xi += 4) {
+      const xPos = padLeft + (xi / 23) * chartW;
       ctx.fillText(String(xi).padStart(2, '0') + ':00', xPos, h - 6);
     }
 
@@ -570,14 +583,14 @@
     ctx.beginPath();
     ctx.moveTo(padLeft, padTop + chartH);
     latencyData.forEach(function (val, i) {
-      var x = padLeft + (i / (latencyData.length - 1)) * chartW;
-      var y = padTop + chartH - (val / maxVal) * chartH;
-      if (i === 0) ctx.lineTo(x, y);
-      else ctx.lineTo(x, y);
+      const x = padLeft + (i / (latencyData.length - 1)) * chartW;
+      const y = padTop + chartH - (val / maxVal) * chartH;
+      if (i === 0) { ctx.lineTo(x, y); }
+      else { ctx.lineTo(x, y); }
     });
     ctx.lineTo(padLeft + chartW, padTop + chartH);
     ctx.closePath();
-    var grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
+    const grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
     grad.addColorStop(0, 'rgba(230, 168, 23, 0.25)');
     grad.addColorStop(1, 'rgba(230, 168, 23, 0.02)');
     ctx.fillStyle = grad;
@@ -590,17 +603,17 @@
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     latencyData.forEach(function (val, i) {
-      var x = padLeft + (i / (latencyData.length - 1)) * chartW;
-      var y = padTop + chartH - (val / maxVal) * chartH;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const x = padLeft + (i / (latencyData.length - 1)) * chartW;
+      const y = padTop + chartH - (val / maxVal) * chartH;
+      if (i === 0) { ctx.moveTo(x, y); }
+      else { ctx.lineTo(x, y); }
     });
     ctx.stroke();
 
     // Data points
     latencyData.forEach(function (val, i) {
-      var x = padLeft + (i / (latencyData.length - 1)) * chartW;
-      var y = padTop + chartH - (val / maxVal) * chartH;
+      const x = padLeft + (i / (latencyData.length - 1)) * chartW;
+      const y = padTop + chartH - (val / maxVal) * chartH;
       ctx.beginPath();
       ctx.arc(x, y, 2.5, 0, Math.PI * 2);
       ctx.fillStyle = val > 280 ? '#E6A817' : '#6B6560';
@@ -608,7 +621,7 @@
     });
 
     // Threshold line
-    var threshY = padTop + chartH - (250 / maxVal) * chartH;
+    const threshY = padTop + chartH - (250 / maxVal) * chartH;
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = 'rgba(224, 72, 72, 0.5)';
     ctx.lineWidth = 1;
@@ -627,9 +640,8 @@
   /* =========================================
      ALERTS: EVENT STREAM & FEED
      ========================================= */
-  var alertsFeed = document.getElementById('alerts-feed');
-  var alertsCount = document.getElementById('alerts-count');
-  var totalAlerts = 0;
+  const alertsFeed = document.getElementById('alerts-feed');
+  const alertsCount = document.getElementById('alerts-count');
 
   /**
    * Open a Server-Sent Events connection to the backend for live alert
@@ -638,11 +650,11 @@
    * @returns {void}
    */
   function connectStream() {
-    var evtSource;
-    try { evtSource = new EventSource(STREAM_URL); } catch (e) { return; }
+    let evtSource;
+    try { evtSource = new EventSource(STREAM_URL); } catch (_e) { return; }
 
     evtSource.onmessage = function (e) {
-      try { processEvent(JSON.parse(e.data)); } catch (err) {}
+      try { processEvent(JSON.parse(e.data)); } catch (_err) { /* malformed event */ }
     };
 
     evtSource.onerror = function () {
@@ -659,7 +671,7 @@
    * @returns {void}
    */
   function processEvent(event) {
-    var type = (event.type || '').toLowerCase();
+    const type = (event.type || '').toLowerCase();
     if (type === 'error' || type === 'critical' || type === 'warning') {
       appendAlert(event);
     }
@@ -674,9 +686,8 @@
    * @returns {void}
    */
   function appendAlert(event) {
-    var row = buildAlertRow(event);
+    const row = buildAlertRow(event);
     alertsFeed.prepend(row);
-    totalAlerts++;
 
     while (alertsFeed.children.length > 150) {
       alertsFeed.removeChild(alertsFeed.lastChild);
@@ -692,21 +703,21 @@
    * @returns {void}
    */
   function updateFilterCounts() {
-    var counts = { critical: 0, error: 0, warning: 0, info: 0 };
+    const counts = { critical: 0, error: 0, warning: 0, info: 0 };
     alertsFeed.querySelectorAll('.alert-row').forEach(function (row) {
       if (row._eventType && counts.hasOwnProperty(row._eventType)) {
         counts[row._eventType]++;
       }
     });
 
-    var critEl = document.getElementById('count-critical');
-    var errEl = document.getElementById('count-error');
-    var warnEl = document.getElementById('count-warning');
-    var infoEl = document.getElementById('count-info');
-    if (critEl) critEl.textContent = counts.critical;
-    if (errEl) errEl.textContent = counts.error;
-    if (warnEl) warnEl.textContent = counts.warning;
-    if (infoEl) infoEl.textContent = counts.info;
+    const critEl = document.getElementById('count-critical');
+    const errEl = document.getElementById('count-error');
+    const warnEl = document.getElementById('count-warning');
+    const infoEl = document.getElementById('count-info');
+    if (critEl) { critEl.textContent = counts.critical; }
+    if (errEl) { errEl.textContent = counts.error; }
+    if (warnEl) { warnEl.textContent = counts.warning; }
+    if (infoEl) { infoEl.textContent = counts.info; }
   }
 
   /**
@@ -718,20 +729,20 @@
    * @returns {HTMLElement} The assembled alert row div.
    */
   function buildAlertRow(event) {
-    var row = document.createElement('div');
+    const row = document.createElement('div');
     row.className = 'alert-row';
 
-    var type = (event.type || '').toLowerCase();
-    if (type === 'critical') row.classList.add('sev-critical');
-    else if (type === 'error') row.classList.add('sev-error');
-    else row.classList.add('sev-warning');
+    const type = (event.type || '').toLowerCase();
+    if (type === 'critical') { row.classList.add('sev-critical'); }
+    else if (type === 'error') { row.classList.add('sev-error'); }
+    else { row.classList.add('sev-warning'); }
 
-    var title = (event.data && (event.data.title || event.data.message)) || event.type || 'Unknown';
-    var tags = event.tags || [];
-    var kvPairs = extractKVPairs(event.data);
+    const title = (event.data && (event.data.title || event.data.message)) || event.type || 'Unknown';
+    const tags = event.tags || [];
+    const kvPairs = extractKVPairs(event.data);
 
-    var version = event.deployVersion || '';
-    var tagsHtml = '';
+    const version = event.deployVersion || '';
+    let tagsHtml = '';
     if (version) {
       tagsHtml += '<span class="alert-tag version-tag">' + escapeHtml(version) + '</span>';
     }
@@ -739,11 +750,11 @@
       return '<span class="alert-tag">' + escapeHtml(t) + '</span>';
     }).join('');
 
-    var kvHtml = kvPairs.map(function (kv) {
+    const kvHtml = kvPairs.map(function (kv) {
       return '<span class="alert-kv"><span class="key">' + escapeHtml(kv.key) + ':</span> <span class="value">' + escapeHtml(kv.value) + '</span></span>';
     }).join('');
 
-    var expandHtml = buildExpandPanel(event, type);
+    const expandHtml = buildExpandPanel(event, type);
 
     row.innerHTML =
       '<div class="alert-time">' +
@@ -781,9 +792,9 @@
    * @returns {string} HTML string for the expand panel.
    */
   function buildExpandPanel(event, type) {
-    var data = event.data || {};
-    var allKeys = Object.keys(data);
-    var items = '';
+    const data = event.data || {};
+    const allKeys = Object.keys(data);
+    let items = '';
 
     items += '<div class="alert-expand-item">' +
       '<span class="alert-expand-key">Severity</span>' +
@@ -805,7 +816,7 @@
         '<span class="alert-expand-value">' + escapeHtml(event.tags.join(', ')) + '</span></div>';
     }
 
-    var stackHtml = '';
+    let stackHtml = '';
     allKeys.forEach(function (key) {
       if (key === 'stack' && data[key]) {
         stackHtml = '<div class="alert-expand-stack">' +
@@ -813,11 +824,11 @@
           '<pre>' + escapeHtml(String(data[key])) + '</pre></div>';
         return;
       }
-      var val = data[key];
-      if (typeof val === 'object') val = JSON.stringify(val);
+      const val = data[key];
+      const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
       items += '<div class="alert-expand-item">' +
         '<span class="alert-expand-key">' + escapeHtml(key) + '</span>' +
-        '<span class="alert-expand-value">' + escapeHtml(String(val)) + '</span></div>';
+        '<span class="alert-expand-value">' + escapeHtml(displayVal) + '</span></div>';
     });
 
     return '<div class="alert-expand">' +
@@ -835,8 +846,8 @@
    * @returns {string} Formatted time with milliseconds.
    */
   function formatTimestamp(iso) {
-    if (!iso) return '--:--:--';
-    var d = new Date(iso);
+    if (!iso) { return '--:--:--'; }
+    const d = new Date(iso);
     return d.toLocaleTimeString('en-US', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
   }
 
@@ -847,10 +858,10 @@
    * @returns {string} Relative time label (e.g. "just now", "3 mins ago").
    */
   function getLastSeen(iso) {
-    if (!iso) return 'just now';
-    var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-    if (diff < 1) return 'just now';
-    if (diff === 1) return '1 min ago';
+    if (!iso) { return 'just now'; }
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (diff < 1) { return 'just now'; }
+    if (diff === 1) { return '1 min ago'; }
     return diff + ' mins ago';
   }
 
@@ -862,12 +873,12 @@
    * @returns {Object[]} Array of { key, value } pairs.
    */
   function extractKVPairs(data) {
-    if (!data || typeof data !== 'object') return [];
-    var skip = ['title', 'message'];
-    var pairs = [];
+    if (!data || typeof data !== 'object') { return []; }
+    const skip = ['title', 'message'];
+    const pairs = [];
     Object.keys(data).forEach(function (key) {
-      if (skip.indexOf(key) !== -1) return;
-      if (typeof data[key] === 'object') return;
+      if (skip.indexOf(key) !== -1) { return; }
+      if (typeof data[key] === 'object') { return; }
       pairs.push({ key: key, value: String(data[key]) });
     });
     return pairs.slice(0, 6);
@@ -880,7 +891,7 @@
    * @returns {string} HTML-safe string.
    */
   function escapeHtml(str) {
-    var div = document.createElement('div');
+    const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
   }
@@ -895,7 +906,7 @@
    * @returns {void}
    */
   function loadSeedData() {
-    var seeds = [
+    const seeds = [
       {
         type: 'critical', timestamp: new Date(Date.now() - 120000).toISOString(),
         deployVersion: 'v2.14.3',
@@ -962,11 +973,11 @@
   loadSeedData();
 
   window.addEventListener('resize', function () {
-    if (viewAnalytics.classList.contains('active')) drawLatencyChart();
+    if (viewAnalytics.classList.contains('active')) { drawLatencyChart(); }
   });
 
   viewAnalytics.addEventListener('transitionend', function () {
-    if (viewAnalytics.classList.contains('active')) drawLatencyChart();
+    if (viewAnalytics.classList.contains('active')) { drawLatencyChart(); }
   });
 
   setTimeout(drawLatencyChart, 100);
