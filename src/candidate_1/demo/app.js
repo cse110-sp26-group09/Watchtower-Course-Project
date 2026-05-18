@@ -129,8 +129,9 @@
     if (loggedInUser) {
       appContainer.innerHTML =
         "<h2>Account</h2>" +
-        '<div class="alert success">Logged in as <strong>' + loggedInUser + "</strong></div>" +
+        '<div class="alert success">Logged in as <strong id="account-username"></strong></div>' +
         '<div class="action-group"><button class="btn outline" onclick="window.__logout()">Log Out</button></div>';
+      document.getElementById("account-username").textContent = loggedInUser;
       return;
     }
 
