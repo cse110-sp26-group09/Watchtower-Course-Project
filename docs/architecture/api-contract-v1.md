@@ -1,6 +1,6 @@
 # API Contract v1
 
-**Applies to:** `src/prototype_1` (Candidate 1), `src/candidate_2` (Candidate 2)  
+**Applies to:** `src/prototype_1`, `src/prototype_2`  
 **Status:** Accepted  
 **Sprint:** 2
 

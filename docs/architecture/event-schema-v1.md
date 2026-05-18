@@ -1,6 +1,6 @@
 # Shared Event Schema v1
 
-**Applies to:** `src/prototype_1` (Candidate 1), `src/candidate_2` (Candidate 2)  
+**Applies to:** `src/prototype_1`, `src/prototype_2`  
 **Status:** Accepted  
 **Sprint:** 2
 
@@ -153,7 +153,7 @@ Sent via `WatchTower.trackEvent(name, payload)`.
 
 ## Validation Rules
 
-The `isValidEvent` utility (in `src/prototype_1/utils/event-utils.js` and `src/candidate_2/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
+The `isValidEvent` utility (in `src/prototype_2/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
 
 An event **passes** validation when:
 1. It is a non-null object.

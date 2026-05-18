@@ -7,7 +7,7 @@ A standalone static frontend candidate based on the WatchTower wireframes.
 Open `index.html` directly in a browser:
 
 ```text
-src/candidate_1/index.html
+src/prototype_1/index.html
 ```
 
 ## What Is Included

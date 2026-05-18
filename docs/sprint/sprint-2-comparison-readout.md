@@ -61,7 +61,7 @@ In short: keep prototype 2's working SDK, server, event utilities, and event flo
 - `SECURITY.md` security policy.
 - Shared event schema v1 and API contract v1 in `docs/architecture/`.
 
-A small but real risk: the unit test file `tests/unit/event-utils.test.js` currently imports from `../../src/prototype_1/utils/event-utils`, which does not exist (the file lives at `src/prototype_2/utils/event-utils.js`). The `npm start` script in `package.json` similarly points at `src/prototype_1/server/server.js`, which also does not exist. Both should be repointed (or the utilities moved) as part of Sprint 3 cleanup. This is a cross-cutting issue, not a prototype-specific defect.
+Note on test and start paths: the unit test file `tests/unit/event-utils.test.js` and the `npm start` script in `package.json` originally referenced the old `candidate_*` paths (rewritten to `src/prototype_1/...`) and broke after the rename to `prototype_*`. As part of this readout work they were repointed to the real locations in `src/prototype_2/`. The deeper integration alignment between tests and the chosen hybrid prototype is still listed as a Sprint 3 follow-up.
 
 ---
 
