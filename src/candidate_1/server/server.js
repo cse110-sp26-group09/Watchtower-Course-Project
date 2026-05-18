@@ -12,7 +12,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const PORT = process.env.PORT || 3100;
+const PORT = process.env.PORT || 3000;
 const MAX_EVENTS = 10000;
 const ACTIVE_USER_WINDOW = 5 * 60 * 1000;
 
