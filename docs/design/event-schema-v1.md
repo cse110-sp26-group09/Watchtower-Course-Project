@@ -1,6 +1,6 @@
 # Shared Event Schema v1 + API Contract
 
-**Applies to:** `src/candidate_1`, `src/candidate_2`  
+**Applies to:** `src/prototype_1`, `src/prototype_2`  
 **Status:** Accepted  
 **Sprint:** 2
 
@@ -327,7 +327,7 @@ data: [{"type":"error","timestamp":"2026-05-16T18:00:01.234Z","data":{...},"rece
 
 ## Validation Rules
 
-The `isValidEvent` utility (in `src/candidate_1/` and `src/candidate_2/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
+The `isValidEvent` utility (in `src/prototype_2/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
 
 An event **passes** validation when:
 1. It is a non-null object.

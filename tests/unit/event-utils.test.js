@@ -9,7 +9,7 @@ const {
   normalizeFeedbackEvent,
   calculateAverage,
   calculatePercentile,
-} = require("../../src/prototype_1/utils/event-utils");
+} = require("../../src/prototype_2/utils/event-utils");
 
 describe("createBaseEvent", () => {
   test("includes type, timestamp, and data fields", () => {

@@ -5,7 +5,7 @@ Link [here](https://courseproject-8qkfva2k4-akatsuki9.vercel.app/)
 
 ## Deploy
 
-Deploy this folder (`src/prototype_1/hosted_demo/`) to any static host, such as GitHub Pages, Netlify, or Vercel. There is no build step.
+Deploy this folder (`src/prototype_2/hosted_demo/`) to any static host, such as GitHub Pages, Netlify, or Vercel. There is no build step.
 
 All asset paths are relative, so the demo works from a domain root or from a subpath.
 
@@ -21,7 +21,7 @@ The demo does not need a backend for this first hosted preview.
 
 ## Local Preview
 
-From `src/prototype_1/`:
+From `src/prototype_2/`:
 
 ```bash
 npx serve hosted_demo

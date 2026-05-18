@@ -5,7 +5,7 @@ A real-time observability dashboard built with vanilla HTML, CSS, and JavaScript
 ## Project Structure
 
 ```
-candidate_2/
+prototype_2/
   index.html      — Main HTML layout (sidebar, 3 views, settings panel)
   style.css       — All styling and theme variables ("Dark Slate & Sandstone")
   dashboard.js    — UI logic: view switching, charts, alerts feed, seed data

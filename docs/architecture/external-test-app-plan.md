@@ -10,7 +10,7 @@
 
 WatchTower is meant to monitor external websites through its SDK, not only demo pages that live inside the same repository.
 
-For now, the repository keeps local and hosted demo pages inside `src/prototype_1/` so the team can develop, test, and show the prototype quickly. Later, we should separate the monitored test app from the WatchTower repo to better reflect real usage.
+For now, the repository keeps local and hosted demo pages inside `src/prototype_2/` so the team can develop, test, and show the prototype quickly. Later, we should separate the monitored test app from the WatchTower repo to better reflect real usage.
 
 ---
 
