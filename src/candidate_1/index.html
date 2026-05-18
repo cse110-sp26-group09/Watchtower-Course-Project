@@ -24,17 +24,9 @@
           <span class="alert-dot" aria-hidden="true"></span>
           <span>3 active issues</span>
         </button>
-        <label class="environment-picker">
-          <span>Environment</span>
-          <select aria-label="Environment">
-            <option>Production</option>
-            <option>Staging</option>
-            <option>Canary</option>
-          </select>
-        </label>
-        <div class="live-pill" role="status" aria-label="Connected to observed software">
+        <div class="live-pill" id="live-status-pill" role="status" aria-label="Connected to observed software">
           <span class="live-dot" aria-hidden="true"></span>
-          <span>Live</span>
+          <span id="live-status-text">Live</span>
         </div>
       </div>
     </header>
@@ -74,8 +66,8 @@
             <h1 id="home-title">Production health</h1>
           </div>
           <div class="refresh-note">
-            <span>Updated 12 sec ago</span>
-            <button class="icon-button" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
+            <span id="last-updated">Waiting for data</span>
+            <button class="icon-button" id="refresh-dashboard" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20 12a8 8 0 1 1-2.3-5.7"></path>
                 <path d="M20 4v6h-6"></path>
@@ -92,24 +84,24 @@
           </div>
           <div class="summary-metrics" role="group" aria-label="Key metrics">
             <div class="metric-tile">
-              <span class="metric-label">Uptime</span>
-              <strong>99.94%</strong>
-              <span class="metric-trend positive">+0.02%</span>
+              <span class="metric-label">Active users</span>
+              <strong id="active-users">0</strong>
+              <span class="metric-trend positive">last 5 minutes</span>
             </div>
             <div class="metric-tile">
-              <span class="metric-label">P95 latency</span>
-              <strong>184 ms</strong>
+              <span class="metric-label">Total events</span>
+              <strong id="total-events">0</strong>
               <span class="metric-trend neutral">stable</span>
             </div>
             <div class="metric-tile warning">
-              <span class="metric-label">Error rate</span>
-              <strong>2.8%</strong>
-              <span class="metric-trend negative">+1.1%</span>
+              <span class="metric-label">Recent errors</span>
+              <strong id="total-errors">0</strong>
+              <span class="metric-trend negative">needs review</span>
             </div>
             <div class="metric-tile">
-              <span class="metric-label">Rating</span>
-              <strong>4.3</strong>
-              <span class="metric-trend neutral">1,284 users</span>
+              <span class="metric-label">Versions tracked</span>
+              <strong id="version-count">0</strong>
+              <span class="metric-trend neutral">deploys seen</span>
             </div>
           </div>
         </section>
@@ -124,70 +116,7 @@
               <button class="ghost-button" type="button">Export CSV</button>
             </div>
 
-            <div class="issue-list">
-              <article class="issue-row severity-critical">
-                <div class="issue-main">
-                  <span class="severity-pill">Critical</span>
-                  <h3>Checkout promise rejection</h3>
-                  <p>Payment gateway returned undefined response during cart submit.</p>
-                  <div class="issue-meta">
-                    <span>v1.2.0-beta</span>
-                    <span>prod-us-west</span>
-                    <span>10:42 AM</span>
-                  </div>
-                </div>
-                <label class="assign-control">
-                  <span>Assign</span>
-                  <select aria-label="Assign checkout promise rejection">
-                    <option>Priya</option>
-                    <option>James</option>
-                    <option>Aditya</option>
-                  </select>
-                </label>
-              </article>
-
-              <article class="issue-row severity-warning">
-                <div class="issue-main">
-                  <span class="severity-pill">Warning</span>
-                  <h3>Search latency spike</h3>
-                  <p>P95 response time exceeded 300 ms for authenticated sessions.</p>
-                  <div class="issue-meta">
-                    <span>v1.2.0-beta</span>
-                    <span>prod-us-west</span>
-                    <span>10:36 AM</span>
-                  </div>
-                </div>
-                <label class="assign-control">
-                  <span>Assign</span>
-                  <select aria-label="Assign search latency spike">
-                    <option>Waleed</option>
-                    <option>Hemendra</option>
-                    <option>Jason</option>
-                  </select>
-                </label>
-              </article>
-
-              <article class="issue-row severity-info">
-                <div class="issue-main">
-                  <span class="severity-pill">Info</span>
-                  <h3>Feedback rating dip</h3>
-                  <p>Average rating moved from 4.7 to 4.3 after the latest deploy.</p>
-                  <div class="issue-meta">
-                    <span>v1.2.0-beta</span>
-                    <span>prod-us-west</span>
-                    <span>10:21 AM</span>
-                  </div>
-                </div>
-                <label class="assign-control">
-                  <span>Assign</span>
-                  <select aria-label="Assign feedback rating dip">
-                    <option>Hieu</option>
-                    <option>Fahad</option>
-                    <option>James</option>
-                  </select>
-                </label>
-              </article>
-            </div>
+            <div class="issue-list" id="issue-list"></div>
           </section>
 
           <section class="panel service-panel" aria-labelledby="services-title">
@@ -197,40 +126,7 @@
                 <h2 id="services-title">Current status</h2>
               </div>
             </div>
-            <div class="service-stack">
-              <div class="service-row">
-                <span class="service-dot good" aria-hidden="true"></span>
-                <div>
-                  <strong>Frontend SDK</strong>
-                  <span>10,482 events/min</span>
-                </div>
-                <span class="service-state">Online</span>
-              </div>
-              <div class="service-row">
-                <span class="service-dot warning" aria-hidden="true"></span>
-                <div>
-                  <strong>Ingestion API</strong>
-                  <span>184 ms p95</span>
-                </div>
-                <span class="service-state">Watch</span>
-              </div>
-              <div class="service-row">
-                <span class="service-dot good" aria-hidden="true"></span>
-                <div>
-                  <strong>Event store</strong>
-                  <span>99.99% durable</span>
-                </div>
-                <span class="service-state">Online</span>
-              </div>
-              <div class="service-row">
-                <span class="service-dot danger" aria-hidden="true"></span>
-                <div>
-                  <strong>Alerts</strong>
-                  <span>3 unresolved</span>
-                </div>
-                <span class="service-state">Action</span>
-              </div>
-            </div>
+            <div class="service-stack" id="service-stack"></div>
           </section>
 
           <section class="panel build-panel" aria-labelledby="build-title">
@@ -240,24 +136,7 @@
                 <h2 id="build-title">Build metadata</h2>
               </div>
             </div>
-            <div class="metadata-grid">
-              <div>
-                <span>Build ID</span>
-                <strong>build-4821</strong>
-              </div>
-              <div>
-                <span>Commit</span>
-                <strong>9f31c2a</strong>
-              </div>
-              <div>
-                <span>Branch</span>
-                <strong>release/watchtower</strong>
-              </div>
-              <div>
-                <span>Deployed</span>
-                <strong>May 15, 10:02 AM</strong>
-              </div>
-            </div>
+            <div class="metadata-grid" id="build-metadata"></div>
           </section>
 
           <section class="panel activity-panel" aria-labelledby="activity-title">
@@ -267,24 +146,7 @@
                 <h2 id="activity-title">Recent events</h2>
               </div>
             </div>
-            <ol class="event-timeline">
-              <li>
-                <span class="timeline-time">10:42</span>
-                <span class="timeline-copy">Unhandled promise rejection on `/checkout`</span>
-              </li>
-              <li>
-                <span class="timeline-time">10:40</span>
-                <span class="timeline-copy">Page load `/products` completed in 142 ms</span>
-              </li>
-              <li>
-                <span class="timeline-time">10:36</span>
-                <span class="timeline-copy">Latency threshold alert on Search API</span>
-              </li>
-              <li>
-                <span class="timeline-time">10:31</span>
-                <span class="timeline-copy">New feedback: "Checkout froze after submit"</span>
-              </li>
-            </ol>
+            <ol class="event-timeline" id="activity-feed"></ol>
           </section>
         </div>
       </section>
@@ -309,36 +171,20 @@
                 <p class="eyebrow">Users</p>
                 <h2 id="user-chart-title">User count over time</h2>
               </div>
-              <span class="delta-badge positive">+12.4%</span>
+              <span class="delta-badge positive" id="user-delta">0 active</span>
             </div>
-            <div class="bar-chart" role="img" aria-label="User count by day">
-              <div class="bar" style="--bar-height: 45%"><span>Mon</span></div>
-              <div class="bar" style="--bar-height: 52%"><span>Tue</span></div>
-              <div class="bar" style="--bar-height: 58%"><span>Wed</span></div>
-              <div class="bar" style="--bar-height: 63%"><span>Thu</span></div>
-              <div class="bar" style="--bar-height: 75%"><span>Fri</span></div>
-              <div class="bar" style="--bar-height: 88%"><span>Sat</span></div>
-              <div class="bar highlight" style="--bar-height: 96%"><span>Sun</span></div>
-            </div>
+            <div class="bar-chart" id="user-chart" role="img" aria-label="User count over time"></div>
           </section>
 
           <section class="panel wide-panel" aria-labelledby="purchase-chart-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Revenue signal</p>
-                <h2 id="purchase-chart-title">Subscriptions and purchases</h2>
+                <p class="eyebrow">Tracked actions</p>
+                <h2 id="purchase-chart-title">Custom activity over time</h2>
               </div>
-              <span class="delta-badge positive">+8.1%</span>
+              <span class="delta-badge positive" id="purchase-delta">0 actions</span>
             </div>
-            <div class="bar-chart purchase-chart" role="img" aria-label="Purchase count by day">
-              <div class="bar" style="--bar-height: 40%"><span>Mon</span></div>
-              <div class="bar" style="--bar-height: 48%"><span>Tue</span></div>
-              <div class="bar" style="--bar-height: 56%"><span>Wed</span></div>
-              <div class="bar" style="--bar-height: 61%"><span>Thu</span></div>
-              <div class="bar" style="--bar-height: 72%"><span>Fri</span></div>
-              <div class="bar" style="--bar-height: 86%"><span>Sat</span></div>
-              <div class="bar highlight" style="--bar-height: 100%"><span>Sun</span></div>
-            </div>
+            <div class="bar-chart purchase-chart" id="purchase-chart" role="img" aria-label="Custom and checkout event activity"></div>
           </section>
 
           <section class="panel line-panel" aria-labelledby="latency-chart-title">
@@ -348,7 +194,7 @@
                 <h2 id="latency-chart-title">Latency by route</h2>
               </div>
             </div>
-            <svg class="line-chart" viewBox="0 0 640 260" role="img" aria-labelledby="latency-svg-title">
+            <svg class="line-chart" id="latency-chart" viewBox="0 0 640 260" role="img" aria-labelledby="latency-svg-title">
               <title id="latency-svg-title">Latency line chart showing checkout above other routes</title>
               <g class="grid-lines">
                 <path d="M60 40H610"></path>
@@ -357,14 +203,10 @@
                 <path d="M60 190H610"></path>
                 <path d="M60 240H610"></path>
               </g>
-              <path class="line checkout" d="M60 154 C130 126 170 132 230 102 S345 82 415 96 520 70 610 58"></path>
-              <path class="line search" d="M60 184 C130 170 178 176 235 150 S342 128 415 138 520 120 610 112"></path>
-              <path class="line products" d="M60 204 C132 190 178 196 235 182 S344 164 415 170 520 154 610 146"></path>
+              <path class="line checkout" id="latency-line" d="M60 240 L610 240"></path>
             </svg>
-            <div class="chart-legend">
-              <span><i class="legend-swatch checkout"></i>Checkout</span>
-              <span><i class="legend-swatch search"></i>Search</span>
-              <span><i class="legend-swatch products"></i>Products</span>
+            <div class="chart-legend" id="latency-legend">
+              <span><i class="legend-swatch checkout"></i>Waiting for pageload samples</span>
             </div>
           </section>
 
@@ -376,14 +218,14 @@
               </div>
             </div>
             <div class="rating-block">
-              <strong>4.3</strong>
-              <span>average rating</span>
-              <div class="rating-bars">
-                <span style="--rating-width: 72%">5 stars</span>
-                <span style="--rating-width: 18%">4 stars</span>
-                <span style="--rating-width: 6%">3 stars</span>
-                <span style="--rating-width: 3%">2 stars</span>
-                <span style="--rating-width: 1%">1 star</span>
+              <strong id="rating-average">0.0</strong>
+              <span id="rating-caption">average rating</span>
+              <div class="rating-bars" id="rating-bars">
+                <span style="--rating-width: 0%">5 stars</span>
+                <span style="--rating-width: 0%">4 stars</span>
+                <span style="--rating-width: 0%">3 stars</span>
+                <span style="--rating-width: 0%">2 stars</span>
+                <span style="--rating-width: 0%">1 star</span>
               </div>
             </div>
           </section>
@@ -391,17 +233,17 @@
           <section class="panel" aria-labelledby="breakdown-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Environment</p>
+                <p class="eyebrow">Activity mix</p>
                 <h2 id="breakdown-title">Event breakdown</h2>
               </div>
             </div>
             <div class="donut-wrap" role="img" aria-label="Event breakdown chart">
-              <div class="donut" aria-hidden="true"></div>
-              <ul class="breakdown-list">
-                <li><span class="legend-dot teal"></span>Performance <strong>48%</strong></li>
-                <li><span class="legend-dot coral"></span>Errors <strong>19%</strong></li>
-                <li><span class="legend-dot amber"></span>Feedback <strong>12%</strong></li>
-                <li><span class="legend-dot blue"></span>Clicks <strong>21%</strong></li>
+              <div class="donut" id="breakdown-donut" aria-hidden="true"></div>
+              <ul class="breakdown-list" id="breakdown-list">
+                <li><span class="legend-dot teal"></span>Performance <strong>0%</strong></li>
+                <li><span class="legend-dot coral"></span>Errors <strong>0%</strong></li>
+                <li><span class="legend-dot amber"></span>Feedback <strong>0%</strong></li>
+                <li><span class="legend-dot blue"></span>Clicks <strong>0%</strong></li>
               </ul>
             </div>
           </section>
@@ -522,20 +364,25 @@
                 </svg>
               </button>
               <div class="settings-content">
-                <label class="toggle-row">
-                  <span>
-                    <strong>Critical alerts</strong>
-                    <small>Send notifications when thresholds are breached.</small>
-                  </span>
-                  <input class="toggle-input" type="checkbox" checked>
+                <label class="field-row" for="notification-mode">
+                  <span>Notification type</span>
+                  <select id="notification-mode">
+                    <option selected>Critical only</option>
+                    <option>Critical and warnings</option>
+                    <option>All activity</option>
+                    <option>Muted</option>
+                  </select>
                 </label>
-                <label class="toggle-row">
-                  <span>
-                    <strong>Pause notifications</strong>
-                    <small>Snooze non-critical alerts for two hours.</small>
-                  </span>
-                  <input class="toggle-input" type="checkbox">
-                </label>
+                <div class="time-grid">
+                  <label class="field-row" for="notification-start">
+                    <span>Notify after</span>
+                    <input id="notification-start" type="time" value="08:00">
+                  </label>
+                  <label class="field-row" for="notification-end">
+                    <span>Notify until</span>
+                    <input id="notification-end" type="time" value="18:00">
+                  </label>
+                </div>
                 <label class="field-row" for="error-threshold">
                   <span>Error rate threshold</span>
                   <select id="error-threshold">
