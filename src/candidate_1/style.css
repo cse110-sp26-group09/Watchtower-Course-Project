@@ -142,8 +142,7 @@ a {
 }
 
 .alert-pill,
-.live-pill,
-.environment-picker {
+.live-pill {
   display: inline-flex;
   align-items: center;
   min-height: 38px;
@@ -165,6 +164,15 @@ a {
 .alert-pill:hover {
   border-color: rgba(212, 93, 76, 0.4);
   background: var(--coral-soft);
+}
+
+.live-pill.offline {
+  color: var(--coral);
+}
+
+.live-pill.offline .live-dot {
+  background: var(--coral);
+  box-shadow: 0 0 0 4px rgba(212, 93, 76, 0.12);
 }
 
 .alert-dot,
@@ -189,21 +197,11 @@ a {
   padding: 0 12px;
 }
 
-.environment-picker {
-  gap: 10px;
-  padding: 0 8px 0 12px;
-}
-
-.environment-picker span {
-  color: var(--muted);
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-.environment-picker select,
+.field-row input[type="time"],
+.field-row input[type="text"],
 .assign-control select,
 .field-row select {
-  min-height: 30px;
+  min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #ffffff;
@@ -441,6 +439,10 @@ code {
 
 .metric-trend.negative {
   color: var(--coral);
+}
+
+.metric-trend.neutral {
+  color: var(--muted);
 }
 
 .home-grid,
@@ -707,6 +709,13 @@ code {
 
 .event-timeline li:last-child {
   border-bottom: 0;
+}
+
+.empty-state.compact {
+  padding: 24px 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
 }
 
 .timeline-time {
@@ -1062,12 +1071,6 @@ code {
 
 .field-row input[type="text"] {
   width: 100%;
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 10px;
-  background: #ffffff;
-  color: var(--ink);
 }
 
 .toggle-row,
@@ -1114,6 +1117,12 @@ code {
 
 .range-row input {
   width: 150px;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .split-actions,
@@ -1201,7 +1210,6 @@ body.text-compact {
     font-size: 16px;
   }
 
-  .environment-picker,
   .alert-pill {
     display: none;
   }
@@ -1349,5 +1357,9 @@ body.text-compact {
 
   .range-row input {
     width: 100%;
+  }
+
+  .time-grid {
+    grid-template-columns: 1fr;
   }
 }
