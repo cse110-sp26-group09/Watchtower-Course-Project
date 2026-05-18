@@ -13,12 +13,14 @@
   var DEFAULT_ENDPOINT = "/api/events";
   var FLUSH_INTERVAL = 2000;
   var SESSION_KEY = "__wt_sid";
+  var inMemorySessionId = null;
+  var fallbackSessionCounter = 0;
 
   /**
    * Generate a short pseudo-random identifier for browser sessions.
    *
-   * Uses the browser crypto API when available and falls back to
-   * `Math.random()` so the SDK still works in simpler environments.
+   * Uses the browser crypto API when available and falls back to a
+   * deterministic timestamp-based identifier in restricted environments.
    *
    * @returns {string} Session identifier such as `"a1b2c3d4-e5f6-4789"`.
    */
@@ -29,18 +31,55 @@
 
     if (cryptoObj && typeof cryptoObj.getRandomValues === "function") {
       cryptoObj.getRandomValues(bytes);
-    } else {
-      while (index < bytes.length) {
-        bytes[index] = Math.floor(Math.random() * 256);
-        index += 1;
-      }
-      index = 0;
+      return "xxxxxxxx-xxxx-4xxx".replace(/x/g, function () {
+        var value = bytes[index++] & 0x0f;
+        return value.toString(16);
+      });
     }
 
-    return "xxxxxxxx-xxxx-4xxx".replace(/x/g, function () {
-      var value = bytes[index++] & 0x0f;
-      return value.toString(16);
-    });
+    fallbackSessionCounter += 1;
+    return [
+      "fallback",
+      Date.now().toString(16),
+      fallbackSessionCounter.toString(16),
+    ].join("-");
+  }
+
+  /**
+   * Safely read a session value from browser storage.
+   *
+   * Some browser contexts disable storage access and throw when reading
+   * `sessionStorage`, so this helper falls back to `null`.
+   *
+   * @param {string} key - Storage key to read.
+   * @returns {?string} Stored value when available.
+   */
+  function readSessionValue(key) {
+    try {
+      if (!global.sessionStorage) {
+        return null;
+      }
+      return global.sessionStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Safely persist a session value in browser storage.
+   *
+   * @param {string} key - Storage key to write.
+   * @param {string} value - Value to store.
+   * @returns {void}
+   */
+  function writeSessionValue(key, value) {
+    try {
+      if (global.sessionStorage) {
+        global.sessionStorage.setItem(key, value);
+      }
+    } catch (error) {
+      // Ignore storage failures and keep the in-memory fallback instead.
+    }
   }
 
   /**
@@ -49,10 +88,11 @@
    * @returns {string} Current tab session id.
    */
   function getSessionId() {
-    var sessionId = sessionStorage.getItem(SESSION_KEY);
+    var sessionId = readSessionValue(SESSION_KEY) || inMemorySessionId;
     if (!sessionId) {
       sessionId = generateId();
-      sessionStorage.setItem(SESSION_KEY, sessionId);
+      inMemorySessionId = sessionId;
+      writeSessionValue(SESSION_KEY, sessionId);
     }
     return sessionId;
   }
