@@ -14,25 +14,40 @@
   var FLUSH_INTERVAL = 2000;
   var SESSION_KEY = "__wt_sid";
 
+  /**
+   * Generate a short pseudo-random identifier for browser sessions.
+   *
+   * Uses the browser crypto API when available and falls back to
+   * `Math.random()` so the SDK still works in simpler environments.
+   *
+   * @returns {string} Session identifier such as `"a1b2c3d4-e5f6-4789"`.
+   */
   function generateId() {
-    var bytes = new Uint8Array(12);
-    global.crypto.getRandomValues(bytes);
-    var i = 0;
     var cryptoObj = global.crypto || global.msCrypto;
-      return (bytes[i++] & 15).toString(16);
-      throw new Error("Secure random number generator is not available.");
+    var bytes = new Uint8Array(12);
+    var index = 0;
+
+    if (cryptoObj && typeof cryptoObj.getRandomValues === "function") {
+      cryptoObj.getRandomValues(bytes);
+    } else {
+      while (index < bytes.length) {
+        bytes[index] = Math.floor(Math.random() * 256);
+        index += 1;
+      }
+      index = 0;
     }
 
-    var bytes = new Uint8Array(12);
-    cryptoObj.getRandomValues(bytes);
-    var i = 0;
-
     return "xxxxxxxx-xxxx-4xxx".replace(/x/g, function () {
-      var value = bytes[i++] & 0x0f;
+      var value = bytes[index++] & 0x0f;
       return value.toString(16);
     });
   }
 
+  /**
+   * Return a stable session identifier for the current tab.
+   *
+   * @returns {string} Current tab session id.
+   */
   function getSessionId() {
     var sessionId = sessionStorage.getItem(SESSION_KEY);
     if (!sessionId) {
@@ -42,6 +57,16 @@
     return sessionId;
   }
 
+  /**
+   * Create a new WatchTower SDK instance.
+   *
+   * @class
+   * @param {Object} [config] - Optional SDK configuration.
+   * @param {string} [config.endpoint] - Events API endpoint.
+   * @param {string} [config.deployVersion] - Deploy version label.
+   * @param {string} [config.appName] - Application name label.
+   * @param {string} [config.userId] - Initial user identifier.
+   */
   function WatchTower(config) {
     config = config || {};
     this.endpoint = config.endpoint || DEFAULT_ENDPOINT;
@@ -57,6 +82,14 @@
     this._startFlush();
   }
 
+  /**
+   * Queue a new event for the next flush cycle.
+   *
+   * @private
+   * @param {string} type - Event type name.
+   * @param {Object} data - Event payload.
+   * @returns {void}
+   */
   WatchTower.prototype._enqueue = function (type, data) {
     this._queue.push({
       type: type,
@@ -71,6 +104,14 @@
     });
   };
 
+  /**
+   * Send a batch of queued events to the backend.
+   *
+   * Failed batches are re-queued for a later retry.
+   *
+   * @private
+   * @returns {void}
+   */
   WatchTower.prototype._flush = function () {
     if (this._flushing || this._queue.length === 0) return;
 
@@ -92,6 +133,12 @@
       });
   };
 
+  /**
+   * Start the periodic background flush cycle.
+   *
+   * @private
+   * @returns {void}
+   */
   WatchTower.prototype._startFlush = function () {
     var sdkInstance = this;
 
@@ -104,6 +151,12 @@
     });
   };
 
+  /**
+   * Bind browser error listeners so uncaught failures are reported.
+   *
+   * @private
+   * @returns {void}
+   */
   WatchTower.prototype._bindErrors = function () {
     var sdkInstance = this;
 
@@ -129,6 +182,12 @@
     });
   };
 
+  /**
+   * Bind performance capture for page-load timing metrics.
+   *
+   * @private
+   * @returns {void}
+   */
   WatchTower.prototype._bindPerformance = function () {
     var sdkInstance = this;
 
@@ -148,10 +207,23 @@
     });
   };
 
+  /**
+   * Associate future events with a user identifier.
+   *
+   * @param {string} userId - Application user id.
+   * @returns {void}
+   */
   WatchTower.prototype.setUser = function (userId) {
     this.userId = userId;
   };
 
+  /**
+   * Track a click interaction.
+   *
+   * @param {string} target - Short element/selector description.
+   * @param {string} text - Visible element text.
+   * @returns {void}
+   */
   WatchTower.prototype.trackClick = function (target, text) {
     this._enqueue("click", {
       target: target || "",
@@ -159,6 +231,13 @@
     });
   };
 
+  /**
+   * Track a login event and remember the current user id.
+   *
+   * @param {string} userId - User identifier.
+   * @param {string} method - Authentication method label.
+   * @returns {void}
+   */
   WatchTower.prototype.trackLogin = function (userId, method) {
     this.userId = userId;
     this._enqueue("login", {
@@ -167,6 +246,13 @@
     });
   };
 
+  /**
+   * Track an application-defined custom event.
+   *
+   * @param {string} name - Event name.
+   * @param {Object} payload - Event payload.
+   * @returns {void}
+   */
   WatchTower.prototype.trackEvent = function (name, payload) {
     this._enqueue("custom", {
       name: name,
@@ -174,6 +260,12 @@
     });
   };
 
+  /**
+   * Track a manually caught error.
+   *
+   * @param {Error|Object|string} error - Error-like value.
+   * @returns {void}
+   */
   WatchTower.prototype.trackError = function (error) {
     this._enqueue("error", {
       message: error.message || String(error),
