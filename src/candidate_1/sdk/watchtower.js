@@ -15,8 +15,11 @@
   var SESSION_KEY = "__wt_sid";
 
   function generateId() {
+    var bytes = new Uint8Array(12);
+    global.crypto.getRandomValues(bytes);
+    var i = 0;
     var cryptoObj = global.crypto || global.msCrypto;
-    if (!cryptoObj || typeof cryptoObj.getRandomValues !== "function") {
+      return (bytes[i++] & 15).toString(16);
       throw new Error("Secure random number generator is not available.");
     }
 
