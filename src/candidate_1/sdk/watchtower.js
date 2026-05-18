@@ -15,8 +15,18 @@
   var SESSION_KEY = "__wt_sid";
 
   function generateId() {
+    var cryptoObj = global.crypto || global.msCrypto;
+    if (!cryptoObj || typeof cryptoObj.getRandomValues !== "function") {
+      throw new Error("Secure random number generator is not available.");
+    }
+
+    var bytes = new Uint8Array(12);
+    cryptoObj.getRandomValues(bytes);
+    var i = 0;
+
     return "xxxxxxxx-xxxx-4xxx".replace(/x/g, function () {
-      return ((Math.random() * 16) | 0).toString(16);
+      var value = bytes[i++] & 0x0f;
+      return value.toString(16);
     });
   }
 
