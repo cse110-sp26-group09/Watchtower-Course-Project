@@ -11,11 +11,6 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const {
-  isValidEvent,
-  calculateAverage,
-  calculatePercentile,
-} = require("../../prototype_1/utils/event-utils");
 
 const PORT = process.env.PORT || 3100;
 const MAX_EVENTS = 10000;
@@ -32,6 +27,63 @@ const MIME = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
 };
+
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidEvent(eventRecord) {
+  return Boolean(
+    eventRecord &&
+      typeof eventRecord === "object" &&
+      typeof eventRecord.type === "string" &&
+      eventRecord.type.trim() !== ""
+  );
+}
+
+function calculateAverage(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return 0;
+  }
+
+  var validValues = values.filter(isFiniteNumber);
+  if (validValues.length === 0) {
+    return 0;
+  }
+
+  var total = validValues.reduce(function (sum, value) {
+    return sum + value;
+  }, 0);
+
+  return total / validValues.length;
+}
+
+function calculatePercentile(values, percentile) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return 0;
+  }
+
+  var validValues = values.filter(isFiniteNumber).sort(function (left, right) {
+    return left - right;
+  });
+
+  if (validValues.length === 0) {
+    return 0;
+  }
+
+  var boundedPercentile = Math.min(Math.max(percentile, 0), 100);
+  var position = (boundedPercentile / 100) * (validValues.length - 1);
+  var lowerIndex = Math.floor(position);
+  var upperIndex = Math.ceil(position);
+  var lowerValue = validValues[lowerIndex];
+  var upperValue = validValues[upperIndex];
+
+  if (lowerIndex === upperIndex) {
+    return lowerValue;
+  }
+
+  return lowerValue + (upperValue - lowerValue) * (position - lowerIndex);
+}
 
 function applyCors(response) {
   response.setHeader("Access-Control-Allow-Origin", "*");
