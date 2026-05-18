@@ -17,7 +17,7 @@ WatchTower helps development teams understand what's happening in production. By
 
 ## Quick Start
 
-- Static hosted demo: see the [hosted demo guide](src/prototype_1/hosted_demo/README.md)
+- Static hosted demo: see the [hosted demo guide](src/prototype_2/hosted_demo/README.md)
 
 ### For Developers
 1. Clone the repository

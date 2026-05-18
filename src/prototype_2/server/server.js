@@ -109,9 +109,8 @@ function broadcast(eventList) {
 function serveStatic(req, res, urlPath) {
   var root = path.join(__dirname, "..");
 
-  if (urlPath === "/" || urlPath === "") urlPath = "/dashboard/index.html";
-  else if (urlPath === "/demo") urlPath = "/demo/index.html";
-  else if (urlPath === "/demo/") urlPath = "/demo/index.html";
+  if (urlPath === "/" || urlPath === "") urlPath = "/index.html";
+  else if (urlPath === "/demo" || urlPath === "/demo/") urlPath = "/hosted_demo/index.html";
 
   var filePath = path.join(root, urlPath);
   var resolved = path.resolve(filePath);
