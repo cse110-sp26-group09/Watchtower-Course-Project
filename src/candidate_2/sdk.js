@@ -18,7 +18,12 @@
    * @returns {string} A prefixed session ID (e.g. "sess_abc123_def456").
    */
   function generateSessionId() {
-    return 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    const bytes = new Uint8Array(6);
+    window.crypto.getRandomValues(bytes);
+    const randomSuffix = Array.from(bytes, function (b) {
+      return (b % 36).toString(36);
+    }).join('').slice(0, 8);
+    return 'sess_' + Date.now().toString(36) + '_' + randomSuffix;
   }
 
   /**
