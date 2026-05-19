@@ -153,7 +153,7 @@ Sent via `WatchTower.trackEvent(name, payload)`.
 
 ## Validation Rules
 
-The `isValidEvent` utility (in `src/prototype_2/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
+The `isValidEvent` utility (in `src/shared/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
 
 An event **passes** validation when:
 1. It is a non-null object.
