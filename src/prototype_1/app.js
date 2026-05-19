@@ -63,7 +63,13 @@
   var timeFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
   var hourFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric" });
 
+  function normalizeSelectedRange(value) {
+    var allowedRanges = ["24h", "7d", "30d"];
+    return allowedRanges.indexOf(value) !== -1 ? value : "24h";
+  }
+
   var state = loadState();
+  state.selectedRange = normalizeSelectedRange(state.selectedRange);
   var liveUpdateTimer = null;
 
   /**
@@ -920,7 +926,7 @@
   function initializeTimeRangeButtons() {
     timeRangeButtons.forEach(function (timeRangeButton) {
       timeRangeButton.addEventListener("click", function () {
-        state.selectedRange = timeRangeButton.getAttribute("data-range") || "24h";
+        state.selectedRange = normalizeSelectedRange(timeRangeButton.getAttribute("data-range"));
 
         timeRangeButtons.forEach(function (buttonElement) {
           buttonElement.classList.toggle("active", buttonElement === timeRangeButton);
