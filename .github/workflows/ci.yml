@@ -246,6 +246,8 @@ jobs:
                   alert: "readonly",
                   location: "readonly",
                   Promise: "readonly",
+                  Notification: "readonly",
+                  HTMLSelectElement: "readonly",
                   setTimeout: "readonly",
                   clearTimeout: "readonly",
                   setInterval: "readonly",
