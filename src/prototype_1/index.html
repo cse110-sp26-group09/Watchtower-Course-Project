@@ -4,23 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WatchTower Candidate 1</title>
-  <link rel="icon" type="image/svg+xml" href="assets/watchtower-logo.svg?v=20260519a">
-  <link rel="stylesheet" href="style.css?v=20260519a">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body data-build-marker="candidate1-v2-debug">
+<body>
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
         <span class="brand-mark" aria-hidden="true">
-          <img src="assets/watchtower-logo.svg?v=20260519a" alt="">
+          <svg viewBox="0 0 32 32" focusable="false">
+            <path d="M6 26h20v-2.2l-2.4-1.6V10.6l-2.7-2.7-2.7 2.7v8.2l-2.2-1.4V7.6L13.1 4.8 10.3 7.6v7.8L8.4 14 6 16.1V26Z"></path>
+            <path d="M9 22.8h14"></path>
+          </svg>
         </span>
         <span>WatchTower</span>
       </a>
 
       <div class="topbar-actions">
-        <button class="alert-pill" id="open-notification-center" type="button" data-view="home">
+        <button class="alert-pill" type="button" data-view="home">
           <span class="alert-dot" aria-hidden="true"></span>
-          <span id="active-issues-count">0 active issues</span>
+          <span>3 active issues</span>
         </button>
         <div class="live-pill" id="live-status-pill" role="status" aria-label="Connected to observed software">
           <span class="live-dot" aria-hidden="true"></span>
@@ -64,8 +66,8 @@
             <h1 id="home-title">Production health</h1>
           </div>
           <div class="refresh-note">
-            <span id="dashboard-last-updated">Updated just now</span>
-            <button class="icon-button" id="refresh-dashboard-btn" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
+            <span id="last-updated">Waiting for data</span>
+            <button class="icon-button" id="refresh-dashboard" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20 12a8 8 0 1 1-2.3-5.7"></path>
                 <path d="M20 4v6h-6"></path>
@@ -76,30 +78,30 @@
 
         <section class="health-summary" aria-label="Simple health summary">
           <div class="summary-copy">
-            <span class="status-token good" id="health-token">Healthy</span>
-            <h2 id="health-summary-title">Observed app is reachable with elevated checkout errors.</h2>
-            <p id="health-summary-copy">Version <code>v1.2.0-beta</code> is receiving traffic. Error rate is above the warning threshold on checkout routes.</p>
+            <span class="status-token good">Healthy</span>
+            <h2>Observed app is reachable with elevated checkout errors.</h2>
+            <p>Version <code>v1.2.0-beta</code> is receiving traffic. Error rate is above the warning threshold on checkout routes.</p>
           </div>
           <div class="summary-metrics" role="group" aria-label="Key metrics">
             <div class="metric-tile">
-              <span class="metric-label">Uptime</span>
-              <strong id="metric-uptime-value">99.94%</strong>
-              <span class="metric-trend positive" id="metric-uptime-trend">+0.00%</span>
+              <span class="metric-label">Active users</span>
+              <strong id="active-users">0</strong>
+              <span class="metric-trend positive">last 5 minutes</span>
             </div>
             <div class="metric-tile">
-              <span class="metric-label">P95 latency</span>
-              <strong id="metric-p95-value">184 ms</strong>
-              <span class="metric-trend neutral" id="metric-p95-trend">stable</span>
+              <span class="metric-label">Total events</span>
+              <strong id="total-events">0</strong>
+              <span class="metric-trend neutral">stable</span>
             </div>
             <div class="metric-tile warning">
-              <span class="metric-label">Error rate</span>
-              <strong id="metric-error-value">2.8%</strong>
-              <span class="metric-trend negative" id="metric-error-trend">+0.00%</span>
+              <span class="metric-label">Recent errors</span>
+              <strong id="total-errors">0</strong>
+              <span class="metric-trend negative">needs review</span>
             </div>
             <div class="metric-tile">
-              <span class="metric-label">Rating</span>
-              <strong id="metric-rating-value">4.3</strong>
-              <span class="metric-trend neutral" id="metric-rating-trend">0 users</span>
+              <span class="metric-label">Versions tracked</span>
+              <strong id="version-count">0</strong>
+              <span class="metric-trend neutral">deploys seen</span>
             </div>
           </div>
         </section>
@@ -114,70 +116,7 @@
               <button class="ghost-button" type="button">Export CSV</button>
             </div>
 
-            <div class="issue-list" id="issue-list">
-              <article class="issue-row severity-critical">
-                <div class="issue-main">
-                  <span class="severity-pill">Critical</span>
-                  <h3>Checkout promise rejection</h3>
-                  <p>Payment gateway returned undefined response during cart submit.</p>
-                  <div class="issue-meta">
-                    <span>v1.2.0-beta</span>
-                    <span>prod-us-west</span>
-                    <span>10:42 AM</span>
-                  </div>
-                </div>
-                <label class="assign-control">
-                  <span>Assign</span>
-                  <select aria-label="Assign checkout promise rejection">
-                    <option>Priya</option>
-                    <option>James</option>
-                    <option>Aditya</option>
-                  </select>
-                </label>
-              </article>
-
-              <article class="issue-row severity-warning">
-                <div class="issue-main">
-                  <span class="severity-pill">Warning</span>
-                  <h3>Search latency spike</h3>
-                  <p>P95 response time exceeded 300 ms for authenticated sessions.</p>
-                  <div class="issue-meta">
-                    <span>v1.2.0-beta</span>
-                    <span>prod-us-west</span>
-                    <span>10:36 AM</span>
-                  </div>
-                </div>
-                <label class="assign-control">
-                  <span>Assign</span>
-                  <select aria-label="Assign search latency spike">
-                    <option>Waleed</option>
-                    <option>Hemendra</option>
-                    <option>Jason</option>
-                  </select>
-                </label>
-              </article>
-
-              <article class="issue-row severity-info">
-                <div class="issue-main">
-                  <span class="severity-pill">Info</span>
-                  <h3>Feedback rating dip</h3>
-                  <p>Average rating moved from 4.7 to 4.3 after the latest deploy.</p>
-                  <div class="issue-meta">
-                    <span>v1.2.0-beta</span>
-                    <span>prod-us-west</span>
-                    <span>10:21 AM</span>
-                  </div>
-                </div>
-                <label class="assign-control">
-                  <span>Assign</span>
-                  <select aria-label="Assign feedback rating dip">
-                    <option>Hieu</option>
-                    <option>Fahad</option>
-                    <option>James</option>
-                  </select>
-                </label>
-              </article>
-            </div>
+            <div class="issue-list" id="issue-list"></div>
           </section>
 
           <section class="panel service-panel" aria-labelledby="services-title">
@@ -187,40 +126,7 @@
                 <h2 id="services-title">Current status</h2>
               </div>
             </div>
-            <div class="service-stack" id="service-stack">
-              <div class="service-row">
-                <span class="service-dot good" aria-hidden="true"></span>
-                <div>
-                  <strong>Frontend SDK</strong>
-                  <span>10,482 events/min</span>
-                </div>
-                <span class="service-state">Online</span>
-              </div>
-              <div class="service-row">
-                <span class="service-dot warning" aria-hidden="true"></span>
-                <div>
-                  <strong>Ingestion API</strong>
-                  <span>184 ms p95</span>
-                </div>
-                <span class="service-state">Watch</span>
-              </div>
-              <div class="service-row">
-                <span class="service-dot good" aria-hidden="true"></span>
-                <div>
-                  <strong>Event store</strong>
-                  <span>99.99% durable</span>
-                </div>
-                <span class="service-state">Online</span>
-              </div>
-              <div class="service-row">
-                <span class="service-dot danger" aria-hidden="true"></span>
-                <div>
-                  <strong>Alerts</strong>
-                  <span>3 unresolved</span>
-                </div>
-                <span class="service-state">Action</span>
-              </div>
-            </div>
+            <div class="service-stack" id="service-stack"></div>
           </section>
 
           <section class="panel build-panel" aria-labelledby="build-title">
@@ -230,24 +136,7 @@
                 <h2 id="build-title">Build metadata</h2>
               </div>
             </div>
-            <div class="metadata-grid">
-              <div>
-                <span>Build ID</span>
-                <strong id="build-id">build-4821</strong>
-              </div>
-              <div>
-                <span>Commit</span>
-                <strong id="build-commit">9f31c2a</strong>
-              </div>
-              <div>
-                <span>Branch</span>
-                <strong id="build-branch">release/watchtower</strong>
-              </div>
-              <div>
-                <span>Deployed</span>
-                <strong id="build-deployed-at">May 15, 10:02 AM</strong>
-              </div>
-            </div>
+            <div class="metadata-grid" id="build-metadata"></div>
           </section>
 
           <section class="panel activity-panel" aria-labelledby="activity-title">
@@ -257,24 +146,7 @@
                 <h2 id="activity-title">Recent events</h2>
               </div>
             </div>
-            <ol class="event-timeline" id="event-timeline">
-              <li>
-                <span class="timeline-time">10:42</span>
-                <span class="timeline-copy">Unhandled promise rejection on `/checkout`</span>
-              </li>
-              <li>
-                <span class="timeline-time">10:40</span>
-                <span class="timeline-copy">Page load `/products` completed in 142 ms</span>
-              </li>
-              <li>
-                <span class="timeline-time">10:36</span>
-                <span class="timeline-copy">Latency threshold alert on Search API</span>
-              </li>
-              <li>
-                <span class="timeline-time">10:31</span>
-                <span class="timeline-copy">New feedback: "Checkout froze after submit"</span>
-              </li>
-            </ol>
+            <ol class="event-timeline" id="activity-feed"></ol>
           </section>
         </div>
       </section>
@@ -286,9 +158,9 @@
             <h1 id="analytics-title">Analytics</h1>
           </div>
           <div class="segmented-control" role="group" aria-label="Time range">
-            <button class="active" type="button" data-range="24h">24h</button>
-            <button type="button" data-range="7d">7d</button>
-            <button type="button" data-range="30d">30d</button>
+            <button class="active" type="button">24h</button>
+            <button type="button">7d</button>
+            <button type="button">30d</button>
           </div>
         </div>
 
@@ -299,9 +171,9 @@
                 <p class="eyebrow">Users</p>
                 <h2 id="user-chart-title">User count over time</h2>
               </div>
-              <span class="delta-badge positive" id="user-count-delta">+0.0%</span>
+              <span class="delta-badge positive" id="user-delta">0 active</span>
             </div>
-            <div class="bar-chart" id="user-count-chart" role="img" aria-label="User count by date"></div>
+            <div class="bar-chart" id="user-chart" role="img" aria-label="User count over time"></div>
           </section>
 
           <section class="panel wide-panel" aria-labelledby="purchase-chart-title">
@@ -310,9 +182,9 @@
                 <p class="eyebrow">Tracked actions</p>
                 <h2 id="purchase-chart-title">Custom activity over time</h2>
               </div>
-              <span class="delta-badge positive" id="interaction-delta">+0.0%</span>
+              <span class="delta-badge positive" id="purchase-delta">0 actions</span>
             </div>
-            <div class="bar-chart purchase-chart" id="interaction-chart" role="img" aria-label="Interaction volume by date"></div>
+            <div class="bar-chart purchase-chart" id="purchase-chart" role="img" aria-label="Custom and checkout event activity"></div>
           </section>
 
           <section class="panel line-panel" aria-labelledby="latency-chart-title">
@@ -323,13 +195,18 @@
               </div>
             </div>
             <svg class="line-chart" id="latency-chart" viewBox="0 0 640 260" role="img" aria-labelledby="latency-svg-title">
-              <title id="latency-svg-title">Latency line chart by route and date</title>
+              <title id="latency-svg-title">Latency line chart showing checkout above other routes</title>
+              <g class="grid-lines">
+                <path d="M60 40H610"></path>
+                <path d="M60 90H610"></path>
+                <path d="M60 140H610"></path>
+                <path d="M60 190H610"></path>
+                <path d="M60 240H610"></path>
+              </g>
+              <path class="line checkout" id="latency-line" d="M60 240 L610 240"></path>
             </svg>
-            <div class="x-axis-labels" id="latency-axis-labels" aria-hidden="true"></div>
-            <div class="chart-legend">
-              <span><i class="legend-swatch checkout"></i>Checkout</span>
-              <span><i class="legend-swatch search"></i>Search</span>
-              <span><i class="legend-swatch products"></i>Products</span>
+            <div class="chart-legend" id="latency-legend">
+              <span><i class="legend-swatch checkout"></i>Waiting for pageload samples</span>
             </div>
           </section>
 
@@ -380,9 +257,9 @@
             <h1 id="settings-title">Settings</h1>
           </div>
           <div class="profile-chip">
-            <span id="profile-initials">AD</span>
+            <span>AD</span>
             <div>
-              <strong id="profile-display-name">Aditya</strong>
+              <strong>Aditya</strong>
               <small>Admin</small>
             </div>
           </div>
@@ -412,16 +289,15 @@
                   <input id="display-name" type="text" value="Aditya">
                 </div>
                 <div class="split-actions">
-                  <button class="primary-button" id="save-display-name-btn" type="button">Save display name</button>
-                  <button class="ghost-button" id="change-password-btn" type="button">Change password</button>
-                  <button class="ghost-button" id="sign-out-btn" type="button">Sign out</button>
+                  <button class="primary-button" type="button">Change password</button>
+                  <button class="ghost-button" type="button">Sign out</button>
                 </div>
                 <label class="toggle-row">
                   <span>
                     <strong>Two-factor authentication</strong>
                     <small>Require a code when signing in.</small>
                   </span>
-                  <input class="toggle-input" id="two-factor-toggle" type="checkbox" checked>
+                  <input class="toggle-input" type="checkbox" checked>
                 </label>
               </div>
             </div>
@@ -488,27 +364,25 @@
                 </svg>
               </button>
               <div class="settings-content">
-                <label class="toggle-row">
-                  <span>
-                    <strong>Critical alerts</strong>
-                    <small>Send notifications when thresholds are breached.</small>
-                  </span>
-                  <input class="toggle-input" id="critical-alert-toggle" type="checkbox" checked>
+                <label class="field-row" for="notification-mode">
+                  <span>Notification type</span>
+                  <select id="notification-mode">
+                    <option selected>Critical only</option>
+                    <option>Critical and warnings</option>
+                    <option>All activity</option>
+                    <option>Muted</option>
+                  </select>
                 </label>
-                <label class="toggle-row">
-                  <span>
-                    <strong>Browser notifications</strong>
-                    <small>Allow popup alerts like Google Calendar reminders.</small>
-                  </span>
-                  <input class="toggle-input" id="browser-notification-toggle" type="checkbox">
-                </label>
-                <label class="toggle-row">
-                  <span>
-                    <strong>Pause notifications</strong>
-                    <small>Snooze non-critical alerts for two hours.</small>
-                  </span>
-                  <input class="toggle-input" id="pause-notification-toggle" type="checkbox">
-                </label>
+                <div class="time-grid">
+                  <label class="field-row" for="notification-start">
+                    <span>Notify after</span>
+                    <input id="notification-start" type="time" value="08:00">
+                  </label>
+                  <label class="field-row" for="notification-end">
+                    <span>Notify until</span>
+                    <input id="notification-end" type="time" value="18:00">
+                  </label>
+                </div>
                 <label class="field-row" for="error-threshold">
                   <span>Error rate threshold</span>
                   <select id="error-threshold">
@@ -524,10 +398,10 @@
           <aside class="settings-preview" aria-label="Notification preview">
             <p class="eyebrow">Preview</p>
             <h2>Critical condition</h2>
-            <p class="preview-copy" id="notification-preview-copy">Checkout error rate exceeded 2% on <code>v1.2.0-beta</code>. Priya has been assigned.</p>
+            <p class="preview-copy">Checkout error rate exceeded 2% on <code>v1.2.0-beta</code>. Priya has been assigned.</p>
             <div class="preview-actions">
-              <button class="primary-button" id="preview-acknowledge-btn" type="button">Acknowledge</button>
-              <button class="ghost-button" id="preview-pause-btn" type="button">Pause</button>
+              <button class="primary-button" type="button">Acknowledge</button>
+              <button class="ghost-button" type="button">Pause</button>
             </div>
           </aside>
         </div>
@@ -560,8 +434,6 @@
     </nav>
   </div>
 
-  <section class="notification-stack" id="notification-stack" aria-live="polite" aria-label="Live notifications"></section>
-
-  <script src="app.js?v=20260519a"></script>
+  <script src="app.js"></script>
 </body>
 </html>
