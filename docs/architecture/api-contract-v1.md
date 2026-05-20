@@ -45,8 +45,13 @@ Ingest one or more events. The SDK sends batches using the `events` array form.
 **Response `200 OK`:**
 
 ```json
-{ "accepted": 2 }
+{ "accepted": 2, "rejected": 0 }
 ```
+
+`accepted` is the number of events that passed validation and were stored;
+`rejected` is the number that failed the [event schema](event-schema-v1.md)
+envelope check and were silently dropped. A batch of entirely invalid events
+still returns `200 OK` with `{ "accepted": 0, "rejected": N }`.
 
 **Response `400 Bad Request`** (body is not valid JSON):
 
@@ -55,7 +60,7 @@ Ingest one or more events. The SDK sends batches using the `events` array form.
 ```
 
 **Notes:**
-- The server does not validate per-field types beyond JSON parsing; malformed events are stored as-is.
+- Each event is validated against the minimum envelope from the [event schema](event-schema-v1.md) (`isValidEvent`): a non-empty string `type`, a parseable `timestamp`, and an object `data`. Events that fail are dropped and counted in `rejected`; valid events in the same batch are still stored.
 - The in-memory buffer is capped at 10,000 events (oldest events are dropped first).
 - Each accepted event has `receivedAt` (ISO-8601) appended before storage.
 - Newly ingested events are broadcast to all connected SSE clients immediately.
