@@ -15,6 +15,39 @@
  */
 
 const path = require("path");
+const { isValidEvent } = require("../../shared/utils/event-utils");
+
+/**
+ * Split a batch of incoming events into valid and rejected groups.
+ *
+ * Validation uses the canonical `isValidEvent` from the shared event
+ * utilities, which enforces the minimum envelope from
+ * `docs/architecture/event-schema-v1.md`: a non-empty string `type`, a
+ * parseable string `timestamp`, and an object `data`. The server should
+ * only store and broadcast the `valid` events; `rejected` is the count of
+ * events that failed validation so the caller can report it back.
+ *
+ * A single event object is accepted as well as an array, mirroring the
+ * `body.events || [body]` shape the server already handles. The input is
+ * never mutated.
+ *
+ * @param {Array<Object>|Object} incoming - One event or a batch of events.
+ * @returns {{ valid: Array<Object>, rejected: number }}
+ *   The events that passed validation and a count of those that did not.
+ */
+function partitionEvents(incoming) {
+  const list = Array.isArray(incoming) ? incoming : [incoming];
+  const valid = [];
+  let rejected = 0;
+  for (let i = 0; i < list.length; i++) {
+    if (isValidEvent(list[i])) {
+      valid.push(list[i]);
+    } else {
+      rejected += 1;
+    }
+  }
+  return { valid: valid, rejected: rejected };
+}
 
 /**
  * Map a request URL to the static file path the server actually serves.
@@ -218,6 +251,7 @@ function computeStats(events, now, activeUserWindowMs) {
 }
 
 module.exports = {
+  partitionEvents,
   resolveAlias,
   isPathSafe,
   appendWithCap,
