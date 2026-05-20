@@ -15,12 +15,95 @@
 const path = require("path");
 
 const {
+  partitionEvents,
   resolveAlias,
   isPathSafe,
   appendWithCap,
   filterEvents,
   computeStats,
 } = require("../../src/prototype_2/server/server-helpers");
+
+// ---------------------------------------------------------------------------
+// partitionEvents
+// ---------------------------------------------------------------------------
+
+describe("partitionEvents", () => {
+  function validEvent(overrides) {
+    return Object.assign(
+      {
+        type: "click",
+        timestamp: new Date().toISOString(),
+        data: { target: "button#submit" },
+      },
+      overrides || {}
+    );
+  }
+
+  test("keeps a fully valid batch and rejects nothing", () => {
+    const result = partitionEvents([validEvent(), validEvent({ type: "error" })]);
+    expect(result.valid).toHaveLength(2);
+    expect(result.rejected).toBe(0);
+  });
+
+  test("accepts a single event object (not wrapped in an array)", () => {
+    const result = partitionEvents(validEvent());
+    expect(result.valid).toHaveLength(1);
+    expect(result.rejected).toBe(0);
+  });
+
+  test("rejects events missing a type", () => {
+    const result = partitionEvents([
+      validEvent(),
+      { timestamp: new Date().toISOString(), data: {} },
+    ]);
+    expect(result.valid).toHaveLength(1);
+    expect(result.rejected).toBe(1);
+  });
+
+  test("rejects events with an empty type", () => {
+    const result = partitionEvents([validEvent({ type: "" })]);
+    expect(result.valid).toHaveLength(0);
+    expect(result.rejected).toBe(1);
+  });
+
+  test("rejects events with an unparseable timestamp", () => {
+    const result = partitionEvents([validEvent({ timestamp: "not-a-date" })]);
+    expect(result.valid).toHaveLength(0);
+    expect(result.rejected).toBe(1);
+  });
+
+  test("rejects events whose data is not an object", () => {
+    const result = partitionEvents([
+      validEvent({ data: "nope" }),
+      validEvent({ data: null }),
+    ]);
+    expect(result.valid).toHaveLength(0);
+    expect(result.rejected).toBe(2);
+  });
+
+  test("rejects primitives, null, and undefined entries", () => {
+    const result = partitionEvents([validEvent(), null, undefined, 42, "x"]);
+    expect(result.valid).toHaveLength(1);
+    expect(result.rejected).toBe(4);
+  });
+
+  test("returns empty/zero for an empty batch", () => {
+    expect(partitionEvents([])).toEqual({ valid: [], rejected: 0 });
+  });
+
+  test("does not mutate the input array or its events", () => {
+    const events = [validEvent(), { type: "bad" }];
+    const snapshot = JSON.parse(JSON.stringify(events));
+    partitionEvents(events);
+    expect(events).toEqual(snapshot);
+  });
+
+  test("preserves the original event objects in the valid list", () => {
+    const ev = validEvent({ type: "feedback" });
+    const result = partitionEvents([ev]);
+    expect(result.valid[0]).toBe(ev);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // resolveAlias
