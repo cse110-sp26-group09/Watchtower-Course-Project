@@ -35,7 +35,7 @@ Related docs:
     on the demo page, see the event appear in `/api/stats.totalErrors`
     within 5 seconds.
 
-- [ ] **Server stores malformed events without validation**
+- [x] **Server stores malformed events without validation** — FIXED
   - `POST /api/events` only checks that the body parses as JSON. The
     documented [event schema v1](../../docs/architecture/event-schema-v1.md)
     requires `type`, `timestamp`, and `data` — none of these are
@@ -52,8 +52,14 @@ Related docs:
 ## Backend / Testing
 
 - [x] **Add Jest unit tests for the server**
-  - Extracted pure helpers into `server-helpers.js`, added 37 tests in
-    `tests/unit/server-helpers.test.js`. 64/64 unit tests passing.
+  - Extracted pure helpers into `server-helpers.js`, added tests in
+    `tests/unit/server-helpers.test.js`. 74/74 unit tests passing.
+  - Owner: Woosik
+
+- [x] **Validate incoming events on `POST /api/events`**
+  - Added `partitionEvents` helper (uses `isValidEvent`); invalid events
+    are dropped and counted, response is `{ accepted, rejected }`. Closes
+    Bug #2 and contributes to requirement F1.
   - Owner: Woosik
 
 - [ ] **Add e2e coverage for SSE stream**
@@ -168,4 +174,5 @@ Related docs:
 - [x] Move `event-utils.js` to `src/shared/utils/event-utils.js`
 - [x] Repoint unit and e2e tests at the shared module and prototype 2 ids
 - [x] Refactor server.js — extract pure helpers into `server-helpers.js`
-- [x] Add 37 unit tests for server helpers (`tests/unit/server-helpers.test.js`)
+- [x] Add unit tests for server helpers (`tests/unit/server-helpers.test.js`)
+- [x] Validate events on POST /api/events (`partitionEvents`); 74 unit tests passing

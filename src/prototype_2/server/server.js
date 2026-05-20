@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 
 const {
+  partitionEvents,
   resolveAlias,
   isPathSafe,
   appendWithCap,
@@ -158,12 +159,18 @@ var server = http.createServer(function (req, res) {
     readBody(req)
       .then(function (body) {
         var incoming = body.events || [body];
-        incoming.forEach(function (ev) {
+        var partitioned = partitionEvents(incoming);
+        partitioned.valid.forEach(function (ev) {
           ev.receivedAt = new Date().toISOString();
         });
-        appendWithCap(events, incoming, MAX_EVENTS);
-        broadcast(incoming);
-        json(res, 200, { accepted: incoming.length });
+        appendWithCap(events, partitioned.valid, MAX_EVENTS);
+        if (partitioned.valid.length > 0) {
+          broadcast(partitioned.valid);
+        }
+        json(res, 200, {
+          accepted: partitioned.valid.length,
+          rejected: partitioned.rejected,
+        });
       })
       .catch(function () {
         json(res, 400, { error: "Invalid JSON" });
