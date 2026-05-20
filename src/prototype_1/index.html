@@ -4,25 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WatchTower Candidate 1</title>
+  <link rel="icon" type="image/png" href="assets/watchtower-logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32" focusable="false">
-            <path d="M6 26h20v-2.2l-2.4-1.6V10.6l-2.7-2.7-2.7 2.7v8.2l-2.2-1.4V7.6L13.1 4.8 10.3 7.6v7.8L8.4 14 6 16.1V26Z"></path>
-            <path d="M9 22.8h14"></path>
-          </svg>
-        </span>
-        <span>WatchTower</span>
-      </a>
+      <div class="topbar-left">
+        <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
+          <span class="brand-mark" aria-hidden="true">
+            <img class="brand-logo" src="assets/watchtower-logo.png" alt="" loading="eager" decoding="async">
+          </span>
+          <span class="brand-label">WatchTower</span>
+        </a>
+      </div>
 
       <div class="topbar-actions">
         <button class="alert-pill" type="button" data-view="home">
           <span class="alert-dot" aria-hidden="true"></span>
-          <span>3 active issues</span>
+          <span id="active-issues-count">0 active issues</span>
         </button>
         <div class="live-pill" id="live-status-pill" role="status" aria-label="Connected to observed software">
           <span class="live-dot" aria-hidden="true"></span>
@@ -31,78 +31,87 @@
       </div>
     </header>
 
-    <aside class="sidebar" aria-label="Primary navigation">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
       <nav class="nav-stack">
-        <button class="nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
-          </svg>
-          <span>Home</span>
-        </button>
-        <button class="nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 19V12"></path>
-            <path d="M10 19V8"></path>
-            <path d="M15 19v-5"></path>
-            <path d="M20 19V5"></path>
-          </svg>
-          <span>Analytics</span>
-        </button>
-        <button class="nav-button" type="button" data-view="settings" title="Settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"></path>
-            <path d="M19.2 13.2a7.8 7.8 0 0 0 .1-1.2 7.8 7.8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.1-1.2L14.4 3h-4.8l-.4 2.7a8.4 8.4 0 0 0-2.1 1.2l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.2c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.1 1.2l.4 2.7h4.8l.4-2.7a8.4 8.4 0 0 0 2.1-1.2l2.4 1 2-3.4-2.1-1.5Z"></path>
-          </svg>
-          <span>Settings</span>
-        </button>
+        <div class="nav-main">
+          <button class="nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
+            </svg>
+            <span>Home</span>
+          </button>
+          <button class="nav-button" type="button" data-view="home" data-scroll-target="issues-title" title="Issues" aria-label="Issues">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 7h14"></path>
+              <path d="M5 12h14"></path>
+              <path d="M5 17h10"></path>
+            </svg>
+            <span>Issues</span>
+          </button>
+          <button class="nav-button" type="button" data-view="home" data-scroll-target="services-title" title="Health" aria-label="Health">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"></path>
+            </svg>
+            <span>Health</span>
+          </button>
+          <button class="nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 19V12"></path>
+              <path d="M10 19V8"></path>
+              <path d="M15 19v-5"></path>
+              <path d="M20 19V5"></path>
+            </svg>
+            <span>Analytics</span>
+          </button>
+        </div>
+        <div class="nav-footer">
+          <button class="nav-button" type="button" data-view="settings" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"></path>
+              <path d="M19.2 13.2a7.8 7.8 0 0 0 .1-1.2 7.8 7.8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.1-1.2L14.4 3h-4.8l-.4 2.7a8.4 8.4 0 0 0-2.1 1.2l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.2c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.1 1.2l.4 2.7h4.8l.4-2.7a8.4 8.4 0 0 0 2.1-1.2l2.4 1 2-3.4-2.1-1.5Z"></path>
+            </svg>
+            <span>Settings</span>
+          </button>
+        </div>
       </nav>
     </aside>
 
     <main class="content" id="main-content">
-      <section class="view active" id="home-view" aria-labelledby="home-title">
-        <div class="page-heading">
-          <div>
+      <section class="view active" id="home-view" aria-label="Home dashboard">
+        <section class="kpi-overview" aria-label="Key metrics">
+          <div class="kpi-toolbar">
             <p class="eyebrow">Realtime operations</p>
-            <h1 id="home-title">Production health</h1>
-          </div>
-          <div class="refresh-note">
-            <span id="last-updated">Waiting for data</span>
-            <button class="icon-button" id="refresh-dashboard" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20 12a8 8 0 1 1-2.3-5.7"></path>
-                <path d="M20 4v6h-6"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <section class="health-summary" aria-label="Simple health summary">
-          <div class="summary-copy">
-            <span class="status-token good">Healthy</span>
-            <h2>Observed app is reachable with elevated checkout errors.</h2>
-            <p>Version <code>v1.2.0-beta</code> is receiving traffic. Error rate is above the warning threshold on checkout routes.</p>
+            <div class="refresh-note">
+              <span id="last-updated">Waiting for data</span>
+              <button class="icon-button" id="refresh-dashboard" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 12a8 8 0 1 1-2.3-5.7"></path>
+                  <path d="M20 4v6h-6"></path>
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="summary-metrics" role="group" aria-label="Key metrics">
-            <div class="metric-tile">
-              <span class="metric-label">Active users</span>
+            <button class="metric-tile metric-link" type="button" data-view="analytics" data-scroll-target="user-chart-title">
+              <span class="metric-label"><i class="metric-icon users" aria-hidden="true"></i>Active users</span>
               <strong id="active-users">0</strong>
-              <span class="metric-trend positive">last 5 minutes</span>
-            </div>
-            <div class="metric-tile">
-              <span class="metric-label">Total events</span>
+              <span class="metric-trend positive">Current sessions</span>
+            </button>
+            <button class="metric-tile metric-link" type="button" data-view="analytics" data-scroll-target="purchase-chart-title">
+              <span class="metric-label"><i class="metric-icon events" aria-hidden="true"></i>Events ingested</span>
               <strong id="total-events">0</strong>
-              <span class="metric-trend neutral">stable</span>
-            </div>
-            <div class="metric-tile warning">
-              <span class="metric-label">Recent errors</span>
+              <span class="metric-trend neutral">Stable</span>
+            </button>
+            <button class="metric-tile metric-link warning" type="button" data-view="home" data-scroll-target="issues-title">
+              <span class="metric-label"><i class="metric-icon errors" aria-hidden="true"></i>Open errors</span>
               <strong id="total-errors">0</strong>
-              <span class="metric-trend negative">needs review</span>
-            </div>
-            <div class="metric-tile">
-              <span class="metric-label">Versions tracked</span>
+              <span class="metric-trend negative">Needs review</span>
+            </button>
+            <button class="metric-tile metric-link" type="button" data-view="home" data-scroll-target="services-title">
+              <span class="metric-label"><i class="metric-icon deploys" aria-hidden="true"></i>Deploy versions</span>
               <strong id="version-count">0</strong>
-              <span class="metric-trend neutral">deploys seen</span>
-            </div>
+              <span class="metric-trend neutral">Deploys seen</span>
+            </button>
           </div>
         </section>
 
@@ -111,19 +120,20 @@
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Triage</p>
-                <h2 id="issues-title">Errors by version</h2>
+                <h2 id="issues-title">Errors needing triage</h2>
               </div>
               <button class="ghost-button" type="button">Export CSV</button>
             </div>
 
             <div class="issue-list" id="issue-list"></div>
+            <button class="issue-toggle" id="issue-expand-toggle" type="button" hidden>Show more</button>
           </section>
 
           <section class="panel service-panel" aria-labelledby="services-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Services</p>
-                <h2 id="services-title">Current status</h2>
+                <p class="eyebrow">Reliability</p>
+                <h2 id="services-title">System and latency health</h2>
               </div>
             </div>
             <div class="service-stack" id="service-stack"></div>
@@ -132,8 +142,8 @@
           <section class="panel build-panel" aria-labelledby="build-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Deploy correlation</p>
-                <h2 id="build-title">Build metadata</h2>
+                <p class="eyebrow">User behavior</p>
+                <h2 id="build-title">Most-clicked features</h2>
               </div>
             </div>
             <div class="metadata-grid" id="build-metadata"></div>
@@ -143,7 +153,7 @@
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Stream</p>
-                <h2 id="activity-title">Recent events</h2>
+                <h2 id="activity-title">Recent user signals</h2>
               </div>
             </div>
             <ol class="event-timeline" id="activity-feed"></ol>
@@ -158,11 +168,26 @@
             <h1 id="analytics-title">Analytics</h1>
           </div>
           <div class="segmented-control" role="group" aria-label="Time range">
-            <button class="active" type="button">24h</button>
-            <button type="button">7d</button>
-            <button type="button">30d</button>
+            <button class="active" type="button" data-range="24h">24h</button>
+            <button type="button" data-range="7d">7d</button>
+            <button type="button" data-range="30d">30d</button>
           </div>
         </div>
+
+        <section class="analytics-summary" aria-label="Analytics summary">
+          <article class="summary-chip">
+            <p>Range active users</p>
+            <strong id="analytics-range-users">0</strong>
+          </article>
+          <article class="summary-chip">
+            <p>Range actions</p>
+            <strong id="analytics-range-actions">0</strong>
+          </article>
+          <article class="summary-chip">
+            <p>Latency peak</p>
+            <strong id="analytics-range-latency">0 ms</strong>
+          </article>
+        </section>
 
         <div class="analytics-grid">
           <section class="panel wide-panel" aria-labelledby="user-chart-title">
@@ -194,7 +219,7 @@
                 <h2 id="latency-chart-title">Latency by route</h2>
               </div>
             </div>
-            <svg class="line-chart" id="latency-chart" viewBox="0 0 640 260" role="img" aria-labelledby="latency-svg-title">
+            <svg class="line-chart" id="latency-chart" viewBox="0 0 640 280" role="img" aria-labelledby="latency-svg-title">
               <title id="latency-svg-title">Latency line chart showing checkout above other routes</title>
               <g class="grid-lines">
                 <path d="M60 40H610"></path>
@@ -203,6 +228,8 @@
                 <path d="M60 190H610"></path>
                 <path d="M60 240H610"></path>
               </g>
+              <g class="axis-labels y-axis" id="latency-y-axis"></g>
+              <g class="axis-labels x-axis" id="latency-x-axis"></g>
               <path class="line checkout" id="latency-line" d="M60 240 L610 240"></path>
             </svg>
             <div class="chart-legend" id="latency-legend">
@@ -259,7 +286,7 @@
           <div class="profile-chip">
             <span>AD</span>
             <div>
-              <strong>Aditya</strong>
+              <strong id="profile-display-name">Aditya</strong>
               <small>Admin</small>
             </div>
           </div>
@@ -289,9 +316,10 @@
                   <input id="display-name" type="text" value="Aditya">
                 </div>
                 <div class="split-actions">
-                  <button class="primary-button" type="button">Change password</button>
-                  <button class="ghost-button" type="button">Sign out</button>
+                  <button class="primary-button" id="change-password-button" type="button">Change password</button>
+                  <button class="ghost-button" id="sign-out-button" type="button">Sign out</button>
                 </div>
+                <p class="inline-status" id="profile-status-line">Profile updates are saved locally for this demo.</p>
                 <label class="toggle-row">
                   <span>
                     <strong>Two-factor authentication</strong>
@@ -328,6 +356,13 @@
                     <small>Increase color contrast in dashboards.</small>
                   </span>
                   <input class="toggle-input" id="contrast-toggle" type="checkbox">
+                </label>
+                <label class="toggle-row">
+                  <span>
+                    <strong>Dark mode</strong>
+                    <small>Switch the dashboard to a dark theme.</small>
+                  </span>
+                  <input class="toggle-input" id="dark-mode-toggle" type="checkbox">
                 </label>
                 <label class="range-row" for="text-size">
                   <span>
@@ -391,6 +426,12 @@
                     <option>5%</option>
                   </select>
                 </label>
+                <div class="snooze-actions" role="group" aria-label="Quick mute controls">
+                  <button class="ghost-button snooze-action" type="button" data-snooze="30">Mute 30m</button>
+                  <button class="ghost-button snooze-action" type="button" data-snooze="120">Mute 2h</button>
+                  <button class="ghost-button snooze-action" type="button" data-snooze="0">Resume now</button>
+                </div>
+                <p class="inline-status" id="notification-status-line">Notifications are active.</p>
               </div>
             </div>
           </section>
