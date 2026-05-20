@@ -2,8 +2,9 @@
 (function () {
   'use strict';
 
-  const STREAM_URL = 'http://localhost:8000/api/events/stream'; // SSE endpoint for live alerts
-  const STATS_URL = 'http://localhost:8000/api/stats';           // REST endpoint for hero stats
+  const API_BASE_URL = window.location.origin;
+  const STREAM_URL = API_BASE_URL + '/api/events/stream'; // SSE endpoint for live alerts
+  const STATS_URL = API_BASE_URL + '/api/stats';          // REST endpoint for hero stats
 
   /* =========================================
      VIEW SWITCHING (3-way)
@@ -12,6 +13,9 @@
   const navAnalytics = document.getElementById('nav-analytics');
   const navAlerts = document.getElementById('nav-alerts');
   const navSettings = document.getElementById('nav-settings');
+  const appLayout = document.querySelector('.app-layout');
+  const navSidebar = document.getElementById('nav-sidebar');
+  const navCollapseTrigger = document.getElementById('nav-collapse-trigger');
   const viewHome = document.getElementById('view-home');
   const viewAnalytics = document.getElementById('view-analytics');
   const viewAlerts = document.getElementById('view-alerts');
@@ -20,6 +24,22 @@
 
   const navItems = [navHome, navAnalytics, navAlerts];
   const views = [viewHome, viewAnalytics, viewAlerts];
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeToggleIcon = document.getElementById('theme-toggle-icon');
+  const themeToggleText = document.getElementById('theme-toggle-text');
+  const themeSelect = document.getElementById('settings-theme-select');
+  const systemThemeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+  const desktopMedia = window.matchMedia ? window.matchMedia('(max-width: 1080px)') : null;
+  const THEME_STORAGE_KEY = 'watchtower-theme-preference';
+  const SIDEBAR_COLLAPSE_STORAGE_KEY = 'watchtower-sidebar-collapsed';
+  const statValueElements = [
+    document.getElementById('stat-active-users'),
+    document.getElementById('stat-max-users'),
+    document.getElementById('stat-errors'),
+    document.getElementById('stat-latency'),
+    document.getElementById('stat-uptime')
+  ].filter(Boolean);
+  let themePreference = 'dark';
 
   navHome.addEventListener('click', function () { switchView(0); });
   navAnalytics.addEventListener('click', function () { switchView(1); });
@@ -34,6 +54,61 @@
     settingsPanel.classList.add('hidden');
     navSettings.classList.remove('active');
   });
+
+  /**
+   * Apply collapsed/expanded sidebar state on desktop widths.
+   *
+   * @param {boolean} collapsed - Whether sidebar should collapse.
+   * @param {boolean} shouldPersist - Whether to persist this preference.
+   * @returns {void}
+   */
+  function setSidebarCollapsed(collapsed, shouldPersist) {
+    if (!navSidebar) { return; }
+    if (desktopMedia && desktopMedia.matches) {
+      navSidebar.classList.remove('collapsed');
+      if (appLayout) { appLayout.classList.remove('sidebar-collapsed'); }
+      return;
+    }
+
+    navSidebar.classList.toggle('collapsed', collapsed);
+    if (appLayout) { appLayout.classList.toggle('sidebar-collapsed', collapsed); }
+    if (navCollapseTrigger) {
+      navCollapseTrigger.innerHTML = collapsed ? '&raquo;' : '&laquo;';
+      navCollapseTrigger.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      navCollapseTrigger.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    }
+
+    if (shouldPersist) {
+      try { localStorage.setItem(SIDEBAR_COLLAPSE_STORAGE_KEY, collapsed ? '1' : '0'); } catch (_err) {}
+    }
+  }
+
+  if (navCollapseTrigger) {
+    navCollapseTrigger.addEventListener('click', function () {
+      const isCollapsed = navSidebar.classList.contains('collapsed');
+      setSidebarCollapsed(!isCollapsed, true);
+    });
+  }
+
+  if (desktopMedia) {
+    const handleViewportCollapse = function () {
+      if (desktopMedia.matches) {
+        setSidebarCollapsed(false, false);
+      } else {
+        let shouldCollapse = false;
+        try { shouldCollapse = localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY) === '1'; } catch (_err) {}
+        setSidebarCollapsed(shouldCollapse, false);
+      }
+    };
+
+    if (typeof desktopMedia.addEventListener === 'function') {
+      desktopMedia.addEventListener('change', handleViewportCollapse);
+    } else if (typeof desktopMedia.addListener === 'function') {
+      desktopMedia.addListener(handleViewportCollapse);
+    }
+
+    handleViewportCollapse();
+  }
 
   /**
    * Show the selected WatchTower view and update sidebar nav highlights.
@@ -62,6 +137,105 @@
   rangeInput.addEventListener('input', function () {
     rangeValue.textContent = rangeInput.value + '%';
   });
+
+  /**
+   * Resolve a theme preference into an explicit rendered theme.
+   *
+   * @param {string} pref - "dark", "light", or "system".
+   * @returns {string} The concrete theme ("dark" or "light").
+   */
+  function resolveTheme(pref) {
+    if (pref === 'system' && systemThemeMedia) {
+      return systemThemeMedia.matches ? 'light' : 'dark';
+    }
+    return pref === 'light' ? 'light' : 'dark';
+  }
+
+  /**
+   * Update theme controls so the toggle button and settings select
+   * always reflect the active theme state.
+   *
+   * @param {string} pref - Persisted theme preference.
+   * @param {string} resolved - Rendered theme after resolving preference.
+   * @returns {void}
+   */
+  function syncThemeControls(pref, resolved) {
+    if (themeSelect) { themeSelect.value = pref; }
+
+    if (themeToggleText) { themeToggleText.textContent = resolved === 'dark' ? 'Dark' : 'Light'; }
+
+    if (themeToggleIcon) {
+      themeToggleIcon.innerHTML = resolved === 'dark' ? '&#9681;' : '&#9728;';
+    }
+
+    if (themeToggle) {
+      const label = resolved === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+      themeToggle.setAttribute('aria-label', label);
+      themeToggle.setAttribute('title', label);
+    }
+  }
+
+  /**
+   * Apply and optionally persist a theme preference.
+   *
+   * @param {string} pref - "dark", "light", or "system".
+   * @param {boolean} shouldPersist - Whether to save in localStorage.
+   * @returns {void}
+   */
+  function applyTheme(pref, shouldPersist) {
+    themePreference = pref;
+    const resolved = resolveTheme(pref);
+
+    document.body.setAttribute('data-theme', resolved);
+    document.documentElement.classList.toggle('dark', resolved === 'dark');
+    syncThemeControls(pref, resolved);
+    if (viewAnalytics.classList.contains('active')) { setTimeout(drawLatencyChart, 0); }
+
+    if (shouldPersist) {
+      try { localStorage.setItem(THEME_STORAGE_KEY, pref); } catch (_err) {}
+    }
+  }
+
+  /**
+   * Load saved theme preference (if present) and initialize the page theme.
+   *
+   * @returns {void}
+   */
+  function initTheme() {
+    let saved = null;
+    try { saved = localStorage.getItem(THEME_STORAGE_KEY); } catch (_err) {}
+
+    const initialPref = saved || 'dark';
+    applyTheme(initialPref, false);
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function () {
+      const resolved = resolveTheme(themePreference);
+      const nextTheme = resolved === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme, true);
+    });
+  }
+
+  if (themeSelect) {
+    themeSelect.addEventListener('change', function () {
+      applyTheme(themeSelect.value, true);
+    });
+  }
+
+  if (systemThemeMedia) {
+    const handleSystemThemeChange = function () {
+      if (themePreference === 'system') {
+        applyTheme('system', false);
+      }
+    };
+
+    if (typeof systemThemeMedia.addEventListener === 'function') {
+      systemThemeMedia.addEventListener('change', handleSystemThemeChange);
+    } else if (typeof systemThemeMedia.addListener === 'function') {
+      systemThemeMedia.addListener(handleSystemThemeChange);
+    }
+  }
 
   /* =========================================
      FILTER SIDEBAR (Alerts view)
@@ -111,6 +285,19 @@
 
   alertsSearchInput.addEventListener('input', function () {
     applyFilters();
+  });
+
+  document.addEventListener('keydown', function (event) {
+    const activeTag = document.activeElement && document.activeElement.tagName
+      ? document.activeElement.tagName.toLowerCase()
+      : '';
+    const isEditable = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement && document.activeElement.isContentEditable);
+
+    if (!isEditable && event.key === '/') {
+      event.preventDefault();
+      switchView(2);
+      alertsSearchInput.focus();
+    }
   });
 
   /**
@@ -186,6 +373,10 @@
     });
 
     alertsCount.textContent = visibleCount + ' of ' + rows.length + ' alerts';
+    if (alertsEmpty) {
+      const shouldShowEmpty = rows.length > 0 && visibleCount === 0;
+      alertsEmpty.classList.toggle('hidden', !shouldShowEmpty);
+    }
   }
 
   /* =========================================
@@ -201,23 +392,40 @@
      HOME: HERO STATS & INSIGHTS
      ========================================= */
   /**
+   * Toggle skeleton loading treatment on KPI values while stats hydrate.
+   *
+   * @param {boolean} isLoading - Whether KPI values should render as loading.
+   * @returns {void}
+   */
+  function setStatsLoading(isLoading) {
+    statValueElements.forEach(function (el) {
+      el.classList.toggle('loading-skeleton', isLoading);
+    });
+  }
+
+  /**
    * Fetch live stats from the backend and update the 5 hero stat cards.
    * Falls back silently if the backend is unreachable.
    *
    * @returns {void}
    */
   function fetchStats() {
+    setStatsLoading(true);
+
     fetch(STATS_URL, { mode: 'cors' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d.activeUsers) { document.getElementById('stat-active-users').textContent = d.activeUsers.toLocaleString(); }
-        if (d.maxUsers) { document.getElementById('stat-max-users').textContent = d.maxUsers.toLocaleString(); }
-        if (d.totalErrors) { document.getElementById('stat-errors').textContent = d.totalErrors; }
-        if (d.avgLatency) { document.getElementById('stat-latency').textContent = d.avgLatency; }
-        if (d.uptime) { document.getElementById('stat-uptime').textContent = d.uptime; }
+        if (d.activeUsers !== undefined) { document.getElementById('stat-active-users').textContent = Number(d.activeUsers).toLocaleString(); }
+        if (d.maxUsers !== undefined) { document.getElementById('stat-max-users').textContent = Number(d.maxUsers).toLocaleString(); }
+        if (d.totalErrors !== undefined) { document.getElementById('stat-errors').textContent = d.totalErrors; }
+        if (d.avgLatency !== undefined) { document.getElementById('stat-latency').textContent = d.avgLatency; }
+        if (d.uptime !== undefined) { document.getElementById('stat-uptime').textContent = d.uptime; }
         updateSystemStatus(d.totalErrors || 0);
       })
-      .catch(function () {});
+      .catch(function () {})
+      .finally(function () {
+        setStatsLoading(false);
+      });
   }
 
   /**
@@ -228,12 +436,15 @@
    * @returns {void}
    */
   function updateSystemStatus(errors) {
+    const statusChip = document.getElementById('system-status');
     const dot = document.querySelector('.system-status-dot');
     const label = document.querySelector('.system-status-label');
     if (errors > 50) {
+      if (statusChip) { statusChip.classList.add('degraded'); }
       dot.className = 'system-status-dot degraded';
       label.textContent = 'Degraded Performance';
     } else {
+      if (statusChip) { statusChip.classList.remove('degraded'); }
       dot.className = 'system-status-dot operational';
       label.textContent = 'All Systems Operational';
     }
@@ -329,6 +540,9 @@
    */
   function renderInsightList(container, items) {
     const isIssuesPanel = container.id === 'insight-issues';
+    const kindGlyph = container.id === 'insight-issues'
+      ? '&#9888;'
+      : (container.id === 'insight-latency' ? '&#9201;' : '&#9652;');
 
     container.innerHTML = '';
     items.forEach(function (item, i) {
@@ -337,7 +551,7 @@
       el.innerHTML =
         '<span class="insight-rank">' + (i + 1) + '</span>' +
         '<div class="insight-body">' +
-          '<div class="insight-text">' + item.title + '</div>' +
+          '<div class="insight-text"><span class="insight-kind">' + kindGlyph + '</span>' + item.title + '</div>' +
           '<div class="insight-meta">' + item.meta + '</div>' +
           (item.detail ? '<div class="insight-detail">' + item.detail + '</div>' : '') +
         '</div>';
@@ -427,6 +641,50 @@
       container.appendChild(node);
     });
   }
+
+  /**
+   * Scroll to a Home bundle panel and briefly highlight it.
+   *
+   * @param {string} selector - CSS selector for the target bundle.
+   * @returns {void}
+   */
+  function focusBundle(selector) {
+    switchView(0);
+    const target = document.querySelector(selector);
+    if (!target) { return; }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.remove('focus-flash');
+    setTimeout(function () { target.classList.add('focus-flash'); }, 40);
+    setTimeout(function () { target.classList.remove('focus-flash'); }, 900);
+  }
+
+  /**
+   * Attach click and keyboard activation behavior to a clickable card.
+   *
+   * @param {HTMLElement | null} el - Card element.
+   * @param {Function} handler - Action to trigger.
+   * @returns {void}
+   */
+  function bindActivatableCard(el, handler) {
+    if (!el) { return; }
+
+    el.addEventListener('click', handler);
+    el.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handler();
+      }
+    });
+  }
+
+  const issuesCard = document.querySelector('.stat-card.linked-issues');
+  const latencyCard = document.querySelector('.stat-card.linked-latency');
+  const trafficCard = document.querySelector('.stat-card.linked-traffic');
+
+  bindActivatableCard(issuesCard, function () { focusBundle('.bundle-panel.issues'); });
+  bindActivatableCard(latencyCard, function () { focusBundle('.bundle-panel.latency'); });
+  bindActivatableCard(trafficCard, function () { focusBundle('.bundle-panel.traffic'); });
 
   /* =========================================
      ANALYTICS: VOLUME BAR CHART
@@ -549,11 +807,35 @@
 
     const maxVal = 450;
     const ySteps = [0, 150, 300, 450];
+    const isLightTheme = document.body.getAttribute('data-theme') === 'light';
+    const palette = isLightTheme
+      ? {
+          grid: 'rgba(76, 110, 156, 0.2)',
+          label: '#5A7193',
+          areaStart: 'rgba(15, 122, 240, 0.24)',
+          areaEnd: 'rgba(15, 122, 240, 0.03)',
+          line: '#0F7AF0',
+          pointHot: '#0F7AF0',
+          pointCool: '#7A94B7',
+          threshold: 'rgba(207, 79, 79, 0.6)',
+          thresholdText: 'rgba(173, 65, 65, 0.85)'
+        }
+      : {
+          grid: 'rgba(95, 126, 169, 0.2)',
+          label: '#8EA4C5',
+          areaStart: 'rgba(78, 167, 255, 0.3)',
+          areaEnd: 'rgba(78, 167, 255, 0.02)',
+          line: '#4EA7FF',
+          pointHot: '#4EA7FF',
+          pointCool: '#5C7495',
+          threshold: 'rgba(255, 116, 116, 0.56)',
+          thresholdText: 'rgba(255, 154, 154, 0.85)'
+        };
 
     ctx.clearRect(0, 0, w, h);
 
     // Grid lines
-    ctx.strokeStyle = 'rgba(86, 145, 200, 0.15)';
+    ctx.strokeStyle = palette.grid;
     ctx.lineWidth = 1;
     ySteps.forEach(function (val) {
       const y = padTop + chartH - (val / maxVal) * chartH;
@@ -564,7 +846,7 @@
     });
 
     // Y-axis labels
-    ctx.fillStyle = '#A89F95';
+    ctx.fillStyle = palette.label;
     ctx.font = '10px monospace';
     ctx.textAlign = 'right';
     ySteps.forEach(function (val) {
@@ -591,14 +873,14 @@
     ctx.lineTo(padLeft + chartW, padTop + chartH);
     ctx.closePath();
     const grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
-    grad.addColorStop(0, 'rgba(230, 168, 23, 0.25)');
-    grad.addColorStop(1, 'rgba(230, 168, 23, 0.02)');
+    grad.addColorStop(0, palette.areaStart);
+    grad.addColorStop(1, palette.areaEnd);
     ctx.fillStyle = grad;
     ctx.fill();
 
     // Line
     ctx.beginPath();
-    ctx.strokeStyle = '#E6A817';
+    ctx.strokeStyle = palette.line;
     ctx.lineWidth = 2.5;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -616,14 +898,14 @@
       const y = padTop + chartH - (val / maxVal) * chartH;
       ctx.beginPath();
       ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = val > 280 ? '#E6A817' : '#6B6560';
+      ctx.fillStyle = val > 280 ? palette.pointHot : palette.pointCool;
       ctx.fill();
     });
 
     // Threshold line
     const threshY = padTop + chartH - (250 / maxVal) * chartH;
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(224, 72, 72, 0.5)';
+    ctx.strokeStyle = palette.threshold;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padLeft, threshY);
@@ -631,7 +913,7 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = 'rgba(224, 72, 72, 0.7)';
+    ctx.fillStyle = palette.thresholdText;
     ctx.font = '10px monospace';
     ctx.textAlign = 'left';
     ctx.fillText('threshold: 250ms', padLeft + 4, threshY - 6);
@@ -642,6 +924,7 @@
      ========================================= */
   const alertsFeed = document.getElementById('alerts-feed');
   const alertsCount = document.getElementById('alerts-count');
+  const alertsEmpty = document.getElementById('alerts-empty');
 
   /**
    * Open a Server-Sent Events connection to the backend for live alert
@@ -964,6 +1247,7 @@
      INIT
      ========================================= */
   generateLatencyData();
+  initTheme();
   initVolumeChart();
   initUserVolumeChart();
   populateInsights();
