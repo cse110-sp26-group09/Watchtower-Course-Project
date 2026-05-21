@@ -27,3 +27,14 @@
 ---
 
 # Sprint 1:
+- **Name**: Josh Victoria
+- **Date**: 05/10/2026
+- **Sprint #**: 1 
+- **Model**:Codex 5.2 medium reasoning
+- **LOC**: 9
+- **Scale**: `requirements.md`
+- **Description:** Used Codex to create a example of what a requirement would look like and used it as a template to create other requirements 
+# Sprint 2:
+
+# Sprint 3:
+
