@@ -83,12 +83,20 @@ a {
   transition: padding-left 180ms ease;
 }
 
+/* Keep brand visible when rail expands on desktop */
+@media (min-width: 861px) {
+  .app-shell:has(.sidebar:hover) .topbar,
+  .app-shell:has(.sidebar:focus-within) .topbar {
+    left: var(--sidebar-expanded-width);
+  }
+}
+
 .topbar {
   position: fixed;
   z-index: 20;
   top: 0;
   right: 0;
-  left: 0;
+  left: var(--sidebar-width);
   height: var(--topbar-height);
   display: flex;
   align-items: center;
@@ -99,6 +107,7 @@ a {
   background: rgba(245, 246, 242, 0.94);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
+  transition: left 180ms ease;
 }
 
 .topbar-left {
@@ -226,12 +235,13 @@ a {
 .sidebar {
   position: fixed;
   z-index: 15;
-  top: var(--topbar-height);
+  top: 0;
   bottom: 0;
   left: 0;
   width: var(--sidebar-width);
-  padding: 18px 12px;
+  padding: 10px 12px 18px;
   background: var(--rail);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden auto;
   transition: width 180ms ease, padding 180ms ease;
 }
@@ -374,6 +384,11 @@ body.dark-mode .topbar {
   background: rgba(15, 20, 26, 0.92);
 }
 
+body.dark-mode .status-token.warning {
+  background: #3a2f1a;
+  color: #ffd37a;
+}
+
 body.dark-mode .alert-pill {
   color: #dce7f4;
   background: #132131;
@@ -458,6 +473,33 @@ body.dark-mode .metadata-grid div {
   background: #111b25;
 }
 
+body.dark-mode .health-radar {
+  background: linear-gradient(160deg, rgba(43, 184, 195, 0.16), rgba(17, 27, 37, 0.8) 60%), #111b25;
+}
+
+body.dark-mode .health-radar-grid polygon,
+body.dark-mode .health-radar-grid line,
+body.dark-mode .health-radar-axis line {
+  stroke: #2c3f52;
+}
+
+body.dark-mode .health-radar-axis text {
+  fill: #d3e2f0;
+}
+
+body.dark-mode .health-legend li {
+  background: #0f1923;
+  border-color: #2c3f52;
+}
+
+body.dark-mode .health-legend strong {
+  color: #f2f7fd;
+}
+
+body.dark-mode .health-summary-head strong {
+  color: #d5e4f3;
+}
+
 body.dark-mode .bar:hover::after,
 body.dark-mode .bar:focus-within::after {
   background: #1d2b3a;
@@ -501,7 +543,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 
   .sidebar {
     width: var(--sidebar-width);
-    padding: 14px 10px;
+    padding: 8px 10px 14px;
     overflow: hidden;
   }
 
@@ -520,6 +562,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   .nav-main {
     display: grid;
     gap: 8px;
+    align-content: start;
   }
 
   .nav-footer {
@@ -565,9 +608,9 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 }
 
 .content {
-  width: min(1320px, 100%);
+  width: min(1440px, 100%);
   margin: 0 auto;
-  padding: 28px;
+  padding: 22px;
 }
 
 .view {
@@ -652,9 +695,105 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   box-shadow: var(--shadow);
 }
 
+.health-summary-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.health-summary-head h1 {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1.02;
+}
+
+.health-summary-head strong {
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.health-radar-card {
+  display: grid;
+  gap: 14px;
+}
+
+.health-radar {
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, rgba(15, 139, 141, 0.07), transparent 55%), var(--surface-muted);
+}
+
+.health-radar-grid polygon,
+.health-radar-grid line {
+  fill: none;
+  stroke: #d6ddd7;
+  stroke-width: 1;
+}
+
+.health-radar-axis line {
+  stroke: #c6d0ca;
+  stroke-width: 1;
+}
+
+.health-radar-axis text {
+  fill: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.health-radar-shape {
+  fill: rgba(212, 93, 76, 0.28);
+  stroke: var(--coral);
+  stroke-width: 2.5;
+}
+
+.health-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-legend li {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.health-legend strong {
+  color: var(--ink);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+  gap: 18px;
+}
+
 .summary-copy {
   display: grid;
-  align-content: center;
+  align-content: start;
   gap: 10px;
 }
 
@@ -717,6 +856,11 @@ code {
   color: #176341;
 }
 
+.status-token.warning {
+  background: var(--amber-soft);
+  color: #7d5206;
+}
+
 .summary-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -770,10 +914,20 @@ code {
 }
 
 .home-grid,
-.analytics-grid {
+.analytics-grid,
+.issues-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
   gap: 18px;
+}
+
+.compact-home-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
+.issues-layout {
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
 }
 
 .panel,
@@ -1608,7 +1762,9 @@ body.text-compact {
   }
 
   .home-grid,
-  .settings-layout {
+  .settings-layout,
+  .health-grid,
+  .issues-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1627,6 +1783,7 @@ body.text-compact {
   }
 
   .topbar {
+    left: 0;
     min-height: 76px;
     padding: 12px 14px;
   }
@@ -1681,6 +1838,14 @@ body.text-compact {
     grid-template-columns: 1fr;
   }
 
+  .health-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .health-radar {
+    min-height: 260px;
+  }
+
   .health-summary,
   .panel {
     padding: 14px;
@@ -1721,7 +1886,7 @@ body.text-compact {
     bottom: 12px;
     left: 12px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     min-height: 70px;
     padding: 8px;
@@ -1768,6 +1933,18 @@ body.text-compact {
   .panel-header,
   .page-heading {
     flex-direction: column;
+  }
+
+  .health-summary-head {
+    flex-direction: column;
+  }
+
+  .health-summary-head h1 {
+    font-size: 34px;
+  }
+
+  .health-summary-head strong {
+    font-size: 18px;
   }
 
   .panel-header {

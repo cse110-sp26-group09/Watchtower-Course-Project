@@ -2,7 +2,7 @@
   "use strict";
 
   var POLL_INTERVAL = 3000;
-  var availableViewNames = ["home", "analytics", "settings"];
+  var availableViewNames = ["home", "issues", "health", "analytics", "settings"];
   var viewToggleElements = document.querySelectorAll("[data-view]");
   var timeRangeButtons = document.querySelectorAll(".segmented-control button");
   var settingsAccordionButtons = document.querySelectorAll(".settings-trigger");
@@ -29,11 +29,12 @@
   var sidebarErrorsValue = document.getElementById("sidebar-errors");
   var sidebarUsersValue = document.getElementById("sidebar-users");
   var sidebarEventsValue = document.getElementById("sidebar-events");
-  var priorityListContainer = document.getElementById("priority-list");
+  var healthPriorityListContainer = document.getElementById("health-priority-list");
   var issueListContainer = document.getElementById("issue-list");
   var serviceStackContainer = document.getElementById("service-stack");
   var featureHotspotsContainer = document.getElementById("build-metadata");
   var activityFeedContainer = document.getElementById("activity-feed");
+  var issuesActivityFeedContainer = document.getElementById("issues-activity-feed");
   var userChartContainer = document.getElementById("user-chart");
   var purchaseChartContainer = document.getElementById("purchase-chart");
   var userDeltaBadge = document.getElementById("user-delta");
@@ -55,6 +56,14 @@
   var profileStatusLine = document.getElementById("profile-status-line");
   var changePasswordButton = document.getElementById("change-password-button");
   var signOutButton = document.getElementById("sign-out-button");
+  var healthSummaryText = document.getElementById("health-summary-text");
+  var healthStatusToken = document.getElementById("health-status-token");
+  var healthCopy = document.getElementById("health-copy");
+  var healthRadarGrid = document.getElementById("health-radar-grid");
+  var healthRadarAxis = document.getElementById("health-radar-axis");
+  var healthRadarShape = document.getElementById("health-radar-shape");
+  var healthLegend = document.getElementById("health-legend");
+  var healthIncidentFeed = document.getElementById("health-incident-feed");
 
   var notificationMutedUntil = 0;
   var PROFILE_STORAGE_KEY = "watchtower_profile_name";
@@ -568,39 +577,233 @@
     }).join("");
   }
 
-  function renderPrioritySnapshot(stats, events) {
-    if (!priorityListContainer) return;
+  function clampScore(value) {
+    return Math.max(0, Math.min(100, Math.round(value)));
+  }
 
+  function calculateHealthScores(stats, events) {
+    var totalEvents = Number(stats.totalEvents || 0);
+    var totalErrors = Number(stats.totalErrors || 0);
     var routeNames = Object.keys(stats.latencyByRoute || {});
     var slowestRouteName = routeNames.sort(function (leftRoute, rightRoute) {
       return (stats.latencyByRoute[rightRoute].p95 || 0) - (stats.latencyByRoute[leftRoute].p95 || 0);
     })[0];
     var slowestRoute = slowestRouteName ? stats.latencyByRoute[slowestRouteName] : null;
+    var p95Latency = Number(slowestRoute && slowestRoute.p95 ? slowestRoute.p95 : 0);
 
-    var topFeature = deriveFeatureCounts(events || [])[0];
-    var firstError = (stats.recentErrors || [])[0];
+    var analytics = stats.analytics || {};
+    var feedbackAverage = Number(analytics.feedbackAverage || 0);
+    var feedbackTotal = Number(analytics.feedbackTotal || 0);
 
-    var items = [];
+    var errorRatio = totalEvents > 0 ? totalErrors / totalEvents : 0;
 
-    if (firstError) {
-      items.push('<li><span aria-hidden="true">!</span> Critical error on ' + escapeHtml(firstError.route || "/") + ': ' + escapeHtml(firstError.data.message || "Unknown error") + "</li>");
-    } else {
-      items.push('<li><span aria-hidden="true">!</span> No recent critical errors reported.</li>');
+    var availabilityScore = clampScore(100 - Math.min(totalErrors * 12, 80));
+    var errorRateScore = clampScore(100 - errorRatio * 280);
+    var latencyScore = p95Latency <= 0 ? 58 : clampScore(100 - ((Math.max(0, p95Latency - 120) / 1800) * 100));
+    var ingestionScore = clampScore(Math.min(totalEvents, 120) / 1.2 + Math.min(Number(stats.activeUsers || 0), 20));
+    var feedbackScore = feedbackTotal === 0 ? 62 : clampScore((feedbackAverage / 5) * 100);
+    var coverageScore = clampScore(Math.min(routeNames.length, 6) * (100 / 6));
+
+    return {
+      availability: availabilityScore,
+      errors: errorRateScore,
+      latency: latencyScore,
+      ingestion: ingestionScore,
+      feedback: feedbackScore,
+      coverage: coverageScore,
+      slowestRouteName: slowestRouteName || "/",
+      slowestRoute: slowestRoute,
+      feedbackTotal: feedbackTotal,
+      score: clampScore((availabilityScore + errorRateScore + latencyScore + ingestionScore + feedbackScore + coverageScore) / 6),
+    };
+  }
+
+  function renderHealthRadar(scores) {
+    if (!healthRadarGrid || !healthRadarAxis || !healthRadarShape || !healthLegend) return;
+
+    var axes = [
+      { key: "availability", label: "Availability" },
+      { key: "errors", label: "Error rate" },
+      { key: "latency", label: "Latency" },
+      { key: "ingestion", label: "Ingestion" },
+      { key: "feedback", label: "Feedback" },
+      { key: "coverage", label: "Coverage" },
+    ];
+
+    var centerX = 260;
+    var centerY = 170;
+    var radius = 120;
+    var levels = 5;
+
+    function pointFor(index, ratio) {
+      var angle = (-Math.PI / 2) + (index * ((Math.PI * 2) / axes.length));
+      return {
+        x: centerX + Math.cos(angle) * radius * ratio,
+        y: centerY + Math.sin(angle) * radius * ratio,
+      };
     }
 
-    if (slowestRoute) {
-      items.push('<li><span aria-hidden="true">!</span> Latency hotspot: ' + escapeHtml(slowestRouteName) + " at " + slowestRoute.p95 + " ms p95</li>");
-    } else {
-      items.push('<li><span aria-hidden="true">!</span> Waiting for pageload events to compute latency hotspots.</li>');
+    healthRadarGrid.innerHTML = Array.from({ length: levels }, function (_, levelIndex) {
+      var ratio = (levelIndex + 1) / levels;
+      var points = axes.map(function (_, axisIndex) {
+        var point = pointFor(axisIndex, ratio);
+        return point.x.toFixed(1) + "," + point.y.toFixed(1);
+      }).join(" ");
+      return '<polygon points="' + points + '"></polygon>';
+    }).join("") + '<line x1="' + centerX + '" y1="' + (centerY - radius) + '" x2="' + centerX + '" y2="' + (centerY + radius) + '"></line>';
+
+    healthRadarAxis.innerHTML = axes.map(function (axis, axisIndex) {
+      var outer = pointFor(axisIndex, 1);
+      var label = pointFor(axisIndex, 1.18);
+      return (
+        '<line x1="' + centerX + '" y1="' + centerY + '" x2="' + outer.x.toFixed(1) + '" y2="' + outer.y.toFixed(1) + '"></line>' +
+        '<text x="' + label.x.toFixed(1) + '" y="' + label.y.toFixed(1) + '">' + escapeHtml(axis.label) + '</text>'
+      );
+    }).join("");
+
+    var polygonPoints = axes.map(function (axis, axisIndex) {
+      var ratio = (Number(scores[axis.key] || 0) / 100);
+      var point = pointFor(axisIndex, ratio);
+      return point.x.toFixed(1) + "," + point.y.toFixed(1);
+    }).join(" ");
+
+    healthRadarShape.setAttribute("points", polygonPoints);
+
+    healthLegend.innerHTML = axes.map(function (axis) {
+      return '<li><span>' + escapeHtml(axis.label) + '</span><strong>' + Number(scores[axis.key] || 0) + '/100</strong></li>';
+    }).join("");
+  }
+
+  function renderHealthIncidentFeed(stats, events) {
+    if (!healthIncidentFeed) return;
+
+    var incidents = [];
+    var recentErrors = (stats.recentErrors || []).slice(0, 4);
+
+    recentErrors.forEach(function (errorEvent) {
+      incidents.push({
+        time: formatClockTime(errorEvent.timestamp),
+        message: 'Error on ' + (errorEvent.route || '/') + ': ' + (errorEvent.data && errorEvent.data.message ? errorEvent.data.message : 'Unknown error'),
+      });
+    });
+
+    var routeNames = Object.keys(stats.latencyByRoute || {});
+    if (routeNames.length > 0) {
+      var slowRouteName = routeNames.sort(function (leftRoute, rightRoute) {
+        return (stats.latencyByRoute[rightRoute].p95 || 0) - (stats.latencyByRoute[leftRoute].p95 || 0);
+      })[0];
+      var slowRouteStats = stats.latencyByRoute[slowRouteName];
+      incidents.push({
+        time: formatClockTime(new Date().toISOString()),
+        message: 'Latency alert on ' + slowRouteName + ' at p95 ' + (slowRouteStats.p95 || 0) + ' ms.',
+      });
     }
 
-    if (topFeature) {
-      items.push('<li><span aria-hidden="true">!</span> Most-clicked feature right now: ' + escapeHtml(topFeature.name) + " (" + topFeature.count + " events)</li>");
-    } else {
-      items.push('<li><span aria-hidden="true">!</span> No click/custom activity yet. Use the demo app to generate behavior data.</li>');
+    if (incidents.length === 0) {
+      healthIncidentFeed.innerHTML = '<li><span class="timeline-time">--:--</span><span class="timeline-copy">No incidents detected yet. Generate demo traffic to populate this stream.</span></li>';
+      return;
     }
 
-    priorityListContainer.innerHTML = items.join("");
+    healthIncidentFeed.innerHTML = incidents.slice(0, 6).map(function (incident) {
+      return '<li><span class="timeline-time">' + escapeHtml(incident.time) + '</span><span class="timeline-copy">' + escapeHtml(incident.message) + '</span></li>';
+    }).join('');
+  }
+
+  function renderHealthSummary(stats, events) {
+    var healthScores = calculateHealthScores(stats, events);
+    renderHealthRadar(healthScores);
+    renderHealthIncidentFeed(stats, events);
+
+    if (healthSummaryText) {
+      healthSummaryText.textContent = 'Overall score ' + healthScores.score + '/100';
+    }
+
+    if (healthStatusToken) {
+      var statusLabel = 'Healthy';
+      var statusClass = 'good';
+
+      if (healthScores.score < 55) {
+        statusLabel = 'At risk';
+        statusClass = 'warning';
+      } else if (healthScores.score < 75) {
+        statusLabel = 'Watch';
+        statusClass = 'warning';
+      }
+
+      healthStatusToken.textContent = statusLabel;
+      healthStatusToken.classList.remove('good', 'warning');
+      healthStatusToken.classList.add(statusClass);
+    }
+
+    if (healthCopy) {
+      var slowRouteLine = healthScores.slowestRoute
+        ? 'Slowest route is ' + healthScores.slowestRouteName + ' at p95 ' + healthScores.slowestRoute.p95 + ' ms.'
+        : 'Waiting for pageload telemetry to measure route latency.';
+      healthCopy.textContent =
+        'Health score balances uptime pressure, error rate, latency, ingestion, and user feedback. ' + slowRouteLine;
+    }
+
+    if (healthPriorityListContainer) {
+      var alerts = [];
+      var topFeature = deriveFeatureCounts(events || [])[0];
+
+      if ((stats.totalErrors || 0) > 0) {
+        alerts.push('<li><span aria-hidden="true">!</span> ' + escapeHtml(String(stats.totalErrors)) + ' open errors are currently pending triage.</li>');
+      } else {
+        alerts.push('<li><span aria-hidden="true">!</span> No open errors right now. Keep monitoring as new deploys roll out.</li>');
+      }
+
+      if (healthScores.slowestRoute) {
+        alerts.push('<li><span aria-hidden="true">!</span> Latency hotspot: ' + escapeHtml(healthScores.slowestRouteName) + ' at p95 ' + healthScores.slowestRoute.p95 + ' ms.</li>');
+      }
+
+      if (topFeature) {
+        alerts.push('<li><span aria-hidden="true">!</span> Most-clicked feature is ' + escapeHtml(topFeature.name) + ' (' + topFeature.count + ' events).</li>');
+      }
+
+      if (healthScores.feedbackTotal === 0) {
+        alerts.push('<li><span aria-hidden="true">!</span> No feedback submissions yet. Prompt users to submit quick ratings.</li>');
+      }
+
+      healthPriorityListContainer.innerHTML = alerts.join('');
+    }
+  }
+
+  function renderIssuesActivityFeed(stats, activityEvents) {
+    if (!issuesActivityFeedContainer) return;
+
+    var rows = [];
+
+    (stats.recentErrors || []).slice(0, 6).forEach(function (eventRecord) {
+      rows.push({
+        timestamp: getValidTimestamp(eventRecord.timestamp) || 0,
+        time: formatClockTime(eventRecord.timestamp),
+        message: "Error: " + (eventRecord.data && eventRecord.data.message ? eventRecord.data.message : "Unknown error"),
+      });
+    });
+
+    (activityEvents || []).filter(function (eventRecord) {
+      return eventRecord.type === "feedback";
+    }).slice(0, 4).forEach(function (feedbackEvent) {
+      rows.push({
+        timestamp: getValidTimestamp(feedbackEvent.timestamp) || 0,
+        time: formatClockTime(feedbackEvent.timestamp),
+        message: "Feedback: " + ((feedbackEvent.data && feedbackEvent.data.message) || "User feedback received"),
+      });
+    });
+
+    rows.sort(function (leftRow, rightRow) {
+      return rightRow.timestamp - leftRow.timestamp;
+    });
+
+    if (rows.length === 0) {
+      issuesActivityFeedContainer.innerHTML = '<li><span class="timeline-time">--:--</span><span class="timeline-copy">No issue activity yet. Generate demo errors to populate this feed.</span></li>';
+      return;
+    }
+
+    issuesActivityFeedContainer.innerHTML = rows.slice(0, 8).map(function (row) {
+      return '<li><span class="timeline-time">' + escapeHtml(row.time) + '</span><span class="timeline-copy">' + escapeHtml(row.message) + '</span></li>';
+    }).join("");
   }
 
   function renderBarChart(chartContainer, labels, values, highlightedIndex) {
@@ -953,8 +1156,9 @@
       if (alertPillButton) alertPillButton.classList.toggle("quiet", issueCount === 0);
     }
 
-    renderPrioritySnapshot(stats, resolvedEvents);
+    renderHealthSummary(stats, resolvedEvents);
     renderIssueList(stats.recentErrors || []);
+    renderIssuesActivityFeed(stats, resolvedEvents);
     renderServiceStatus(stats);
     renderFeatureHotspots(resolvedEvents);
     renderActivityFeed(resolvedEvents);
