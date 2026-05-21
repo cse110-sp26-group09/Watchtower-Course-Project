@@ -150,3 +150,48 @@ This approach keeps the project simple, easy to deploy, and easier for all team 
 - Full database integration – Not needed for prototype validation
 
 These may be considered later only if approved and justified.
+
+---
+
+## ADR 0002: CI/CD Pipeline Setup
+
+### Status
+Approved
+
+### Context
+For Sprint 2, we need to keep a solid CI/CD pipeline to guide our process to make progress as smooth and accessible, keeping our main branches clean, while also keeping our documentation clear 
+
+### Decision
+We will use familiar dependencies that we have used in our labs for easy implementation since we are familiar with the technology while also using some unfamiliar dependancies to insure stronger code security
+
+**Familar Dependancies**
+- **Jest** for unit testing
+- **Playwright** for end-to-end testing
+- **Github actions** for automated testing/ keeping up good coding practice 
+- **HTML/CSS/JS validation** for basic test that all code is syntatically correct
+
+
+**Unfamiliar Dependancies**
+- **Dependabot** used for keeping up with any dependancy updates/ conflicts with dependancy source of truth
+- **npm security audit in CI** used to make sure any dependancies can't create any security issues
+- **CodeQL** used to scan codebase to find any security vulnerabilities
+
+### Consequences
+This approach keeps our process clean and organized so whenver we update our code we make sure every aspect is covered in terms of documentation, security, and avoid errors that won't affect our main branch.
+
+### Alternatives Considered
+- Vitest (Alternative to Jest) A modern unit testing framework built on Vite. It uses almost identical syntax to Jest, meaning your team won't have to relearn how to write tests, but it runs significantly faster.
+
+- Cypress (Alternative to Playwright) A developer-friendly end-to-end testing framework that runs directly inside the browser. It features a powerful visual runner that makes debugging failing UI tests much easier for beginners.
+
+- GitLab CI/CD (Alternative to GitHub Actions) A powerful, built-in automation platform. While GitHub Actions is native to your current code hosting, GitLab CI/CD is the industry's leading native alternative if you ever shift repository hosting.
+
+- ESLint & Prettier (Alternative to HTML/CSS/JS Validation) Instead of just checking if syntax is valid, this combination actively enforces uniform code formatting and catches tricky logical bugs before your code even reaches the main branch.
+
+- Renovate (Alternative to Dependabot) An automated dependency checker that reduces "PR noise" by grouping multiple package updates into a single Pull Request, preventing your team from being flooded with notifications.
+
+- Snyk (Alternative to npm security audit) A dedicated security tool that scans your external packages for vulnerabilities, offering automated fixes and much clearer instructions on how to patch security flaws than standard npm audits.
+
+- SonarCloud (Alternative to CodeQL) A cloud-based code analysis tool that scans your codebase for security vulnerabilities, bugs, and "code smell." It provides a clean dashboard visual grade (A through F) for your code quality.
+
+These may be considered later only if approved and justified.
