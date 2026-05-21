@@ -1,34 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WatchTower — Observability Dashboard</title>
+  <title>WatchTower - Observability Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'monospace']
+          },
+          colors: {
+            wt: {
+              950: '#0a0e15',
+              900: '#101722',
+              850: '#151d2b',
+              800: '#1b2638',
+              700: '#2b3a52',
+              600: '#3c4e6b',
+              500: '#587198',
+              400: '#7f9bc4',
+              300: '#a4b9d6'
+            }
+          },
+          boxShadow: {
+            panel: '0 10px 30px rgba(2, 8, 20, 0.38)'
+          }
+        }
+      }
+    };
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <!-- Main grid: 72px sidebar + fluid content area -->
-  <div class="app-layout">
+<body class="min-h-screen overflow-hidden bg-wt-950 text-slate-100 antialiased">
+  <div class="app-layout h-screen">
+    <nav class="nav-sidebar" id="nav-sidebar">
+      <div class="nav-shell">
+        <div class="workspace-switcher">
+          <div class="workspace-mark">WT</div>
+          <div class="workspace-meta">
+            <p class="workspace-label">Workspace</p>
+            <p class="workspace-name">WatchTower</p>
+          </div>
+          <button class="nav-collapse-trigger" id="nav-collapse-trigger" type="button" aria-label="Collapse sidebar">«</button>
+        </div>
 
-    <!-- Primary Navigation Sidebar -->
-    <nav class="nav-sidebar">
-      <div class="nav-logo">W</div>
-      <div class="nav-icon active" id="nav-home" title="Home">&#8962;</div>
-      <div class="nav-icon" id="nav-analytics" title="Analytics">&#9201;</div>
-      <div class="nav-icon" id="nav-alerts" title="Alerts">&#9888;</div>
-      <div class="nav-spacer"></div>
-      <div class="nav-icon" id="nav-settings" title="Settings">&#9881;</div>
+        <div class="nav-section">
+          <p class="nav-group-title">Monitor</p>
+          <button class="nav-icon active" id="nav-home" title="Home">
+            <span class="nav-glyph">&#8962;</span>
+            <span class="nav-text">Overview</span>
+          </button>
+          <button class="nav-icon" id="nav-analytics" title="Analytics">
+            <span class="nav-glyph">&#9201;</span>
+            <span class="nav-text">Analytics</span>
+          </button>
+          <button class="nav-icon" id="nav-alerts" title="Alerts">
+            <span class="nav-glyph">&#9888;</span>
+            <span class="nav-text">Alerts</span>
+          </button>
+        </div>
+
+        <details class="sidebar-version" open>
+          <summary class="sidebar-version-toggle">
+            <span class="sidebar-version-icon">&#9673;</span>
+            <span class="sidebar-version-label">Version History</span>
+          </summary>
+          <div class="sidebar-version-body">
+            <div class="version-branch sidebar-version-branch" id="version-branch"></div>
+          </div>
+        </details>
+
+        <div class="nav-spacer"></div>
+
+        <div class="nav-section nav-bottom">
+          <button class="nav-icon" id="nav-settings" title="Settings">
+            <span class="nav-glyph">&#9881;</span>
+            <span class="nav-text">Settings</span>
+          </button>
+          <div class="nav-user">
+            <span class="nav-user-avatar">AH</span>
+            <div class="nav-user-meta">
+              <p class="nav-user-name">Aditya H.</p>
+              <p class="nav-user-role">Tech Lead</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </nav>
 
-    <!-- Settings Panel -->
     <div class="settings-panel hidden" id="settings-panel">
       <div class="panel-header">
         <span>Settings</span>
-        <button class="panel-close" id="settings-close">&times;</button>
+        <button class="panel-close" id="settings-close" type="button">&times;</button>
       </div>
       <div class="settings-section">
-        <label class="settings-label">Language</label>
-        <select class="settings-select">
+        <label class="settings-label" for="settings-language">Language</label>
+        <select class="settings-select" id="settings-language">
           <option selected>English</option>
           <option>Spanish</option>
           <option>French</option>
@@ -36,28 +108,49 @@
           <option>Japanese</option>
         </select>
       </div>
+      
+      <!-- FIXED: Linked range input explicitly with label using for/id attributes -->
       <div class="settings-section">
-        <label class="settings-label">Alert Volume</label>
-        <input type="range" class="settings-range" min="0" max="100" value="70">
+        <label class="settings-label" for="settings-volume">Alert Volume</label>
+        <input type="range" class="settings-range" id="settings-volume" min="0" max="100" value="70">
         <span class="settings-range-value">70%</span>
       </div>
+
       <div class="settings-section">
-        <label class="settings-label">Theme</label>
-        <select class="settings-select">
-          <option selected>Dark</option>
-          <option>Light</option>
-          <option>System Default</option>
+        <label class="settings-label" for="settings-theme-select">Theme</label>
+        <select class="settings-select" id="settings-theme-select">
+          <option value="dark" selected>Dark</option>
+          <option value="light">Light</option>
+          <option value="system">System Default</option>
         </select>
       </div>
+
+      <!-- FIXED: Wrapped toggles into semantic labels to associate inputs with description tags -->
       <div class="settings-section">
-        <label class="settings-label">Notifications</label>
-        <div class="settings-toggle-row"><span>Desktop alerts</span><input type="checkbox" checked></div>
-        <div class="settings-toggle-row"><span>Sound on critical</span><input type="checkbox" checked></div>
-        <div class="settings-toggle-row"><span>Email digest</span><input type="checkbox"></div>
+        <p class="settings-label">Notifications</p>
+        <div class="settings-toggle-row">
+          <label class="flex w-full justify-between items-center cursor-pointer">
+            <span>Desktop alerts</span>
+            <input type="checkbox" checked>
+          </label>
+        </div>
+        <div class="settings-toggle-row">
+          <label class="flex w-full justify-between items-center cursor-pointer">
+            <span>Sound on critical</span>
+            <input type="checkbox" checked>
+          </label>
+        </div>
+        <div class="settings-toggle-row">
+          <label class="flex w-full justify-between items-center cursor-pointer">
+            <span>Email digest</span>
+            <input type="checkbox">
+          </label>
+        </div>
       </div>
+
       <div class="settings-section">
-        <label class="settings-label">Refresh Rate</label>
-        <select class="settings-select">
+        <label class="settings-label" for="settings-refresh-rate">Refresh Rate</label>
+        <select class="settings-select" id="settings-refresh-rate">
           <option>5 seconds</option>
           <option selected>10 seconds</option>
           <option>30 seconds</option>
@@ -65,8 +158,8 @@
         </select>
       </div>
       <div class="settings-section">
-        <label class="settings-label">Time Zone</label>
-        <select class="settings-select">
+        <label class="settings-label" for="settings-timezone">Time Zone</label>
+        <select class="settings-select" id="settings-timezone">
           <option>UTC</option>
           <option selected>Local (auto-detect)</option>
           <option>US/Pacific</option>
@@ -76,260 +169,297 @@
       </div>
     </div>
 
-    <!-- ===== VIEW 1: HOME — Stats overview, insights, and version history ===== -->
-    <div class="view view-home active" id="view-home">
-      <div class="view-scroll">
+    <main class="main-shell">
+      <div class="view view-home active" id="view-home">
+        <div class="view-scroll">
+          <header class="home-header">
+            <div class="home-header-left">
+              <h1 class="home-title">WatchTower Overview</h1>
+              <p class="home-subtitle">Realtime application health, incident surface, and performance behavior.</p>
+            </div>
+            <div class="home-header-controls">
+              <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark or light mode">
+                <span class="theme-toggle-icon" id="theme-toggle-icon">&#9681;</span>
+                <span class="theme-toggle-text" id="theme-toggle-text">Dark</span>
+              </button>
+              <div class="system-status" id="system-status">
+                <span class="system-status-dot operational"></span>
+                <span class="system-status-label">All Systems Operational</span>
+              </div>
+            </div>
+          </header>
 
-        <!-- Header with system status indicator (operational/degraded) -->
-        <header class="home-header">
-          <div class="home-header-left">
-            <h1 class="home-title">Welcome to WatchTower</h1>
-            <p class="home-subtitle">Centralized observability at a glance</p>
+          <div class="hero-stats" id="hero-stats">
+            <div class="stat-card">
+              <div class="stat-card-head">
+                <span class="stat-icon">&#128101;</span>
+                <span class="stat-link">Users</span>
+              </div>
+              <div class="stat-value" id="stat-active-users">1,284</div>
+              <div class="stat-label">Active Users</div>
+              <p class="stat-trend up">+5.2% vs 1h</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-head">
+                <span class="stat-icon">&#128200;</span>
+                <span class="stat-link">24h Peak</span>
+              </div>
+              <div class="stat-value" id="stat-max-users">2,871</div>
+              <div class="stat-label">Max Users (24h)</div>
+              <p class="stat-trend up">+9.8% vs yesterday</p>
+            </div>
+            <div class="stat-card accent-red linked-issues" role="button" tabindex="0" aria-label="Jump to top issues">
+              <div class="stat-card-head">
+                <span class="stat-icon">&#9888;</span>
+                <span class="stat-link">Top 3 Issues</span>
+              </div>
+              <div class="stat-value" id="stat-errors">24</div>
+              <div class="stat-label">Current Errors</div>
+              <p class="stat-trend down">+3 critical in 15m</p>
+            </div>
+            <div class="stat-card accent-honey linked-latency" role="button" tabindex="0" aria-label="Jump to latency windows">
+              <div class="stat-card-head">
+                <span class="stat-icon">&#9201;</span>
+                <span class="stat-link">Latency Windows</span>
+              </div>
+              <div class="stat-value" id="stat-latency">142ms</div>
+              <div class="stat-label">Avg Latency</div>
+              <p class="stat-trend down">-18ms from peak</p>
+            </div>
+            <div class="stat-card accent-green linked-traffic" role="button" tabindex="0" aria-label="Jump to traffic windows">
+              <div class="stat-card-head">
+                <span class="stat-icon">&#128640;</span>
+                <span class="stat-link">Peak Traffic</span>
+              </div>
+              <div class="stat-value" id="stat-uptime">99.97%</div>
+              <div class="stat-label">Uptime (30d)</div>
+              <p class="stat-trend up">+0.04% this week</p>
+            </div>
           </div>
-          <div class="system-status" id="system-status">
-            <span class="system-status-dot operational"></span>
-            <span class="system-status-label">All Systems Operational</span>
-          </div>
-        </header>
 
-        <!-- 5-column stat cards: users, errors, latency, uptime -->
-        <div class="hero-stats" id="hero-stats">
-          <div class="stat-card">
-            <div class="stat-value" id="stat-active-users">1,284</div>
-            <div class="stat-label">Active Users</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-max-users">2,871</div>
-            <div class="stat-label">Max Users (24h)</div>
-          </div>
-          <div class="stat-card accent-red">
-            <div class="stat-value" id="stat-errors">24</div>
-            <div class="stat-label">Current Errors</div>
-          </div>
-          <div class="stat-card accent-honey">
-            <div class="stat-value" id="stat-latency">142ms</div>
-            <div class="stat-label">Avg Latency</div>
-          </div>
-          <div class="stat-card accent-green">
-            <div class="stat-value" id="stat-uptime">99.97%</div>
-            <div class="stat-label">Uptime (30d)</div>
-          </div>
-        </div>
-
-        <section class="home-columns">
-          <!-- Left: Insights stacked vertically -->
-          <div class="insights-column">
-            <div class="insight-panel">
-              <div class="insight-panel-header">
-                <span class="insight-panel-icon issues">&#9888;</span>
-                <h2 class="insight-title">Top 3 Issues</h2>
+          <section class="overview-bundles">
+            <div class="bundle-panel issues">
+              <div class="bundle-summary accent-red">
+                <span class="bundle-icon">&#9888;</span>
+                <div class="bundle-summary-body">
+                  <p class="bundle-eyebrow">Current Errors</p>
+                  <h2 class="bundle-title">Top 3 Issues</h2>
+                  <p class="bundle-subtext">Most urgent failures affecting active sessions and APIs.</p>
+                </div>
               </div>
               <div class="insight-list" id="insight-issues"></div>
             </div>
-            <div class="insight-panel">
-              <div class="insight-panel-header">
-                <span class="insight-panel-icon latency">&#9201;</span>
-                <h2 class="insight-title">High Latency Windows</h2>
+
+            <div class="bundle-panel latency">
+              <div class="bundle-summary accent-honey">
+                <span class="bundle-icon">&#9201;</span>
+                <div class="bundle-summary-body">
+                  <p class="bundle-eyebrow">Avg Latency</p>
+                  <h2 class="bundle-title">High Latency Windows</h2>
+                  <p class="bundle-subtext">Grouped windows with p95 and endpoint-level degradation context.</p>
+                </div>
               </div>
               <div class="insight-list" id="insight-latency"></div>
             </div>
-            <div class="insight-panel">
-              <div class="insight-panel-header">
-                <span class="insight-panel-icon traffic">&#9652;</span>
-                <h2 class="insight-title">Peak Traffic</h2>
+
+            <div class="bundle-panel traffic">
+              <div class="bundle-summary accent-green">
+                <span class="bundle-icon">&#9652;</span>
+                <div class="bundle-summary-body">
+                  <p class="bundle-eyebrow">Uptime (30d)</p>
+                  <h2 class="bundle-title">Peak Traffic</h2>
+                  <p class="bundle-subtext">Top request windows and deployment-correlated load shifts.</p>
+                </div>
               </div>
               <div class="insight-list" id="insight-traffic"></div>
             </div>
-          </div>
+          </section>
 
-          <!-- Right: Version History Branch -->
-          <div class="version-panel">
-            <div class="insight-panel-header">
-              <span class="insight-panel-icon" style="color: var(--morning-sky);">&#9673;</span>
-              <h2 class="insight-title">Version History</h2>
+        </div>
+      </div>
+
+      <div class="view view-analytics" id="view-analytics">
+        <div class="view-scroll">
+          <section class="chart-section">
+            <div class="section-header">
+              <h2 class="section-title">Event Volume - Last 24 Hours</h2>
+              <div class="section-chip">Live</div>
             </div>
-            <div class="version-branch" id="version-branch"></div>
-          </div>
-        </section>
+            <div class="volume-chart-container">
+              <div class="volume-chart" id="volume-chart"></div>
+              <div class="volume-x-axis" id="volume-x-axis"></div>
+            </div>
+          </section>
 
+          <section class="chart-section">
+            <div class="section-header">
+              <h2 class="section-title">User Activity - Last 24 Hours</h2>
+              <div class="section-chip">Rolling</div>
+            </div>
+            <div class="volume-chart-container">
+              <div class="volume-chart" id="user-volume-chart"></div>
+              <div class="volume-x-axis" id="user-volume-x-axis"></div>
+            </div>
+          </section>
+
+          <section class="chart-section">
+            <div class="section-header">
+              <h2 class="section-title">Response Latency - Last 24 Hours</h2>
+              <div class="section-chip">p95</div>
+            </div>
+            <div class="canvas-container">
+              <canvas id="latency-canvas"></canvas>
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
 
-    <!-- ===== VIEW 2: ANALYTICS — Bar charts and canvas latency graph ===== -->
-    <div class="view view-analytics" id="view-analytics">
-      <div class="view-scroll">
-
-        <section class="chart-section">
-          <h2 class="section-title">Event Volume — Last 24 Hours</h2>
-          <div class="volume-chart-container">
-            <div class="volume-chart" id="volume-chart"></div>
-            <div class="volume-x-axis" id="volume-x-axis"></div>
+      <div class="view view-alerts" id="view-alerts">
+        <aside class="filter-sidebar" id="filter-sidebar">
+          <div class="filter-sidebar-header">
+            <span class="filter-title">Filters</span>
+            <div class="filter-header-actions">
+              <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear All</button>
+              <button class="filter-collapse-btn" id="filter-collapse-btn" type="button">&#10094;</button>
+            </div>
           </div>
-        </section>
-
-        <section class="chart-section">
-          <h2 class="section-title">User Activity — Last 24 Hours</h2>
-          <div class="volume-chart-container">
-            <div class="volume-chart" id="user-volume-chart"></div>
-            <div class="volume-x-axis" id="user-volume-x-axis"></div>
+          <div class="filter-body">
+            <div class="facet-search">
+              <input type="text" placeholder="Search filters...">
+            </div>
+            <div class="facet-group" id="facet-status">
+              <div class="facet-header">
+                <span>Status</span>
+                <span class="facet-toggle">&#9662;</span>
+              </div>
+              <div class="facet-items">
+                <div class="status-item active" data-status="critical">
+                  <span class="status-dot critical"></span>
+                  <span class="status-name">Critical</span>
+                  <span class="count" id="count-critical">0</span>
+                </div>
+                <div class="status-item active" data-status="error">
+                  <span class="status-dot error"></span>
+                  <span class="status-name">Error</span>
+                  <span class="count" id="count-error">0</span>
+                </div>
+                <div class="status-item active" data-status="warning">
+                  <span class="status-dot warning"></span>
+                  <span class="status-name">Warning</span>
+                  <span class="count" id="count-warning">0</span>
+                </div>
+                <div class="status-item" data-status="info">
+                  <span class="status-dot info"></span>
+                  <span class="status-name">Info</span>
+                  <span class="count" id="count-info">0</span>
+                </div>
+              </div>
+            </div>
+            <div class="facet-group" id="facet-patch">
+              <div class="facet-header">
+                <span>Patch</span>
+                <span class="facet-toggle">&#9662;</span>
+              </div>
+              <div class="facet-items">
+                <div class="select-item active" data-value="v2.14.3">
+                  <span class="select-chip">v2.14.3</span>
+                  <span class="count">67</span>
+                </div>
+                <div class="select-item active" data-value="v2.14.2">
+                  <span class="select-chip">v2.14.2</span>
+                  <span class="count">45</span>
+                </div>
+                <div class="select-item" data-value="v2.13.8">
+                  <span class="select-chip">v2.13.8</span>
+                  <span class="count">33</span>
+                </div>
+              </div>
+            </div>
+            <div class="facet-group" id="facet-security">
+              <div class="facet-header">
+                <span>Security</span>
+                <span class="facet-toggle">&#9662;</span>
+              </div>
+              <div class="facet-items">
+                <div class="select-item active" data-value="brute-force">
+                  <span class="select-chip">Brute Force</span>
+                  <span class="count">8</span>
+                </div>
+                <div class="select-item active" data-value="unauthorized">
+                  <span class="select-chip">Unauthorized</span>
+                  <span class="count">15</span>
+                </div>
+                <div class="select-item" data-value="rate-limit">
+                  <span class="select-chip">Rate Limit</span>
+                  <span class="count">31</span>
+                </div>
+                <div class="select-item" data-value="injection">
+                  <span class="select-chip">Injection</span>
+                  <span class="count">3</span>
+                </div>
+              </div>
+            </div>
+            <div class="facet-group" id="facet-service">
+              <div class="facet-header">
+                <span>Service</span>
+                <span class="facet-toggle">&#9662;</span>
+              </div>
+              <div class="facet-items">
+                <div class="select-item active" data-value="auth-service">
+                  <span class="select-chip">auth-service</span>
+                  <span class="count">42</span>
+                </div>
+                <div class="select-item active" data-value="payment-api">
+                  <span class="select-chip">payment-api</span>
+                  <span class="count">19</span>
+                </div>
+                <div class="select-item" data-value="user-service">
+                  <span class="select-chip">user-service</span>
+                  <span class="count">27</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
+        </aside>
 
-        <section class="chart-section">
-          <h2 class="section-title">Response Latency — Last 24 Hours</h2>
-          <div class="canvas-container">
-            <canvas id="latency-canvas"></canvas>
+        <div class="alerts-main">
+          <header class="alerts-topbar">
+            <div class="alerts-search">
+              <input type="text" placeholder="Search errors by title, tag, or key-value..." id="alerts-search-input">
+            </div>
+            <div class="alerts-controls">
+              <button class="mute-btn" id="mute-btn" type="button">Mute Alerts</button>
+              
+              <!-- FIXED: Added an explicit aria-label for standalone dropdown layout -->
+              <select class="time-selector" id="alerts-time" aria-label="Filter alerts by historical time window">
+                <option>Past 15 Minutes</option>
+                <option>Past 1 Hour</option>
+                <option>Past 4 Hours</option>
+                <option selected>Past 1 Day</option>
+                <option>Past 7 Days</option>
+              </select>
+            </div>
+          </header>
+
+          <div class="alerts-list-header">
+            <span class="alerts-count" id="alerts-count">0 alerts</span>
+            <div class="alerts-col-headers">
+              <span>Date</span>
+              <span>Severity</span>
+              <span>Details</span>
+            </div>
           </div>
-        </section>
 
-      </div>
-    </div>
-
-    <!-- ===== VIEW 3: ALERTS — Filterable real-time alert feed ===== -->
-    <div class="view view-alerts" id="view-alerts">
-
-      <!-- Collapsible filter sidebar: status, patch, security, service facets -->
-      <aside class="filter-sidebar" id="filter-sidebar">
-        <div class="filter-sidebar-header">
-          <span class="filter-title">Filters</span>
-          <div class="filter-header-actions">
-            <button class="filter-clear-btn" id="filter-clear-btn">Clear All</button>
-            <button class="filter-collapse-btn" id="filter-collapse-btn">&#10094;</button>
+          <div class="alerts-feed" id="alerts-feed"></div>
+          <div class="alerts-empty hidden" id="alerts-empty">
+            <p class="alerts-empty-title">No alerts match this filter set</p>
+            <p class="alerts-empty-text">Try broadening status, patch, or service filters to repopulate results.</p>
           </div>
         </div>
-        <div class="filter-body">
-          <div class="facet-search">
-            <input type="text" placeholder="Search filters...">
-          </div>
-          <div class="facet-group" id="facet-status">
-            <div class="facet-header">
-              <span>Status</span>
-              <span class="facet-toggle">&#9662;</span>
-            </div>
-            <div class="facet-items">
-              <div class="status-item active" data-status="critical">
-                <span class="status-dot critical"></span>
-                <span class="status-name">Critical</span>
-                <span class="count" id="count-critical">0</span>
-              </div>
-              <div class="status-item active" data-status="error">
-                <span class="status-dot error"></span>
-                <span class="status-name">Error</span>
-                <span class="count" id="count-error">0</span>
-              </div>
-              <div class="status-item active" data-status="warning">
-                <span class="status-dot warning"></span>
-                <span class="status-name">Warning</span>
-                <span class="count" id="count-warning">0</span>
-              </div>
-              <div class="status-item" data-status="info">
-                <span class="status-dot info"></span>
-                <span class="status-name">Info</span>
-                <span class="count" id="count-info">0</span>
-              </div>
-            </div>
-          </div>
-          <div class="facet-group" id="facet-patch">
-            <div class="facet-header">
-              <span>Patch</span>
-              <span class="facet-toggle">&#9662;</span>
-            </div>
-            <div class="facet-items">
-              <div class="select-item active" data-value="v2.14.3">
-                <span class="select-chip">v2.14.3</span>
-                <span class="count">67</span>
-              </div>
-              <div class="select-item active" data-value="v2.14.2">
-                <span class="select-chip">v2.14.2</span>
-                <span class="count">45</span>
-              </div>
-              <div class="select-item" data-value="v2.13.8">
-                <span class="select-chip">v2.13.8</span>
-                <span class="count">33</span>
-              </div>
-            </div>
-          </div>
-          <div class="facet-group" id="facet-security">
-            <div class="facet-header">
-              <span>Security</span>
-              <span class="facet-toggle">&#9662;</span>
-            </div>
-            <div class="facet-items">
-              <div class="select-item active" data-value="brute-force">
-                <span class="select-chip">Brute Force</span>
-                <span class="count">8</span>
-              </div>
-              <div class="select-item active" data-value="unauthorized">
-                <span class="select-chip">Unauthorized</span>
-                <span class="count">15</span>
-              </div>
-              <div class="select-item" data-value="rate-limit">
-                <span class="select-chip">Rate Limit</span>
-                <span class="count">31</span>
-              </div>
-              <div class="select-item" data-value="injection">
-                <span class="select-chip">Injection</span>
-                <span class="count">3</span>
-              </div>
-            </div>
-          </div>
-          <div class="facet-group" id="facet-service">
-            <div class="facet-header">
-              <span>Service</span>
-              <span class="facet-toggle">&#9662;</span>
-            </div>
-            <div class="facet-items">
-              <div class="select-item active" data-value="auth-service">
-                <span class="select-chip">auth-service</span>
-                <span class="count">42</span>
-              </div>
-              <div class="select-item active" data-value="payment-api">
-                <span class="select-chip">payment-api</span>
-                <span class="count">19</span>
-              </div>
-              <div class="select-item" data-value="user-service">
-                <span class="select-chip">user-service</span>
-                <span class="count">27</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Alerts Main Content -->
-      <div class="alerts-main">
-        <header class="alerts-topbar">
-          <div class="alerts-search">
-            <input type="text" placeholder="Search errors by title, tag, or key-value..." id="alerts-search-input">
-          </div>
-          <div class="alerts-controls">
-            <button class="mute-btn" id="mute-btn">Mute Alerts</button>
-            <select class="time-selector" id="alerts-time">
-              <option>Past 15 Minutes</option>
-              <option>Past 1 Hour</option>
-              <option>Past 4 Hours</option>
-              <option selected>Past 1 Day</option>
-              <option>Past 7 Days</option>
-            </select>
-          </div>
-        </header>
-
-        <div class="alerts-list-header">
-          <span class="alerts-count" id="alerts-count">0 alerts</span>
-          <div class="alerts-col-headers">
-            <span>DATE</span>
-            <span>SEVERITY</span>
-            <span>DETAILS</span>
-          </div>
-        </div>
-
-        <div class="alerts-feed" id="alerts-feed"></div>
       </div>
-    </div>
-
+    </main>
   </div>
 
-  <!-- SDK must load first so WatchTowerSDK is available to dashboard.js -->
   <script src="sdk.js"></script>
   <script src="dashboard.js"></script>
 </body>
