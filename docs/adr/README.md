@@ -52,6 +52,12 @@ What other options did we evaluate and why were they not chosen?
 - **Summary:** Lightweight static prototype using vanilla JavaScript, HTML, CSS, and Node.js backend
 - **Link:** [ADR-0001.md](ADR-0001.md) or see content below
 
+### ADR-0002: Use Node.js for WatchTower Backend
+- **Status:** Accepted
+- **Date:** *(Sprint 3)*
+- **Summary:** Usage of Node.js as backend due to its simply front-backend integration, live event handling capacity, and native JSON handling. 
+- **Link:** [ADR-0002.md](ADR-0002.md) or see content below
+
 ## Writing ADRs
 
 ### When to Write an ADR
@@ -151,47 +157,79 @@ This approach keeps the project simple, easy to deploy, and easier for all team 
 
 These may be considered later only if approved and justified.
 
+--- 
+# ADR-0002: Use Node.js for WatchTower Backend
+
+- **Status:** Proposed  
+- **Date:** 2026-05-20  
+
+## Context
+
+WatchTower is a centralized observability system that captures:
+- application events
+- errors
+- performance signals
+- deployment telemetry
+- live operational updates
+
+The system requires:
+- realtime event handling
+- asynchronous network communication
+- lightweight deployment compatibility
+
 ---
 
-## ADR 0002: CI/CD Pipeline Setup
+## Decision
 
-### Status
-Approved
+Use **Node.js** as the backend runtime for WatchTower.
 
-### Context
-For Sprint 2, we need to keep a solid CI/CD pipeline to guide our process to make progress as smooth and accessible, keeping our main branches clean, while also keeping our documentation clear 
+---
 
-### Decision
-We will use familiar dependencies that we have used in our labs for easy implementation since we are familiar with the technology while also using some unfamiliar dependancies to insure stronger code security
+## Rationale
 
-**Familar Dependancies**
-- **Jest** for unit testing
-- **Playwright** for end-to-end testing
-- **Github actions** for automated testing/ keeping up good coding practice 
-- **HTML/CSS/JS validation** for basic test that all code is syntatically correct
+- Node.js is optimized for **I/O-bound and event-driven systems**
+- WatchTower primarily handles:
+  - incoming telemetry
+  - websocket connections
+  - network requests
+  - streaming updates
+- Node.js supports realtime communication naturally through:
+  - WebSockets
+  - async event handling
+  - streams
+- JSON handling is native and aligns well with browser-based telemetry payloads
+- Shared JavaScript semantics between frontend and backend reduce development complexity
+- Lightweight architecture supports rapid iteration and deployment
 
+---
 
-**Unfamiliar Dependancies**
-- **Dependabot** used for keeping up with any dependancy updates/ conflicts with dependancy source of truth
-- **npm security audit in CI** used to make sure any dependancies can't create any security issues
-- **CodeQL** used to scan codebase to find any security vulnerabilities
+## Alternatives Considered
 
-### Consequences
-This approach keeps our process clean and organized so whenver we update our code we make sure every aspect is covered in terms of documentation, security, and avoid errors that won't affect our main branch.
+### Go
+Rejected due to slower iteration speed and increased backend complexity for the project scope.
 
-### Alternatives Considered
-- Vitest (Alternative to Jest) A modern unit testing framework built on Vite. It uses almost identical syntax to Jest, meaning your team won't have to relearn how to write tests, but it runs significantly faster.
+### Python
+Rejected because realtime websocket/event handling is less natural compared to Node.js.
 
-- Cypress (Alternative to Playwright) A developer-friendly end-to-end testing framework that runs directly inside the browser. It features a powerful visual runner that makes debugging failing UI tests much easier for beginners.
+### Java/Spring
+Rejected due to excessive architectural overhead for a lightweight observability platform.
 
-- GitLab CI/CD (Alternative to GitHub Actions) A powerful, built-in automation platform. While GitHub Actions is native to your current code hosting, GitLab CI/CD is the industry's leading native alternative if you ever shift repository hosting.
+---
 
-- ESLint & Prettier (Alternative to HTML/CSS/JS Validation) Instead of just checking if syntax is valid, this combination actively enforces uniform code formatting and catches tricky logical bugs before your code even reaches the main branch.
+## Consequences
 
-- Renovate (Alternative to Dependabot) An automated dependency checker that reduces "PR noise" by grouping multiple package updates into a single Pull Request, preventing your team from being flooded with notifications.
+### Positive
+- Strong realtime support
+- Efficient concurrent connection handling
+- Fast prototyping
+- Simplified frontend/backend integration
 
-- Snyk (Alternative to npm security audit) A dedicated security tool that scans your external packages for vulnerabilities, offering automated fixes and much clearer instructions on how to patch security flaws than standard npm audits.
+### Negative
+- CPU-intensive operations can block the event loop
+- Heavy computation may require worker threads or external services
 
-- SonarCloud (Alternative to CodeQL) A cloud-based code analysis tool that scans your codebase for security vulnerabilities, bugs, and "code smell." It provides a clean dashboard visual grade (A through F) for your code quality.
+---
 
-These may be considered later only if approved and justified.
+## Conclusion
+
+Node.js was selected because WatchTower is fundamentally an event-driven realtime system, making Node.js a strong fit for handling asynchronous telemetry ingestion and live operational updates.

@@ -20,7 +20,7 @@
       </div>
 
       <div class="topbar-actions">
-        <button class="alert-pill" type="button" data-view="home">
+        <button class="alert-pill" type="button" data-view="issues">
           <span class="alert-dot" aria-hidden="true"></span>
           <span id="active-issues-count">0 active issues</span>
         </button>
@@ -40,7 +40,7 @@
             </svg>
             <span>Home</span>
           </button>
-          <button class="nav-button" type="button" data-view="home" data-scroll-target="issues-title" title="Issues" aria-label="Issues">
+          <button class="nav-button" type="button" data-view="issues" title="Issues" aria-label="Issues">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 7h14"></path>
               <path d="M5 12h14"></path>
@@ -48,7 +48,7 @@
             </svg>
             <span>Issues</span>
           </button>
-          <button class="nav-button" type="button" data-view="home" data-scroll-target="services-title" title="Health" aria-label="Health">
+          <button class="nav-button" type="button" data-view="health" title="Health" aria-label="Health">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"></path>
             </svg>
@@ -102,12 +102,12 @@
               <strong id="total-events">0</strong>
               <span class="metric-trend neutral">Stable</span>
             </button>
-            <button class="metric-tile metric-link warning" type="button" data-view="home" data-scroll-target="issues-title">
+            <button class="metric-tile metric-link warning" type="button" data-view="issues" data-scroll-target="issues-title">
               <span class="metric-label"><i class="metric-icon errors" aria-hidden="true"></i>Open errors</span>
               <strong id="total-errors">0</strong>
               <span class="metric-trend negative">Needs review</span>
             </button>
-            <button class="metric-tile metric-link" type="button" data-view="home" data-scroll-target="services-title">
+            <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-radar-title">
               <span class="metric-label"><i class="metric-icon deploys" aria-hidden="true"></i>Deploy versions</span>
               <strong id="version-count">0</strong>
               <span class="metric-trend neutral">Deploys seen</span>
@@ -115,30 +115,7 @@
           </div>
         </section>
 
-        <div class="home-grid">
-          <section class="panel issue-panel" aria-labelledby="issues-title">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Triage</p>
-                <h2 id="issues-title">Errors needing triage</h2>
-              </div>
-              <button class="ghost-button" type="button">Export CSV</button>
-            </div>
-
-            <div class="issue-list" id="issue-list"></div>
-            <button class="issue-toggle" id="issue-expand-toggle" type="button" hidden>Show more</button>
-          </section>
-
-          <section class="panel service-panel" aria-labelledby="services-title">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Reliability</p>
-                <h2 id="services-title">System and latency health</h2>
-              </div>
-            </div>
-            <div class="service-stack" id="service-stack"></div>
-          </section>
-
+        <div class="home-grid compact-home-grid">
           <section class="panel build-panel" aria-labelledby="build-title">
             <div class="panel-header">
               <div>
@@ -157,6 +134,93 @@
               </div>
             </div>
             <ol class="event-timeline" id="activity-feed"></ol>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="issues-view" aria-labelledby="issues-page-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Incident response</p>
+            <h1 id="issues-page-title">Triage queue</h1>
+          </div>
+          <button class="ghost-button" type="button">Export CSV</button>
+        </div>
+
+        <div class="issues-layout">
+          <section class="panel issue-panel" aria-labelledby="issues-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Triage</p>
+                <h2 id="issues-title">Errors needing triage</h2>
+              </div>
+            </div>
+
+            <div class="issue-list" id="issue-list"></div>
+            <button class="issue-toggle" id="issue-expand-toggle" type="button" hidden>Show more</button>
+          </section>
+
+          <section class="panel" aria-labelledby="incident-feed-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Stream</p>
+                <h2 id="incident-feed-title">Latest issue activity</h2>
+              </div>
+            </div>
+            <ol class="event-timeline" id="issues-activity-feed"></ol>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="health-view" aria-labelledby="health-title" hidden>
+        <section class="health-summary">
+          <div class="health-summary-head">
+            <div>
+              <p class="eyebrow">Production reliability</p>
+              <h1 id="health-title">Production health</h1>
+            </div>
+            <strong id="health-summary-text">Waiting for health telemetry</strong>
+          </div>
+          <div class="summary-copy">
+            <p class="status-token good" id="health-status-token">Healthy</p>
+            <h2 id="health-radar-title">System health profile</h2>
+            <p id="health-copy">
+              Reliability score is computed from availability, error pressure, latency, signal quality, and user feedback.
+            </p>
+            <ul class="priority-list" id="health-priority-list">
+              <li><span aria-hidden="true">!</span> Waiting for live data from the monitored demo app.</li>
+            </ul>
+          </div>
+          <div class="health-radar-card">
+            <svg class="health-radar" id="health-radar-chart" viewBox="0 0 520 340" role="img" aria-labelledby="health-radar-svg-title">
+              <title id="health-radar-svg-title">Radar chart of app health dimensions</title>
+              <g class="health-radar-grid" id="health-radar-grid"></g>
+              <g class="health-radar-axis" id="health-radar-axis"></g>
+              <polygon class="health-radar-shape" id="health-radar-shape" points=""></polygon>
+            </svg>
+            <ul class="health-legend" id="health-legend"></ul>
+          </div>
+        </section>
+
+        <div class="health-grid">
+          <section class="panel health-services-panel" aria-labelledby="health-services-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Infrastructure</p>
+                <h2 id="health-services-title">Service health details</h2>
+              </div>
+            </div>
+            <div class="service-stack" id="service-stack"></div>
+          </section>
+
+          <section class="panel health-issues-panel" aria-labelledby="health-issues-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Incidents</p>
+                <h2 id="health-issues-title">Recent reliability incidents</h2>
+              </div>
+            </div>
+            <ol class="event-timeline" id="health-incident-feed"></ol>
           </section>
         </div>
       </section>
@@ -455,6 +519,20 @@
           <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
         </svg>
         <span>Home</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="issues" title="Issues" aria-label="Issues">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 7h14"></path>
+          <path d="M5 12h14"></path>
+          <path d="M5 17h10"></path>
+        </svg>
+        <span>Issues</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="health" title="Health" aria-label="Health">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"></path>
+        </svg>
+        <span>Health</span>
       </button>
       <button class="mobile-nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
         <svg viewBox="0 0 24 24" aria-hidden="true">
