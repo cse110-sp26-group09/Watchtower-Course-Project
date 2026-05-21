@@ -750,17 +750,17 @@ Each team member should acknowledge that they understand:
 
 | Team Member | Acknowledged? |
 |---|---|
-| Aditya | [ ] |
-| Fahad | [ ] |
-| James | [ ] |
-| Hieu | [ ] |
-| Daniel | [ ] |
-| Jason | [ ] |
-| Waleed | [ ] |
-| Josh | [ ] |
-| Woosik | [ ] |
-| Alex | [ ] |
-| Hemendra | [ ] |
+| Aditya | [ Yes ] |
+| Fahad | [ Yes ] |
+| James | [ Yes ] |
+| Hieu | [ Yes ] |
+| Daniel | [ Yes ] |
+| Jason | [ Yes ] |
+| Waleed | [ Yes ] |
+| Josh | [ Yes ] |
+| Woosik | [ Yes ] |
+| Alex | [ Yes ] |
+| Hemendra | [ Yes ] |
 
 ---
 
