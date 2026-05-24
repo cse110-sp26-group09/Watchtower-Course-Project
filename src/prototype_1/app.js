@@ -327,21 +327,8 @@
       var selectedValue = assignmentSelect.value;
 
       if (selectedValue === "__add_new__") {
-        var newName = prompt("Add teammate name:", "");
-        var normalizedName = newName ? newName.trim() : "";
-
-        if (!normalizedName) {
-          assignmentSelect.value = uiState.issueAssignments[issueId] || "";
-          return;
-        }
-
-        if (uiState.issueAssignees.indexOf(normalizedName) === -1) {
-          uiState.issueAssignees.push(normalizedName);
-          saveUiPreference(ISSUE_ASSIGNEES_STORAGE_KEY, JSON.stringify(uiState.issueAssignees));
-        }
-
-        uiState.issueAssignments[issueId] = normalizedName;
-        rerenderIfReady();
+        assignmentSelect.value = uiState.issueAssignments[issueId] || "";
+        setProfileStatus("Add teammate is disabled in CI-safe mode. Update assignees in source for now.");
         return;
       }
 
