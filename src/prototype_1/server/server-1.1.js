@@ -61,7 +61,7 @@ const countEventsStmt = db.prepare('SELECT COUNT(*) AS count FROM events');
  * Sends a JSON response with standard CORS headers.
  * @param {import('http').ServerResponse} res - HTTP response object.
  * @param {number} status - HTTP status code.
- * @param {unknown} data - JSON-serializable response payload.
+ * @param {*} data - JSON-serializable response payload.
  * @returns {void}
  */
 function sendJson(res, status, data) {
@@ -87,7 +87,7 @@ function applyCors(res) {
 /**
  * Parses the request body as JSON.
  * @param {import('http').IncomingMessage} req - HTTP request object.
- * @returns {Promise<unknown>} Parsed JSON payload.
+ * @returns {Promise.<*>} Parsed JSON payload.
  */
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -111,7 +111,7 @@ function parseBody(req) {
 
 /**
  * Checks whether a value is a plain object (not null, not array).
- * @param {unknown} value - Value to inspect.
+ * @param {*} value - Value to inspect.
  * @returns {boolean}
  */
 function isObject(value) {
@@ -120,7 +120,7 @@ function isObject(value) {
 
 /**
  * Checks whether a value is a non-empty string after trimming.
- * @param {unknown} value - Value to inspect.
+ * @param {*} value - Value to inspect.
  * @returns {boolean}
  */
 function isNonEmptyString(value) {
@@ -129,7 +129,7 @@ function isNonEmptyString(value) {
 
 /**
  * Validates that a value is a parseable timestamp string.
- * @param {unknown} value - Candidate timestamp.
+ * @param {*} value - Candidate timestamp.
  * @returns {boolean}
  */
 function isValidTimestamp(value) {
@@ -142,7 +142,7 @@ function isValidTimestamp(value) {
 
 /**
  * Validates optional context fields on an event envelope.
- * @param {Record<string, unknown>} event - Event object to validate.
+ * @param {Object.<string, *>} event - Event object to validate.
  * @returns {string|null} Error message on failure, otherwise null.
  */
 function validateOptionalContext(event) {
@@ -175,7 +175,7 @@ function validateOptionalContext(event) {
 
 /**
  * Validates required event envelope fields and optional context fields.
- * @param {unknown} event - Event payload to validate.
+ * @param {*} event - Event payload to validate.
  * @returns {string|null} Error message on failure, otherwise null.
  */
 function validateEvent(event) {
@@ -221,7 +221,7 @@ function validateEvent(event) {
  *   appName: string|null,
  *   url: string|null,
  *   route: string|null,
- *   data: Record<string, unknown>,
+ *   data: Object.<string, *>,
  *   receivedAt: string
  * }}
  */
@@ -284,7 +284,7 @@ function parseLimit(value, fallback) {
 
 /**
  * Sends event batches to all active SSE clients.
- * @param {Array<Record<string, unknown>>} eventBatch - Newly accepted events.
+ * @param {Array.<Object.<string, *>>} eventBatch - Newly accepted events.
  * @returns {void}
  */
 function broadcastEvents(eventBatch) {
@@ -348,8 +348,8 @@ function serveStaticFile(res, pathname) {
 
 /**
  * Builds fixed 7-slot series data aligned right with zero padding.
- * @param {Array<Record<string, unknown>>} events - Source events ordered oldest-to-newest.
- * @param {(event: Record<string, unknown>, index: number, window: Array<Record<string, unknown>>) => number} valueGetter - Series value callback.
+ * @param {Array.<Object.<string, *>>} events - Source events ordered oldest-to-newest.
+ * @param {function(Object.<string, *>, number, Array.<Object.<string, *>>): number} valueGetter - Series value callback.
  * @returns {{labels: string[], values: number[]}}
  */
 function buildSeries(events, valueGetter) {
@@ -368,7 +368,7 @@ function buildSeries(events, valueGetter) {
  * Main HTTP request handler for the WatchTower event API.
  * @param {import('http').IncomingMessage} req - HTTP request object.
  * @param {import('http').ServerResponse} res - HTTP response object.
- * @returns {Promise<void>}
+ * @returns {Promise.<void>}
  */
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
