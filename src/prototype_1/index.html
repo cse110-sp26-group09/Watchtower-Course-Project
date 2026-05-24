@@ -147,6 +147,46 @@
           <button class="ghost-button" type="button">Export CSV</button>
         </div>
 
+        <div class="issues-toolbar" aria-label="Issue sorting and filtering controls">
+          <label>
+            <span>Sort</span>
+            <select id="issue-sort-field">
+              <option value="timestamp">Timestamp</option>
+              <option value="version">Version</option>
+              <option value="severity">Severity</option>
+              <option value="route">Route</option>
+            </select>
+          </label>
+          <label>
+            <span>Direction</span>
+            <select id="issue-sort-direction">
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </label>
+          <label>
+            <span>Severity</span>
+            <select id="issue-filter-severity">
+              <option value="all">All</option>
+              <option value="critical">Critical</option>
+              <option value="warning">Warning</option>
+            </select>
+          </label>
+          <label>
+            <span>Version</span>
+            <input id="issue-filter-version" type="text" placeholder="v1.2.0-beta">
+          </label>
+          <label>
+            <span>App</span>
+            <input id="issue-filter-app" type="text" placeholder="candidate_1_demo">
+          </label>
+          <label>
+            <span>Route</span>
+            <input id="issue-filter-route" type="text" placeholder="/demo">
+          </label>
+          <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
+        </div>
+
         <div class="issues-layout">
           <section class="panel issue-panel" aria-labelledby="issues-title">
             <div class="panel-header">

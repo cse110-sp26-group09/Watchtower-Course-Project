@@ -17,6 +17,13 @@
   var notificationStatusLine = document.getElementById("notification-status-line");
   var snoozeActionButtons = document.querySelectorAll(".snooze-action");
   var issueExpandToggleButton = document.getElementById("issue-expand-toggle");
+  var issueSortFieldSelect = document.getElementById("issue-sort-field");
+  var issueSortDirectionSelect = document.getElementById("issue-sort-direction");
+  var issueFilterSeveritySelect = document.getElementById("issue-filter-severity");
+  var issueFilterVersionInput = document.getElementById("issue-filter-version");
+  var issueFilterAppInput = document.getElementById("issue-filter-app");
+  var issueFilterRouteInput = document.getElementById("issue-filter-route");
+  var issueFilterClearButton = document.getElementById("issue-filter-clear");
   var lastUpdatedLabel = document.getElementById("last-updated");
   var liveStatusPill = document.getElementById("live-status-pill");
   var liveStatusText = document.getElementById("live-status-text");
@@ -69,6 +76,7 @@
   var PROFILE_STORAGE_KEY = "watchtower_profile_name";
   var ANALYTICS_RANGE_STORAGE_KEY = "watchtower_analytics_range";
   var THEME_STORAGE_KEY = "watchtower_theme_mode";
+  var ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
   var LIGHT_LOGO_PATH = "assets/watchtower-logo.png";
   var DARK_LOGO_PATH = "assets/watchtower-dark-logo.png";
 
@@ -77,6 +85,14 @@
     issuesExpanded: false,
     latestStats: null,
     latestEvents: [],
+    issueSortField: "timestamp",
+    issueSortDirection: "desc",
+    issueFilterSeverity: "all",
+    issueFilterVersion: "",
+    issueFilterApp: "",
+    issueFilterRoute: "",
+    issueAssignments: {},
+    issueAssignees: ["Aditya", "Fahad", "James", "Hieu", "Daniel", "Jason", "Waleed", "Josh", "Woosik", "Alex", "Hemendra"],
   };
 
   function escapeHtml(value) {
@@ -230,14 +246,110 @@
     });
   }
 
-  function initializeIssueAssignmentDelegation() {
+  function initializeIssueControls() {
     if (!issueListContainer) return;
+
+    var storedAssignees = loadUiPreference(ISSUE_ASSIGNEES_STORAGE_KEY);
+    if (storedAssignees) {
+      try {
+        var parsedAssignees = JSON.parse(storedAssignees);
+        if (Array.isArray(parsedAssignees) && parsedAssignees.length > 0) {
+          uiState.issueAssignees = parsedAssignees.filter(function (name) {
+            return typeof name === "string" && name.trim() !== "";
+          });
+        }
+      } catch (_error) {
+        // Ignore malformed local storage payload.
+      }
+    }
+
+    if (issueSortFieldSelect) {
+      issueSortFieldSelect.value = uiState.issueSortField;
+      issueSortFieldSelect.addEventListener("change", function () {
+        uiState.issueSortField = issueSortFieldSelect.value;
+        rerenderIfReady();
+      });
+    }
+
+    if (issueSortDirectionSelect) {
+      issueSortDirectionSelect.value = uiState.issueSortDirection;
+      issueSortDirectionSelect.addEventListener("change", function () {
+        uiState.issueSortDirection = issueSortDirectionSelect.value;
+        rerenderIfReady();
+      });
+    }
+
+    if (issueFilterSeveritySelect) {
+      issueFilterSeveritySelect.value = uiState.issueFilterSeverity;
+      issueFilterSeveritySelect.addEventListener("change", function () {
+        uiState.issueFilterSeverity = issueFilterSeveritySelect.value;
+        rerenderIfReady();
+      });
+    }
+
+    [
+      { element: issueFilterVersionInput, key: "issueFilterVersion" },
+      { element: issueFilterAppInput, key: "issueFilterApp" },
+      { element: issueFilterRouteInput, key: "issueFilterRoute" },
+    ].forEach(function (entry) {
+      if (!entry.element) return;
+      entry.element.addEventListener("input", function () {
+        uiState[entry.key] = entry.element.value.trim().toLowerCase();
+        rerenderIfReady();
+      });
+    });
+
+    if (issueFilterClearButton) {
+      issueFilterClearButton.addEventListener("click", function () {
+        uiState.issueFilterSeverity = "all";
+        uiState.issueFilterVersion = "";
+        uiState.issueFilterApp = "";
+        uiState.issueFilterRoute = "";
+        uiState.issueSortField = "timestamp";
+        uiState.issueSortDirection = "desc";
+
+        if (issueSortFieldSelect) issueSortFieldSelect.value = uiState.issueSortField;
+        if (issueSortDirectionSelect) issueSortDirectionSelect.value = uiState.issueSortDirection;
+        if (issueFilterSeveritySelect) issueFilterSeveritySelect.value = uiState.issueFilterSeverity;
+        if (issueFilterVersionInput) issueFilterVersionInput.value = "";
+        if (issueFilterAppInput) issueFilterAppInput.value = "";
+        if (issueFilterRouteInput) issueFilterRouteInput.value = "";
+
+        rerenderIfReady();
+      });
+    }
 
     issueListContainer.addEventListener("change", function (event) {
       var assignmentSelect = event.target.closest("select");
-      var issueHeading = assignmentSelect ? assignmentSelect.closest(".issue-row").querySelector("h3") : null;
-      if (!issueHeading) return;
-      issueHeading.textContent = issueHeading.textContent.replace(/\s+\(assigned\)$/i, "") + " (assigned)";
+      if (!assignmentSelect) return;
+
+      var issueId = assignmentSelect.getAttribute("data-issue-id") || "";
+      var selectedValue = assignmentSelect.value;
+
+      if (selectedValue === "__add_new__") {
+        var newName = prompt("Add teammate name:", "");
+        var normalizedName = newName ? newName.trim() : "";
+
+        if (!normalizedName) {
+          assignmentSelect.value = uiState.issueAssignments[issueId] || "";
+          return;
+        }
+
+        if (uiState.issueAssignees.indexOf(normalizedName) === -1) {
+          uiState.issueAssignees.push(normalizedName);
+          saveUiPreference(ISSUE_ASSIGNEES_STORAGE_KEY, JSON.stringify(uiState.issueAssignees));
+        }
+
+        uiState.issueAssignments[issueId] = normalizedName;
+        rerenderIfReady();
+        return;
+      }
+
+      if (!selectedValue) {
+        delete uiState.issueAssignments[issueId];
+      } else {
+        uiState.issueAssignments[issueId] = selectedValue;
+      }
     });
   }
 
@@ -396,24 +508,101 @@
     return "critical";
   }
 
+  function getIssueIdentifier(eventRecord, fallbackIndex) {
+    return [
+      eventRecord && eventRecord.timestamp ? String(eventRecord.timestamp) : "",
+      eventRecord && eventRecord.route ? String(eventRecord.route) : "",
+      eventRecord && eventRecord.deployVersion ? String(eventRecord.deployVersion) : "",
+      eventRecord && eventRecord.data && eventRecord.data.message ? String(eventRecord.data.message) : "",
+      String(fallbackIndex || 0),
+    ].join("|");
+  }
+
+  function passesIssueFilters(eventRecord) {
+    var severity = toIssueSeverity(eventRecord);
+    var version = String((eventRecord && eventRecord.deployVersion) || "").toLowerCase();
+    var appName = String((eventRecord && eventRecord.appName) || "").toLowerCase();
+    var route = String((eventRecord && eventRecord.route) || "").toLowerCase();
+
+    if (uiState.issueFilterSeverity !== "all" && severity !== uiState.issueFilterSeverity) return false;
+    if (uiState.issueFilterVersion && version.indexOf(uiState.issueFilterVersion) === -1) return false;
+    if (uiState.issueFilterApp && appName.indexOf(uiState.issueFilterApp) === -1) return false;
+    if (uiState.issueFilterRoute && route.indexOf(uiState.issueFilterRoute) === -1) return false;
+
+    return true;
+  }
+
+  function compareIssues(leftIssue, rightIssue) {
+    var sortDirection = uiState.issueSortDirection === "asc" ? 1 : -1;
+    var leftSeverity = toIssueSeverity(leftIssue) === "critical" ? 2 : 1;
+    var rightSeverity = toIssueSeverity(rightIssue) === "critical" ? 2 : 1;
+
+    if (uiState.issueSortField === "severity") {
+      if (leftSeverity !== rightSeverity) return (leftSeverity - rightSeverity) * sortDirection;
+      var leftTs = getValidTimestamp(leftIssue.timestamp) || 0;
+      var rightTs = getValidTimestamp(rightIssue.timestamp) || 0;
+      return (leftTs - rightTs) * -1;
+    }
+
+    if (uiState.issueSortField === "version") {
+      var leftVersion = String(leftIssue.deployVersion || "");
+      var rightVersion = String(rightIssue.deployVersion || "");
+      if (leftVersion !== rightVersion) return leftVersion.localeCompare(rightVersion) * sortDirection;
+      var leftTsVersion = getValidTimestamp(leftIssue.timestamp) || 0;
+      var rightTsVersion = getValidTimestamp(rightIssue.timestamp) || 0;
+      return (leftTsVersion - rightTsVersion) * -1;
+    }
+
+    if (uiState.issueSortField === "route") {
+      var leftRoute = String(leftIssue.route || "");
+      var rightRoute = String(rightIssue.route || "");
+      if (leftRoute !== rightRoute) return leftRoute.localeCompare(rightRoute) * sortDirection;
+      var leftTsRoute = getValidTimestamp(leftIssue.timestamp) || 0;
+      var rightTsRoute = getValidTimestamp(rightIssue.timestamp) || 0;
+      return (leftTsRoute - rightTsRoute) * -1;
+    }
+
+    var leftTimestamp = getValidTimestamp(leftIssue.timestamp) || 0;
+    var rightTimestamp = getValidTimestamp(rightIssue.timestamp) || 0;
+    return (leftTimestamp - rightTimestamp) * sortDirection;
+  }
+
+  function getPreparedIssues(recentErrors) {
+    return (recentErrors || [])
+      .filter(passesIssueFilters)
+      .sort(compareIssues);
+  }
+
   function renderIssueList(recentErrors) {
     if (!issueListContainer) return;
 
-    if (!recentErrors || recentErrors.length === 0) {
-      issueListContainer.innerHTML = '<div class="empty-state compact">No issues yet. Open the monitored demo and generate a few test events.</div>';
+    var preparedIssues = getPreparedIssues(recentErrors);
+
+    if (!preparedIssues || preparedIssues.length === 0) {
+      issueListContainer.innerHTML = '<div class="empty-state compact">No issues matched your filters. Try clearing filters or generate new demo errors.</div>';
       if (issueExpandToggleButton) {
         issueExpandToggleButton.hidden = true;
       }
       return;
     }
 
-    var visibleCount = uiState.issuesExpanded ? recentErrors.length : Math.min(3, recentErrors.length);
-    var hiddenCount = Math.max(0, recentErrors.length - visibleCount);
+    var visibleCount = uiState.issuesExpanded ? preparedIssues.length : Math.min(3, preparedIssues.length);
+    var hiddenCount = Math.max(0, preparedIssues.length - visibleCount);
 
-    issueListContainer.innerHTML = recentErrors.slice(0, visibleCount).map(function (eventRecord, index) {
+    issueListContainer.innerHTML = preparedIssues.slice(0, visibleCount).map(function (eventRecord, index) {
       var severity = toIssueSeverity(eventRecord);
       var severityClass = severity === "warning" ? "severity-warning" : "severity-critical";
       var severityLabel = severity === "warning" ? "Warning" : "Critical";
+      var issueId = getIssueIdentifier(eventRecord, index);
+      var assignedName = uiState.issueAssignments[issueId] || "";
+
+      var assignmentOptions = ['<option value="">Unassigned</option>']
+        .concat(uiState.issueAssignees.map(function (assigneeName) {
+          var isSelected = assignedName === assigneeName ? ' selected' : '';
+          return '<option value="' + escapeHtml(assigneeName) + '"' + isSelected + '>' + escapeHtml(assigneeName) + '</option>';
+        }))
+        .concat(['<option value="__add_new__">+ Add teammate...</option>'])
+        .join("");
 
       return (
         '<article class="issue-row ' + severityClass + '">' +
@@ -429,11 +618,8 @@
         "</div>" +
         '<label class="assign-control">' +
         "<span>Assign</span>" +
-        '<select aria-label="Assign issue ' + (index + 1) + '">' +
-        "<option>Priya</option>" +
-        "<option>James</option>" +
-        "<option>Aditya</option>" +
-        "<option>Hieu</option>" +
+        '<select data-issue-id="' + escapeHtml(issueId) + '" aria-label="Assign issue ' + (index + 1) + '">' +
+        assignmentOptions +
         "</select>" +
         "</label>" +
         "</article>"
@@ -441,7 +627,7 @@
     }).join("");
 
     if (issueExpandToggleButton) {
-      if (recentErrors.length <= 3) {
+      if (preparedIssues.length <= 3) {
         issueExpandToggleButton.hidden = true;
       } else {
         issueExpandToggleButton.hidden = false;
@@ -1218,7 +1404,7 @@
     initializeViewNavigation();
     initializeTimeRangeButtons();
     initializeSettingsAccordions();
-    initializeIssueAssignmentDelegation();
+    initializeIssueControls();
     initializeIssueExpansionControls();
     initializeDarkModeToggle();
     initializeContrastToggle();

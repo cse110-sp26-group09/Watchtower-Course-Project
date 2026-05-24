@@ -85,6 +85,11 @@ a {
 
 /* Keep brand visible when rail expands on desktop */
 @media (min-width: 861px) {
+  .app-shell:has(.sidebar:hover),
+  .app-shell:has(.sidebar:focus-within) {
+    padding-left: var(--sidebar-expanded-width);
+  }
+
   .app-shell:has(.sidebar:hover) .topbar,
   .app-shell:has(.sidebar:focus-within) .topbar {
     left: var(--sidebar-expanded-width);
@@ -429,6 +434,13 @@ body.dark-mode .field-row select {
   color: var(--ink);
 }
 
+body.dark-mode .issues-toolbar select,
+body.dark-mode .issues-toolbar input {
+  background: #0f1923;
+  color: var(--ink);
+  border-color: #2c3f52;
+}
+
 body.dark-mode .brand-mark {
   background: #132131;
   border: 1px solid #33516a;
@@ -561,13 +573,14 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 
   .nav-main {
     display: grid;
-    gap: 8px;
+    gap: 10px;
     align-content: start;
+    flex: 1 1 auto;
   }
 
   .nav-footer {
     margin-top: auto;
-    padding-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
@@ -575,8 +588,8 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
     grid-template-columns: 24px minmax(0, 1fr);
     align-items: center;
     justify-items: center;
-    min-height: 54px;
-    padding: 10px 8px;
+    min-height: 56px;
+    padding: 12px 10px;
   }
 
   .nav-button span {
@@ -590,7 +603,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   .sidebar:hover .nav-button,
   .sidebar:focus-within .nav-button {
     justify-items: start;
-    padding: 10px 12px;
+    padding: 12px 14px;
     gap: 10px;
   }
 
@@ -926,6 +939,41 @@ code {
   align-items: start;
 }
 
+.issues-toolbar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) auto;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: end;
+}
+
+.issues-toolbar label {
+  display: grid;
+  gap: 6px;
+}
+
+.issues-toolbar label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.issues-toolbar select,
+.issues-toolbar input {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 4px 10px;
+}
+
+.issues-toolbar .ghost-button {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
 .issues-layout {
   grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
 }
@@ -1009,14 +1057,15 @@ code {
 
 .issue-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(130px, 160px);
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
   gap: 14px;
-  align-items: center;
+  align-items: start;
   padding: 14px;
   border: 1px solid var(--line);
   border-left-width: 5px;
   border-radius: var(--radius);
   background: #ffffff;
+  overflow: hidden;
 }
 
 .severity-critical {
@@ -1031,9 +1080,14 @@ code {
   border-left-color: var(--blue);
 }
 
+.issue-main {
+  min-width: 0;
+}
+
 .issue-main h3 {
   margin: 8px 0 4px;
   font-size: 16px;
+  overflow-wrap: anywhere;
 }
 
 .issue-main p {
@@ -1088,6 +1142,16 @@ code {
 .assign-control {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  width: 100%;
+  justify-self: end;
+}
+
+.issue-row .assign-control select {
+  width: 100%;
+  max-width: 220px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .assign-control span,
@@ -1768,6 +1832,10 @@ body.text-compact {
     grid-template-columns: 1fr;
   }
 
+  .issues-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .settings-preview {
     position: static;
   }
@@ -1836,6 +1904,10 @@ body.text-compact {
   .analytics-grid,
   .analytics-summary {
     grid-template-columns: 1fr;
+  }
+
+  .issues-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .health-legend {
@@ -1933,6 +2005,10 @@ body.text-compact {
   .panel-header,
   .page-heading {
     flex-direction: column;
+  }
+
+  .issues-toolbar {
+    grid-template-columns: 1fr;
   }
 
   .health-summary-head {
