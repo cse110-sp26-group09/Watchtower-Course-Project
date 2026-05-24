@@ -7,6 +7,8 @@ const PORT = process.env.PORT || 3000;
 const MAX_EVENTS = 10000;
 const ACTIVE_USER_WINDOW = 5 * 60 * 1000;
 const sseClients = new Set();
+/** @typedef {http.IncomingMessage} IncomingMessage */
+/** @typedef {http.ServerResponse} ServerResponse */
 const MIME = {
   '.html': 'text/html',
   '.css': 'text/css',
@@ -59,7 +61,7 @@ const countEventsStmt = db.prepare('SELECT COUNT(*) AS count FROM events');
 
 /**
  * Sends a JSON response with standard CORS headers.
- * @param {import('http').ServerResponse} res - HTTP response object.
+ * @param {ServerResponse} res - HTTP response object.
  * @param {number} status - HTTP status code.
  * @param {*} data - JSON-serializable response payload.
  * @returns {void}
@@ -75,7 +77,7 @@ function sendJson(res, status, data) {
 
 /**
  * Applies permissive CORS headers to a response.
- * @param {import('http').ServerResponse} res - HTTP response object.
+ * @param {ServerResponse} res - HTTP response object.
  * @returns {void}
  */
 function applyCors(res) {
@@ -86,7 +88,7 @@ function applyCors(res) {
 
 /**
  * Parses the request body as JSON.
- * @param {import('http').IncomingMessage} req - HTTP request object.
+ * @param {IncomingMessage} req - HTTP request object.
  * @returns {Promise.<*>} Parsed JSON payload.
  */
 function parseBody(req) {
@@ -314,7 +316,7 @@ function resolveStaticPath(pathname) {
 
 /**
  * Serves a static file from the repository parent directory.
- * @param {import('http').ServerResponse} res - HTTP response object.
+ * @param {ServerResponse} res - HTTP response object.
  * @param {string} pathname - Incoming URL pathname.
  * @returns {void}
  */
@@ -366,8 +368,8 @@ function buildSeries(events, valueGetter) {
 
 /**
  * Main HTTP request handler for the WatchTower event API.
- * @param {import('http').IncomingMessage} req - HTTP request object.
- * @param {import('http').ServerResponse} res - HTTP response object.
+ * @param {IncomingMessage} req - HTTP request object.
+ * @param {ServerResponse} res - HTTP response object.
  * @returns {Promise.<void>}
  */
 const server = http.createServer(async (req, res) => {
