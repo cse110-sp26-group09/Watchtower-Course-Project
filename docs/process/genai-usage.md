@@ -65,3 +65,19 @@
 - **LOC:** 14
 - **Scale:** `Adr/ReadME.md`
 - **Description:** Used Gemini to generate a couple of alternatives for our ADR with a small description of what their strengths are
+---
+- **Name:** Jason Nguyen
+- **Date:** 05/24/2026
+- **Sprint #**: 3 
+- **Model:** GPT-5.3-Codex (Medium reasoning)
+- **LOC:** 461
+- **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
+- **Description:** Used codex to generate a server that connects a database using the event schemas defined for our project.
+---
+- **Name:** Jason Nguyen
+- **Date:** 05/24/2026
+- **Sprint #**: 3 
+- **Model:** GPT-5.3-Codex (Medium reasoning)
+- **LOC:** 685
+- **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
+- **Description:** Used codex to update server.js to integrate with our prototype 1 demo and watchtower app.
