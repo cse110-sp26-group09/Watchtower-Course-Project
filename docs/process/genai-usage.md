@@ -39,3 +39,11 @@
 - **LOC:** ~1,600 lines written (plus ~800 lines edited/refactored)
 - **Scale:** Updated src/prototype_2/index.html, src/prototype_2/style.css, and src/prototype_2/dashboard.js
 - **Description:** Asked GenAI to redesign the WatchTower UI/UX into a cleaner, developer-focused dashboard (dark/light theme support, improved sidebar/navigation, tighter alert-table readability, and bundling overview KPIs with related detail sections), while preserving existing functionality and state behavior. Also used it to fix an index.html structure/syntax issue and keep keyboard accessibility intact.
+
+- **Name:** Woosik Kim
+- **Date:** May 20, 2026
+- **Sprint #:** 3
+- **Model:** Claude Opus 4.6 (Anthropic, Cowork desktop mode)
+- **LOC:** ~168 lines written (one new e2e test file)
+- **Scale:** Created `tests/e2e/api-events-filters.spec.js`
+- **Description:** Asked the assistant to write end-to-end tests for the `GET /api/events` query filters (requirement F8), which the existing suite did not cover beyond a single smoke check. It first read the actual backend (`server.js`, `server-helpers.js`'s `filterEvents`, `src/shared/utils/event-utils.js`, the existing `watchtower.spec.js`, and `playwright.config.js`) to match the real contract, then wrote 9 Playwright API tests covering the `type`, `version` (maps to `deployVersion`), and `limit` parameters, including most-recent-N ordering, no-match, and invalid/zero-limit fallback. Each test seeds its own events under a unique `deployVersion` tag so assertions stay deterministic against the shared in-memory buffer. The assistant ran the tests against a live `npm start` server on `main` and confirmed all 9 pass.
