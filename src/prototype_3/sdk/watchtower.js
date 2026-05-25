@@ -10,11 +10,11 @@
 (function (global) {
   "use strict";
 
-  var DEFAULT_ENDPOINT = "/api/events";
-  var FLUSH_INTERVAL = 2000;
-  var SESSION_KEY = "__wt_sid";
-  var inMemorySessionId = null;
-  var fallbackSessionCounter = 0;
+  let DEFAULT_ENDPOINT = "/api/events";
+  let FLUSH_INTERVAL = 2000;
+  let SESSION_KEY = "__wt_sid";
+  let inMemorySessionId = null;
+  let fallbackSessionCounter = 0;
 
   /**
    * Generate a short pseudo-random identifier for browser sessions.
@@ -25,14 +25,14 @@
    * @returns {string} Session identifier such as `"a1b2c3d4-e5f6-4789"`.
    */
   function generateId() {
-    var cryptoObj = global.crypto || global.msCrypto;
-    var bytes = new Uint8Array(12);
-    var index = 0;
+    let cryptoObj = global.crypto || global.msCrypto;
+    let bytes = new Uint8Array(12);
+    let index = 0;
 
     if (cryptoObj && typeof cryptoObj.getRandomValues === "function") {
       cryptoObj.getRandomValues(bytes);
       return "xxxxxxxx-xxxx-4xxx".replace(/x/g, function () {
-        var value = bytes[index++] & 0x0f;
+        let value = bytes[index++] & 0x0f;
         return value.toString(16);
       });
     }
@@ -88,7 +88,7 @@
    * @returns {string} Current tab session id.
    */
   function getSessionId() {
-    var sessionId = readSessionValue(SESSION_KEY) || inMemorySessionId;
+    let sessionId = readSessionValue(SESSION_KEY) || inMemorySessionId;
     if (!sessionId) {
       sessionId = generateId();
       inMemorySessionId = sessionId;
@@ -156,8 +156,8 @@
     if (this._flushing || this._queue.length === 0) return;
 
     this._flushing = true;
-    var batch = this._queue.splice(0, 50);
-    var sdkInstance = this;
+    let batch = this._queue.splice(0, 50);
+    let sdkInstance = this;
 
     fetch(this.endpoint, {
       method: "POST",
@@ -180,7 +180,7 @@
    * @returns {void}
    */
   WatchTower.prototype._startFlush = function () {
-    var sdkInstance = this;
+    let sdkInstance = this;
 
     setInterval(function () {
       sdkInstance._flush();
@@ -198,7 +198,7 @@
    * @returns {void}
    */
   WatchTower.prototype._bindErrors = function () {
-    var sdkInstance = this;
+    let sdkInstance = this;
 
     window.addEventListener("error", function (event) {
       sdkInstance._enqueue("error", {
@@ -211,7 +211,7 @@
     });
 
     window.addEventListener("unhandledrejection", function (event) {
-      var rejectionReason = event.reason || {};
+      let rejectionReason = event.reason || {};
       sdkInstance._enqueue("error", {
         message: rejectionReason.message || String(rejectionReason),
         source: "unhandledrejection",
@@ -229,11 +229,11 @@
    * @returns {void}
    */
   WatchTower.prototype._bindPerformance = function () {
-    var sdkInstance = this;
+    let sdkInstance = this;
 
     window.addEventListener("load", function () {
       setTimeout(function () {
-        var navigationEntry = performance.getEntriesByType("navigation")[0];
+        let navigationEntry = performance.getEntriesByType("navigation")[0];
         if (!navigationEntry) return;
 
         sdkInstance._enqueue("pageload", {
