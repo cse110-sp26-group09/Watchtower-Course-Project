@@ -225,6 +225,31 @@ a {
   padding: 0 12px;
 }
 
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mode-pill-button {
+  cursor: pointer;
+}
+
+.mode-pill-button:hover {
+  border-color: rgba(44, 186, 215, 0.42);
+  background: var(--surface-muted);
+}
+
+
 .field-row input[type="time"],
 .field-row input[type="text"],
 .assign-control select,
@@ -937,6 +962,85 @@ code {
 .compact-home-grid {
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.95fr);
   align-items: start;
+}
+
+.manager-only-panel,
+.developer-only-panel {
+  grid-column: 1 / -1;
+}
+
+.developer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.developer-grid h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.developer-span-2 {
+  grid-column: 1 / -1;
+}
+
+.developer-alerts-panel .panel-header {
+  margin-bottom: 10px;
+}
+
+.developer-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.developer-kpi-grid .summary-chip {
+  min-height: 76px;
+}
+
+.developer-issue-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.developer-issue-tools .inline-status {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.compact-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.compact-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.compact-list li span {
+  color: var(--ink-soft);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.compact-list li strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 .issues-toolbar {
@@ -2056,6 +2160,22 @@ body.text-compact {
   }
 
   .time-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1120px) {
+  .developer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1120px) {
+  .developer-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .developer-issue-tools {
     grid-template-columns: 1fr;
   }
 }
