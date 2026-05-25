@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WatchTower | Auth Review</title>
+  <link rel="stylesheet" href="./auth.css">
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-brand">
+      <a class="home-link" href="./landing.html">Back to landing</a>
+      <img src="./assets/watchtower-logo.png" alt="WatchTower logo" onerror="this.style.display='none'">
+      <h1>WatchTower</h1>
+      <p>Static auth prototype for visual review. Backend auth will be wired in a later sprint.</p>
+      <ul>
+        <li>Role-aware onboarding (Manager / Developer)</li>
+        <li>Google sign-in placeholder</li>
+        <li>No live credentials or account creation yet</li>
+      </ul>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-heading">
+      <div class="tabs" role="tablist" aria-label="Authentication mode">
+        <button class="tab active" type="button" data-mode="login" role="tab" aria-selected="true">Log in</button>
+        <button class="tab" type="button" data-mode="signup" role="tab" aria-selected="false">Sign up</button>
+      </div>
+
+      <h2 id="auth-heading">Welcome back</h2>
+      <p class="subhead">Use this static screen to review visual flow and layout.</p>
+
+      <form id="auth-form" novalidate>
+        <label for="fullName" class="optional">Full name <span>(Sign up only)</span></label>
+        <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Alex Rivera">
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+
+        <label for="role">Default dashboard view</label>
+        <select id="role" name="role">
+          <option>Manager view</option>
+          <option>Developer view</option>
+        </select>
+
+        <button class="primary" type="button" id="primary-cta">Log in (static)</button>
+      </form>
+
+      <div class="divider"><span>or</span></div>
+      <button class="google" type="button" aria-disabled="true">Continue with Google (Coming soon)</button>
+      <p class="legal">By continuing, you agree to the WatchTower prototype terms for class review.</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+      const heading = document.getElementById("auth-heading");
+      const cta = document.getElementById("primary-cta");
+      const fullName = document.getElementById("fullName");
+      const fullNameLabel = document.querySelector("label[for='fullName']");
+
+      const syncMode = (mode) => {
+        const signup = mode === "signup";
+        tabs.forEach((tab) => {
+          const active = tab.dataset.mode === mode;
+          tab.classList.toggle("active", active);
+          tab.setAttribute("aria-selected", String(active));
+        });
+        heading.textContent = signup ? "Create your account" : "Welcome back";
+        cta.textContent = signup ? "Create account (static)" : "Log in (static)";
+        fullNameLabel.style.opacity = signup ? "1" : "0.5";
+        fullName.disabled = !signup;
+      };
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => syncMode(tab.dataset.mode));
+      });
+
+      syncMode("login");
+    })();
+  </script>
+</body>
+</html>
