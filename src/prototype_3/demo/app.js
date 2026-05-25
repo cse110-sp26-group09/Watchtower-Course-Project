@@ -9,19 +9,19 @@
 (function () {
   "use strict";
 
-  var versionSelect = document.getElementById("version-select");
-  var watchTower = new WatchTower({
+  let versionSelect = document.getElementById("version-select");
+  let watchTower = new WatchTower({
     endpoint: "/api/events",
     deployVersion: versionSelect.value,
     appName: "shopdemo",
   });
 
-  var appContainer = document.getElementById("app");
-  var userBadge = document.getElementById("user-badge");
-  var loggedInUser = null;
-  var cartItems = [];
+  let appContainer = document.getElementById("app");
+  let userBadge = document.getElementById("user-badge");
+  let loggedInUser = null;
+  let cartItems = [];
 
-  var PRODUCTS = [
+  let PRODUCTS = [
     { id: 1, name: "Synthetic Monitor", price: 79.99, desc: "Automated checks, route coverage" },
     { id: 2, name: "Latency Probe", price: 129.99, desc: "TTFB and page-load diagnostics" },
     { id: 3, name: "Build Overlay", price: 49.99, desc: "Commit and deploy correlation" },
@@ -34,13 +34,13 @@
   });
 
   function trackClick(clickedElement) {
-    var clickedText = clickedElement.textContent || clickedElement.innerText || "";
-    var selectorHint = clickedElement.tagName + (clickedElement.className ? "." + clickedElement.className.split(" ")[0] : "");
+    let clickedText = clickedElement.textContent || clickedElement.innerText || "";
+    let selectorHint = clickedElement.tagName + (clickedElement.className ? "." + clickedElement.className.split(" ")[0] : "");
     watchTower.trackClick(selectorHint, clickedText.trim().substring(0, 60));
   }
 
   document.addEventListener("click", function (event) {
-    var clickableElement = event.target.closest(".btn, .card, .nav-links a");
+    let clickableElement = event.target.closest(".btn, .card, .nav-links a");
     if (clickableElement) trackClick(clickableElement);
   });
 
@@ -86,7 +86,7 @@
   }
 
   function renderProducts() {
-    var productsHtml = "<h2>Testing tools</h2><div class='card-grid'>";
+    let productsHtml = "<h2>Testing tools</h2><div class='card-grid'>";
     PRODUCTS.forEach(function (product) {
       productsHtml +=
         '<div class="card" onclick="window.__addToCart(' + product.id + ')">' +
@@ -100,12 +100,12 @@
   }
 
   function renderCart() {
-    var cartHtml = "<h2>Cart (" + cartItems.length + " items)</h2>";
+    let cartHtml = "<h2>Cart (" + cartItems.length + " items)</h2>";
 
     if (cartItems.length === 0) {
       cartHtml += '<div class="empty-state">Your cart is empty. Add testing tools to generate more telemetry.</div>';
     } else {
-      var totalPrice = 0;
+      let totalPrice = 0;
       cartItems.forEach(function (item, index) {
         totalPrice += item.price;
         cartHtml +=
@@ -145,7 +145,7 @@
   }
 
   window.__triggerError = function () {
-    var brokenObject = null;
+    let brokenObject = null;
     brokenObject.thisWillThrow();
   };
 
@@ -183,7 +183,7 @@
   };
 
   window.__addToCart = function (productId) {
-    var selectedProduct = PRODUCTS.find(function (product) { return product.id === productId; });
+    let selectedProduct = PRODUCTS.find(function (product) { return product.id === productId; });
     if (!selectedProduct) return;
     cartItems.push(selectedProduct);
     watchTower.trackEvent("add-to-cart", {
@@ -195,7 +195,7 @@
   };
 
   window.__removeFromCart = function (itemIndex) {
-    var removedItem = cartItems[itemIndex];
+    let removedItem = cartItems[itemIndex];
     cartItems.splice(itemIndex, 1);
     watchTower.trackEvent("remove-from-cart", { productName: removedItem.name });
     renderCart();
@@ -213,7 +213,7 @@
 
   window.__checkoutError = function () {
     try {
-      var paymentGateway = undefined;
+      let paymentGateway = undefined;
       paymentGateway.processPayment(cartItems);
     } catch (error) {
       watchTower.trackError(error);
@@ -223,8 +223,8 @@
   };
 
   window.__login = function () {
-    var usernameInput = document.getElementById("username");
-    var username = usernameInput.value.trim();
+    let usernameInput = document.getElementById("username");
+    let username = usernameInput.value.trim();
     if (!username) {
       alert("Please enter a username");
       return;

@@ -46,12 +46,12 @@ function calculateAverage(values) {
     return 0;
   }
 
-  var validValues = values.filter(isFiniteNumber);
+  let validValues = values.filter(isFiniteNumber);
   if (validValues.length === 0) {
     return 0;
   }
 
-  var total = validValues.reduce(function (sum, value) {
+  let total = validValues.reduce(function (sum, value) {
     return sum + value;
   }, 0);
 
@@ -63,7 +63,7 @@ function calculatePercentile(values, percentile) {
     return 0;
   }
 
-  var validValues = values.filter(isFiniteNumber).sort(function (left, right) {
+  let validValues = values.filter(isFiniteNumber).sort(function (left, right) {
     return left - right;
   });
 
@@ -71,12 +71,12 @@ function calculatePercentile(values, percentile) {
     return 0;
   }
 
-  var boundedPercentile = Math.min(Math.max(percentile, 0), 100);
-  var position = (boundedPercentile / 100) * (validValues.length - 1);
-  var lowerIndex = Math.floor(position);
-  var upperIndex = Math.ceil(position);
-  var lowerValue = validValues[lowerIndex];
-  var upperValue = validValues[upperIndex];
+  let boundedPercentile = Math.min(Math.max(percentile, 0), 100);
+  let position = (boundedPercentile / 100) * (validValues.length - 1);
+  let lowerIndex = Math.floor(position);
+  let upperIndex = Math.ceil(position);
+  let lowerValue = validValues[lowerIndex];
+  let upperValue = validValues[upperIndex];
 
   if (lowerIndex === upperIndex) {
     return lowerValue;
@@ -99,7 +99,7 @@ function sendJson(response, statusCode, payload) {
 
 function readJsonBody(request) {
   return new Promise(function (resolve, reject) {
-    var chunks = [];
+    let chunks = [];
 
     request.on("data", function (chunk) {
       chunks.push(chunk);
@@ -118,7 +118,7 @@ function readJsonBody(request) {
 }
 
 function broadcastEvents(eventBatch) {
-  var eventPayload = JSON.stringify(eventBatch);
+  let eventPayload = JSON.stringify(eventBatch);
   sseClients.forEach(function (response) {
     response.write("data: " + eventPayload + "\n\n");
   });
@@ -147,10 +147,10 @@ function resolveStaticPath(pathname) {
 }
 
 function serveStaticFile(response, pathname) {
-  var candidateRoot = path.join(__dirname, "..");
-  var requestedPath = resolveStaticPath(pathname);
-  var filePath = path.join(candidateRoot, requestedPath);
-  var resolvedFilePath = path.resolve(filePath);
+  let candidateRoot = path.join(__dirname, "..");
+  let requestedPath = resolveStaticPath(pathname);
+  let filePath = path.join(candidateRoot, requestedPath);
+  let resolvedFilePath = path.resolve(filePath);
 
   if (!resolvedFilePath.startsWith(path.resolve(candidateRoot))) {
     response.writeHead(403);
@@ -165,7 +165,7 @@ function serveStaticFile(response, pathname) {
       return;
     }
 
-    var extension = path.extname(resolvedFilePath);
+    let extension = path.extname(resolvedFilePath);
     response.writeHead(200, {
       "Content-Type": MIME[extension] || "application/octet-stream",
     });
@@ -174,14 +174,14 @@ function serveStaticFile(response, pathname) {
 }
 
 function buildLatencySummary() {
-  var latencyByRoute = {};
+  let latencyByRoute = {};
 
   storedEvents.forEach(function (eventRecord) {
     if (eventRecord.type !== "pageload" || !eventRecord.data || eventRecord.data.duration == null) {
       return;
     }
 
-    var routeName = eventRecord.route || "/";
+    let routeName = eventRecord.route || "/";
     if (!latencyByRoute[routeName]) latencyByRoute[routeName] = [];
 
     latencyByRoute[routeName].push({
@@ -191,7 +191,7 @@ function buildLatencySummary() {
   });
 
   return Object.keys(latencyByRoute).reduce(function (summary, routeName) {
-    var durations = latencyByRoute[routeName].map(function (point) {
+    let durations = latencyByRoute[routeName].map(function (point) {
       return point.duration;
     });
     summary[routeName] = {
@@ -206,9 +206,9 @@ function buildLatencySummary() {
 }
 
 function buildSeries(events, valueGetter) {
-  var labels = ["1", "2", "3", "4", "5", "6", "7"];
-  var series = [0, 0, 0, 0, 0, 0, 0];
-  var relevantEvents = events.slice(-7);
+  let labels = ["1", "2", "3", "4", "5", "6", "7"];
+  let series = [0, 0, 0, 0, 0, 0, 0];
+  let relevantEvents = events.slice(-7);
 
   relevantEvents.forEach(function (eventRecord, index) {
     series[labels.length - relevantEvents.length + index] = valueGetter(eventRecord, index, relevantEvents);
@@ -221,14 +221,14 @@ function buildSeries(events, valueGetter) {
 }
 
 function getNotificationAnalytics() {
-  var breakdownCounts = {
+  let breakdownCounts = {
     performance: 0,
     errors: 0,
     feedback: 0,
     clicks: 0,
   };
-  var feedbackRatings = [];
-  var feedbackBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let feedbackRatings = [];
+  let feedbackBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
   storedEvents.forEach(function (eventRecord) {
     if (eventRecord.type === "pageload") breakdownCounts.performance += 1;
@@ -252,24 +252,24 @@ function getNotificationAnalytics() {
 }
 
 function getDashboardStats() {
-  var activeSessionIds = new Set();
-  var recentWindow = Date.now() - ACTIVE_USER_WINDOW;
-  var errorsByVersion = {};
-  var recentErrors = [];
-  var recentActivity = [];
-  var analytics = getNotificationAnalytics();
-  var customActivityTotal = 0;
+  let activeSessionIds = new Set();
+  let recentWindow = Date.now() - ACTIVE_USER_WINDOW;
+  let errorsByVersion = {};
+  let recentErrors = [];
+  let recentActivity = [];
+  let analytics = getNotificationAnalytics();
+  let customActivityTotal = 0;
 
-  for (var index = storedEvents.length - 1; index >= 0; index -= 1) {
-    var eventRecord = storedEvents[index];
-    var eventTimestamp = new Date(eventRecord.timestamp).getTime();
+  for (let index = storedEvents.length - 1; index >= 0; index -= 1) {
+    let eventRecord = storedEvents[index];
+    let eventTimestamp = new Date(eventRecord.timestamp).getTime();
 
     if (eventTimestamp >= recentWindow) {
       activeSessionIds.add(eventRecord.sessionId);
     }
 
     if (eventRecord.type === "error") {
-      var versionName = eventRecord.deployVersion || "unknown";
+      let versionName = eventRecord.deployVersion || "unknown";
       errorsByVersion[versionName] = (errorsByVersion[versionName] || 0) + 1;
       if (recentErrors.length < 20) recentErrors.push(eventRecord);
     }
@@ -287,15 +287,15 @@ function getDashboardStats() {
     }
   }
 
-  var userSeries = buildSeries(storedEvents, function (_, index, relevantEvents) {
-    var uniqueSessionIds = new Set();
+  let userSeries = buildSeries(storedEvents, function (_, index, relevantEvents) {
+    let uniqueSessionIds = new Set();
     relevantEvents.slice(0, index + 1).forEach(function (seriesEvent) {
       uniqueSessionIds.add(seriesEvent.sessionId);
     });
     return uniqueSessionIds.size;
   });
 
-  var activitySeries = buildSeries(storedEvents, function (eventRecord) {
+  let activitySeries = buildSeries(storedEvents, function (eventRecord) {
     if (eventRecord.type === "custom" || eventRecord.type === "feedback" || eventRecord.type === "login") {
       return 1;
     }
@@ -323,8 +323,8 @@ function getDashboardStats() {
 }
 
 const server = http.createServer(function (request, response) {
-  var parsedUrl = new URL(request.url, "http://localhost");
-  var pathname = parsedUrl.pathname;
+  let parsedUrl = new URL(request.url, "http://localhost");
+  let pathname = parsedUrl.pathname;
 
   if (request.method === "OPTIONS") {
     applyCors(response);
@@ -336,8 +336,8 @@ const server = http.createServer(function (request, response) {
   if (request.method === "POST" && pathname === "/api/events") {
     readJsonBody(request)
       .then(function (requestBody) {
-        var rawEvents = Array.isArray(requestBody.events) ? requestBody.events : [requestBody];
-        var normalizedEvents = rawEvents.filter(isValidEvent).map(normalizeIncomingEvent);
+        let rawEvents = Array.isArray(requestBody.events) ? requestBody.events : [requestBody];
+        let normalizedEvents = rawEvents.filter(isValidEvent).map(normalizeIncomingEvent);
 
         normalizedEvents.forEach(function (eventRecord) {
           storedEvents.push(eventRecord);
@@ -358,10 +358,10 @@ const server = http.createServer(function (request, response) {
   }
 
   if (request.method === "GET" && pathname === "/api/events") {
-    var typeFilter = parsedUrl.searchParams.get("type");
-    var versionFilter = parsedUrl.searchParams.get("version");
-    var limit = parseInt(parsedUrl.searchParams.get("limit") || "100", 10);
-    var filteredEvents = storedEvents;
+    let typeFilter = parsedUrl.searchParams.get("type");
+    let versionFilter = parsedUrl.searchParams.get("version");
+    let limit = parseInt(parsedUrl.searchParams.get("limit") || "100", 10);
+    let filteredEvents = storedEvents;
 
     if (typeFilter) {
       filteredEvents = filteredEvents.filter(function (eventRecord) {
