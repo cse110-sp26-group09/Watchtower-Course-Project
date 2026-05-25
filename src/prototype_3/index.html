@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WatchTower Candidate 1</title>
+  <title>WatchTower Prototype 3</title>
   <link rel="icon" type="image/png" href="assets/watchtower-logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -24,6 +24,7 @@
           <span class="alert-dot" aria-hidden="true"></span>
           <span id="active-issues-count">0 active issues</span>
         </button>
+        <button class="mode-pill mode-pill-button" id="dashboard-mode-pill" type="button" data-view="settings" aria-label="Open settings to switch dashboard mode" title="Open settings">Manager view</button>
         <div class="live-pill" id="live-status-pill" role="status" aria-label="Connected to observed software">
           <span class="live-dot" aria-hidden="true"></span>
           <span id="live-status-text">Live</span>
@@ -135,6 +136,59 @@
             </div>
             <ol class="event-timeline" id="activity-feed"></ol>
           </section>
+
+          <section class="panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="manager-summary-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Manager summary</p>
+                <h2 id="manager-summary-title">Operational highlights</h2>
+              </div>
+            </div>
+            <ul class="priority-list" id="manager-summary-list">
+              <li><span aria-hidden="true">!</span> Waiting for live trends from shop demo.</li>
+            </ul>
+          </section>
+
+          <section class="panel developer-only-panel" data-dashboard-mode="developer" aria-labelledby="developer-diagnostics-title" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Developer diagnostics</p>
+                <h2 id="developer-diagnostics-title">Route and release signals</h2>
+              </div>
+            </div>
+            <div class="developer-grid">
+              <article>
+                <h3>Latency by route (p95)</h3>
+                <ul class="compact-list" id="developer-route-table">
+                  <li><span>/</span><strong>Waiting for samples</strong></li>
+                </ul>
+              </article>
+              <article>
+                <h3>Errors by deploy version</h3>
+                <ul class="compact-list" id="developer-version-table">
+                  <li><span>No errors yet</span><strong>0</strong></li>
+                </ul>
+              </article>
+              <article class="developer-span-2">
+                <h3>Top issue signatures</h3>
+                <ul class="compact-list" id="developer-top-issues">
+                  <li><span>No active signatures</span><strong>0</strong></li>
+                </ul>
+              </article>
+              <article>
+                <h3>High latency windows</h3>
+                <ul class="compact-list" id="developer-latency-windows">
+                  <li><span>No route telemetry yet</span><strong>0 ms</strong></li>
+                </ul>
+              </article>
+              <article>
+                <h3>Traffic peaks</h3>
+                <ul class="compact-list" id="developer-traffic-peaks">
+                  <li><span>Waiting for load samples</span><strong>0/min</strong></li>
+                </ul>
+              </article>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -178,7 +232,7 @@
           </label>
           <label>
             <span>App</span>
-            <input id="issue-filter-app" type="text" placeholder="candidate_1_demo">
+            <input id="issue-filter-app" type="text" placeholder="shopdemo">
           </label>
           <label>
             <span>Route</span>
@@ -186,6 +240,29 @@
           </label>
           <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
         </div>
+
+        <section class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" aria-labelledby="developer-alerts-title" hidden>
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Developer alerts</p>
+              <h2 id="developer-alerts-title">Severity diagnostics and signal controls</h2>
+            </div>
+          </div>
+          <div class="developer-kpi-grid">
+            <article class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></article>
+            <article class="summary-chip"><p>Warning</p><strong id="dev-warning-count">0</strong></article>
+            <article class="summary-chip"><p>Info/Other</p><strong id="dev-info-count">0</strong></article>
+            <article class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></article>
+          </div>
+          <div class="developer-issue-tools">
+            <label class="field-row" for="developer-issue-search">
+              <span>Developer search</span>
+              <input id="developer-issue-search" type="text" placeholder="Search title, route, app, version...">
+            </label>
+            <button class="ghost-button" id="developer-mute-toggle" type="button">Mute alerts</button>
+            <p class="inline-status" id="developer-mute-status">Live alerts are active.</p>
+          </div>
+        </section>
 
         <div class="issues-layout">
           <section class="panel issue-panel" aria-labelledby="issues-title">
@@ -378,6 +455,25 @@
               </ul>
             </div>
           </section>
+
+          <section class="panel developer-only-panel" data-dashboard-mode="developer" aria-labelledby="developer-analytics-title" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Developer analytics</p>
+                <h2 id="developer-analytics-title">Diagnostic event mix and route pressure</h2>
+              </div>
+            </div>
+            <div class="developer-grid">
+              <article>
+                <h3>Event type mix (range)</h3>
+                <ul class="compact-list" id="developer-event-mix"></ul>
+              </article>
+              <article>
+                <h3>Route pressure (range p95)</h3>
+                <ul class="compact-list" id="developer-route-pressure"></ul>
+              </article>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -467,6 +563,13 @@
                     <small>Switch the dashboard to a dark theme.</small>
                   </span>
                   <input class="toggle-input" id="dark-mode-toggle" type="checkbox">
+                </label>
+                <label class="field-row" for="dashboard-mode-select">
+                  <span>Dashboard mode</span>
+                  <select id="dashboard-mode-select">
+                    <option value="manager" selected>Manager view (summary)</option>
+                    <option value="developer">Developer view (detailed)</option>
+                  </select>
                 </label>
                 <label class="range-row" for="text-size">
                   <span>
