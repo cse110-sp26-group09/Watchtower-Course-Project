@@ -105,7 +105,7 @@ See [docs/planning/sprint-1-planning.md](docs/planning/sprint-1-planning.md) for
 - **Documentation**: [docs/](docs/README.md)
 - **Decisions & Logs**: [docs/meetings/](docs/meetings/)
 - **Research**: [docs/research/](docs/research/)
-
+- **Team Status Video** :[Youtube](https://youtu.be/9Bn4ElbA7Js) , [docs/videos](docs\videos\statusvideo1.mp4)
 ## Contributing
 
 Before you start work:
