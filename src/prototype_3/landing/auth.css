@@ -8,6 +8,16 @@
   --line: rgba(151, 182, 194, 0.25);
 }
 
+body[data-theme="light"] {
+  --bg: #f4f7fa;
+  --panel: #ffffff;
+  --panel-soft: #f3f7fa;
+  --ink: #152128;
+  --muted: #5c6f77;
+  --teal: #1d99a7;
+  --line: #cfdce3;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -30,29 +40,42 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 22px;
-  align-items: stretch;
 }
 
 .auth-brand,
 .auth-card {
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: linear-gradient(160deg, rgba(18, 31, 47, 0.95), rgba(17, 26, 39, 0.96));
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
 }
 
 .auth-brand {
   padding: 28px;
 }
 
+.brand-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .home-link {
-  display: inline-block;
   color: var(--muted);
   text-decoration: none;
-  margin-bottom: 22px;
 }
 
 .home-link:hover {
   color: var(--ink);
+}
+
+#theme-toggle {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  padding: 8px 10px;
+  cursor: pointer;
 }
 
 .auth-brand img {
@@ -104,8 +127,8 @@ body {
 }
 
 .tab.active {
-  background: #1f3349;
-  border-color: #2f6f8a;
+  background: color-mix(in srgb, var(--panel-soft) 82%, var(--teal) 18%);
+  border-color: color-mix(in srgb, var(--teal) 62%, var(--line));
 }
 
 .auth-card h2 {
@@ -130,7 +153,7 @@ label {
 }
 
 .optional span {
-  color: #758a95;
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
 }
 
 input,
@@ -145,7 +168,7 @@ select {
 }
 
 input::placeholder {
-  color: #78909c;
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
 }
 
 .primary,
@@ -183,7 +206,7 @@ input::placeholder {
 .divider span {
   position: relative;
   padding: 0 10px;
-  background: #132235;
+  background: var(--panel);
   color: var(--muted);
 }
 
@@ -196,7 +219,7 @@ input::placeholder {
 
 .legal {
   margin: 12px 0 0;
-  color: #738a95;
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
   font-size: 0.82rem;
   line-height: 1.4;
 }

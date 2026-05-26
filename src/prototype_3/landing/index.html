@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WatchTower | Landing Review</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body data-theme="light">
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="WatchTower landing page">
+      <img src="../assets/watchtower-logo.png" alt="WatchTower logo" onerror="this.style.display='none'">
+      <span>WatchTower</span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a href="#about">About</a>
+      <a href="#views">Views</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#workflow">Workflow</a>
+      <a class="ghost" href="./auth.html">Sign up / login</a>
+      <button class="theme-toggle" type="button" id="theme-toggle">Dark mode</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="about">
+      <div class="hero-copy">
+        <p class="eyebrow">Observability for early-stage products</p>
+        <h1>Know what your software is doing right now.</h1>
+        <p class="summary">
+          WatchTower tracks real usage and operational risk in one place:
+          errors, latency, uptime pressure, and user signals.
+        </p>
+        <ul class="feature-list">
+          <li>Real-time event flow from monitored sites</li>
+          <li>Issue triage with assignment and severity</li>
+          <li>Production health profile for quick status checks</li>
+          <li>Dual experiences: Manager view and Developer view</li>
+        </ul>
+        <div class="hero-actions">
+          <a class="btn primary" href="./auth.html">Review sign in flow</a>
+          <button class="btn secondary" type="button" disabled>Dashboard routing disabled for review</button>
+        </div>
+      </div>
+      <aside class="hero-panel" aria-label="What WatchTower helps with">
+        <h2>What teams use it for</h2>
+        <div class="pill-grid">
+          <span>Critical errors</span>
+          <span>Latency spikes</span>
+          <span>Deployment regressions</span>
+          <span>Most-clicked features</span>
+          <span>User feedback</span>
+          <span>Incident response</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="views" id="views">
+      <h2 class="section-title">Choose the right operating lens</h2>
+      <article class="view-card">
+        <h3>Developer View</h3>
+        <p>Deep diagnostics and data density for engineering investigations.</p>
+        <ul>
+          <li>Richer telemetry tables and filters</li>
+          <li>Route-level latency and event drill-down</li>
+          <li>Build/deploy context for incident tracing</li>
+        </ul>
+      </article>
+
+      <article class="view-card">
+        <h3>Manager View</h3>
+        <p>Clear, concise summary for quick decisions and prioritization.</p>
+        <ul>
+          <li>At-a-glance health and issue trends</li>
+          <li>Simple triage status and ownership</li>
+          <li>High-signal metrics without noisy details</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="gallery" id="gallery">
+      <h2>Prototype Gallery</h2>
+      <p class="gallery-sub">Click any image to zoom in. Replace these with your Canva exports in `src/prototype_3/assets/canva/` when ready.</p>
+      <div class="gallery-grid">
+        <figure class="shot">
+          <img src="../assets/canva/developer-view.svg" alt="Developer view dashboard layout" data-caption="Developer View: dense diagnostics, issue table, and route-level analysis.">
+          <figcaption>Developer View - detailed diagnostics and triage tools.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="../assets/canva/manager-view.svg" alt="Manager view dashboard layout" data-caption="Manager View: concise KPIs, high-signal alerts, and simplified operations summary.">
+          <figcaption>Manager View - concise and decision-focused status board.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="../assets/canva/watchtower-flow.svg" alt="WatchTower architecture and flow" data-caption="System flow: collect, classify, store, and present actionable observability insights.">
+          <figcaption>Architecture snapshot - event flow from site activity to response.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="workflow" id="workflow">
+      <h2>How WatchTower Works</h2>
+      <ol>
+        <li>Collect events from browser/app instrumentation</li>
+        <li>Normalize and classify errors, performance, and feedback</li>
+        <li>Surface incidents in shared dashboards and triage queues</li>
+        <li>Act quickly with the right view for each role</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Prototype review page only. No production authentication enabled yet.</p>
+  </footer>
+
+  <dialog class="zoom-modal" id="zoom-modal" aria-labelledby="zoom-caption">
+    <button class="close-modal" type="button" id="close-modal" aria-label="Close zoomed image">Close</button>
+    <img id="zoom-image" src="" alt="">
+    <p id="zoom-caption"></p>
+  </dialog>
+
+  <script src="./script.js"></script>
+</body>
+</html>
