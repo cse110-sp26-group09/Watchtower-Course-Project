@@ -66,3 +66,26 @@ temp/
 # Local data / prototype storage
 local-data/
 mock-output/
+
+# Local SQLite databases (Prototype 1 SQLite verification flow).
+# The active runtime database lives at data/prototype_1/watchtower.sqlite.
+# Keep these files out of the repo so committed schema/code changes are
+# never confused with locally generated row data.
+data/*.sqlite
+data/**/*.sqlite
+data/*.sqlite-journal
+data/**/*.sqlite-journal
+data/*.sqlite-wal
+data/**/*.sqlite-wal
+data/*.sqlite-shm
+data/**/*.sqlite-shm
+data/*.db
+data/**/*.db
+data/*.db-journal
+data/**/*.db-journal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
