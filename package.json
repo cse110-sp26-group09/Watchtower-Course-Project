@@ -5,6 +5,7 @@
   "description": "WatchTower - a lightweight observability web application that captures and displays user events, JavaScript errors, performance metrics, and feedback through a real-time dashboard.",
   "license": "UNLICENSED",
   "scripts": {
+    "start": "node src/prototype_2/server/server.js",
     "start:prototype2": "node src/prototype_2/server/server.js",
     "start:prototype1": "node src/prototype_1/server/server.js",
     "test": "npm run test:unit",
