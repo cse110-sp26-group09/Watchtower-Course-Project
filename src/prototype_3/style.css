@@ -132,8 +132,8 @@ a {
 
 .brand-mark {
   display: grid;
-  width: 34px;
-  height: 54px;
+  width: 42px;
+  height: 62px;
   flex: 0 0 auto;
   place-items: center;
   overflow: visible;
@@ -151,6 +151,8 @@ a {
   max-height: none;
   object-fit: contain;
   object-position: center;
+  transform: scale(1.12);
+  transform-origin: center;
 }
 
 
@@ -467,17 +469,17 @@ body.dark-mode .issues-toolbar input {
 }
 
 body.dark-mode .brand-mark {
-  background: #132131;
-  border: 1px solid #33516a;
-  border-radius: 6px;
-  padding: 2px;
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  overflow: visible;
 }
 
 body.dark-mode .brand-logo {
   mix-blend-mode: normal;
   filter: none;
-  transform: scale(1.2);
+  transform: scale(1.12);
   transform-origin: center;
 }
 
@@ -1965,8 +1967,8 @@ body.text-compact {
   }
 
   .brand-mark {
-    width: 30px;
-    height: 48px;
+    width: 38px;
+    height: 56px;
   }
 
   .brand-logo {
