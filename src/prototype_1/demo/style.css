@@ -246,6 +246,34 @@ h2 {
   font-size: 14px;
 }
 
+.local-test-panel {
+  margin: 24px 0;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid #b9ddd4;
+  border-left: 4px solid #1b6b63;
+  border-radius: 10px;
+}
+
+.local-test-panel h3 {
+  margin-bottom: 6px;
+  font-size: 18px;
+  color: #184f4a;
+}
+
+.local-test-panel p {
+  font-size: 13px;
+  color: #4d5b55;
+  margin-bottom: 4px;
+}
+
+.local-test-panel code {
+  background: #f4f1e7;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
 @media (max-width: 760px) {
   nav {
     flex-wrap: wrap;

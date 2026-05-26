@@ -13,8 +13,17 @@
   var watchTower = new WatchTower({
     endpoint: "/api/events",
     deployVersion: versionSelect.value,
-    appName: "candidate_1_demo",
+    appName: "prototype_1_demo",
   });
+
+  if (typeof console !== "undefined" && console && typeof console.info === "function") {
+    console.info(
+      "[ShopDemo] WatchTower SDK initialized. Endpoint:",
+      "/api/events",
+      "session:",
+      watchTower.sessionId
+    );
+  }
 
   var appContainer = document.getElementById("app");
   var userBadge = document.getElementById("user-badge");
@@ -75,7 +84,18 @@
   function renderHome() {
     appContainer.innerHTML =
       "<h2>Monitored test surface</h2>" +
-      '<div class="alert info">This app is connected to Candidate 1. Use it to generate clicks, custom events, latency samples, and failures.</div>' +
+      '<div class="alert info">This app is connected to the Prototype 1 SQLite-backed WatchTower backend. Use it to generate clicks, custom events, latency samples, and failures.</div>' +
+      '<section class="local-test-panel" aria-labelledby="local-test-title">' +
+      '<h3 id="local-test-title">Local SQLite verification</h3>' +
+      '<p>These buttons exercise the full <code>SDK &rarr; /api/events &rarr; SQLite</code> flow. After clicking, run <code>curl http://localhost:3000/api/events</code> or open the dashboard at <code>/</code> to verify storage.</p>' +
+      '<div class="action-group" id="local-test-buttons">' +
+      '<button class="btn" type="button" data-test-action="send-test-event">Send Test Event</button>' +
+      '<button class="btn danger" type="button" data-test-action="trigger-test-error">Trigger Test Error</button>' +
+      '<button class="btn" type="button" data-test-action="send-performance-event">Send Performance Event</button>' +
+      '<button class="btn outline" type="button" data-test-action="send-feedback-event">Send Feedback Event</button>' +
+      "</div>" +
+      "</section>" +
+      "<h3>Realistic monitored interactions</h3>" +
       '<div class="action-group">' +
       '<button class="btn" onclick="window.__triggerSlowLoad()">Simulate Slow Load</button>' +
       '<button class="btn danger" onclick="window.__triggerError()">Trigger JS Error</button>' +
@@ -83,7 +103,81 @@
       '<button class="btn outline" onclick="window.__triggerCustomEvent()">Send Custom Event</button>' +
       '<button class="btn outline" onclick="window.__triggerFeedback()">Send Feedback</button>' +
       "</div>";
+
+    bindLocalTestButtons();
   }
+
+  function bindLocalTestButtons() {
+    var localTestContainer = document.getElementById("local-test-buttons");
+    if (!localTestContainer) {
+      return;
+    }
+    localTestContainer.addEventListener("click", function (event) {
+      var trigger = event.target.closest("[data-test-action]");
+      if (!trigger) {
+        return;
+      }
+      switch (trigger.getAttribute("data-test-action")) {
+        case "send-test-event":
+          window.__sendLocalTestEvent();
+          break;
+        case "trigger-test-error":
+          window.__triggerLocalTestError();
+          break;
+        case "send-performance-event":
+          window.__sendLocalPerformanceEvent();
+          break;
+        case "send-feedback-event":
+          window.__sendLocalFeedbackEvent();
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  window.__sendLocalTestEvent = function () {
+    var safeMetadata = { test: true, scenario: "manual-verification" };
+    var posted = window.sendWatchTowerEvent({
+      type: "custom",
+      sessionId: watchTower.sessionId,
+      pageUrl: location.pathname,
+      message: "Manual verification test event",
+      severity: "info",
+      appVersion: watchTower.deployVersion,
+      data: { name: "manual-verification", payload: safeMetadata },
+      metadata: safeMetadata,
+    });
+    if (posted && typeof posted.then === "function") {
+      posted.then(function (response) {
+        if (typeof console !== "undefined" && console && typeof console.info === "function") {
+          console.info("[ShopDemo] Test event response:", response);
+        }
+      });
+    }
+  };
+
+  window.__triggerLocalTestError = function () {
+    var localError = new Error("Local SQLite verification - simulated error");
+    watchTower.trackError(localError);
+  };
+
+  window.__sendLocalPerformanceEvent = function () {
+    watchTower._enqueue("performance", {
+      duration: 200 + Math.floor(Math.random() * 1500),
+      ttfb: 80 + Math.floor(Math.random() * 200),
+      domContentLoaded: 150 + Math.floor(Math.random() * 800),
+      loadComplete: 250 + Math.floor(Math.random() * 1200),
+    });
+  };
+
+  window.__sendLocalFeedbackEvent = function () {
+    watchTower._enqueue("feedback", {
+      rating: 5,
+      message: "Local SQLite verification feedback event.",
+      category: "verification",
+    });
+  };
 
   function renderProducts() {
     var productsHtml = "<h2>Testing tools</h2><div class='card-grid'>";

@@ -1,22 +1,40 @@
+"use strict";
+
 /**
- * WatchTower Candidate 1 server.
+ * Prototype 1 SQLite-backed WatchTower server.
  *
- * Serves the candidate dashboard, monitored demo app, and browser SDK.
- * It also accepts event ingestion, computes basic stats, and streams
- * new events to connected dashboards with Server-Sent Events.
+ * Serves the prototype 1 dashboard, the monitored ShopDemo app, and the
+ * browser SDK as static files; persists ingested events to a single
+ * SQLite database using `better-sqlite3` via {@link module:prototype_1/server/event-store};
+ * exposes a small JSON API (`/api/health`, `/api/events`, `/api/stats`,
+ * `/api/events/stream`) used both by the dashboard and the local
+ * verification workflow described in `docs/architecture/event-storage.md`.
  *
- * @module candidate_1/server
+ * Database file location:
+ *   `<repo-root>/data/prototype_1/watchtower.sqlite`
+ *
+ * Override with the `WATCHTOWER_P1_DB` environment variable.
+ *
+ * @module prototype_1/server
  */
 
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const PORT = process.env.PORT || 3000;
-const MAX_EVENTS = 10000;
-const ACTIVE_USER_WINDOW = 5 * 60 * 1000;
+const eventStoreModule = require("./event-store");
 
-const storedEvents = [];
+const PORT = process.env.PORT || 3000;
+const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
+  ? parseInt(process.env.MAX_EVENTS, 10)
+  : 10000;
+const ACTIVE_USER_WINDOW_MS = 5 * 60 * 1000;
+const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
+const DEFAULT_DB_PATH = path.join(REPO_ROOT, "data", "prototype_1", "watchtower.sqlite");
+const DATABASE_PATH = process.env.WATCHTOWER_P1_DB
+  ? path.resolve(process.env.WATCHTOWER_P1_DB)
+  : DEFAULT_DB_PATH;
+
 const sseClients = new Set();
 
 const MIME = {
@@ -28,303 +46,260 @@ const MIME = {
   ".svg": "image/svg+xml",
 };
 
-function isFiniteNumber(value) {
-  return typeof value === "number" && Number.isFinite(value);
-}
+const database = eventStoreModule.openDatabase(DATABASE_PATH);
+const store = eventStoreModule.createEventStore(database);
 
-function isValidEvent(eventRecord) {
-  return Boolean(
-    eventRecord &&
-      typeof eventRecord === "object" &&
-      typeof eventRecord.type === "string" &&
-      eventRecord.type.trim() !== ""
-  );
-}
-
-function calculateAverage(values) {
-  if (!Array.isArray(values) || values.length === 0) {
-    return 0;
-  }
-
-  var validValues = values.filter(isFiniteNumber);
-  if (validValues.length === 0) {
-    return 0;
-  }
-
-  var total = validValues.reduce(function (sum, value) {
-    return sum + value;
-  }, 0);
-
-  return total / validValues.length;
-}
-
-function calculatePercentile(values, percentile) {
-  if (!Array.isArray(values) || values.length === 0) {
-    return 0;
-  }
-
-  var validValues = values.filter(isFiniteNumber).sort(function (left, right) {
-    return left - right;
-  });
-
-  if (validValues.length === 0) {
-    return 0;
-  }
-
-  var boundedPercentile = Math.min(Math.max(percentile, 0), 100);
-  var position = (boundedPercentile / 100) * (validValues.length - 1);
-  var lowerIndex = Math.floor(position);
-  var upperIndex = Math.ceil(position);
-  var lowerValue = validValues[lowerIndex];
-  var upperValue = validValues[upperIndex];
-
-  if (lowerIndex === upperIndex) {
-    return lowerValue;
-  }
-
-  return lowerValue + (upperValue - lowerValue) * (position - lowerIndex);
-}
-
+/**
+ * Apply permissive CORS headers used by the SDK and verification scripts.
+ *
+ * @param {http.ServerResponse} response - HTTP response object.
+ * @returns {void}
+ */
 function applyCors(response) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
+/**
+ * Send a JSON response with CORS headers.
+ *
+ * @param {http.ServerResponse} response - HTTP response object.
+ * @param {number} statusCode - HTTP status code.
+ * @param {Object} payload - JSON-serializable response body.
+ * @returns {void}
+ */
 function sendJson(response, statusCode, payload) {
   applyCors(response);
   response.writeHead(statusCode, { "Content-Type": "application/json" });
   response.end(JSON.stringify(payload));
 }
 
+/**
+ * Read a request body and parse it as JSON.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {Promise<Object>} Resolves with the parsed body.
+ */
 function readJsonBody(request) {
   return new Promise(function (resolve, reject) {
-    var chunks = [];
-
+    const chunks = [];
     request.on("data", function (chunk) {
       chunks.push(chunk);
     });
-
     request.on("end", function () {
+      const raw = Buffer.concat(chunks).toString();
+      if (raw.length === 0) {
+        resolve({});
+        return;
+      }
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString() || "{}"));
+        resolve(JSON.parse(raw));
       } catch (error) {
         reject(error);
       }
     });
-
     request.on("error", reject);
   });
 }
 
+/**
+ * Send a batch of events to all connected SSE clients.
+ *
+ * @param {Array<Object>} eventBatch - Newly stored events.
+ * @returns {void}
+ */
 function broadcastEvents(eventBatch) {
-  var eventPayload = JSON.stringify(eventBatch);
+  if (!Array.isArray(eventBatch) || eventBatch.length === 0) {
+    return;
+  }
+  const payload = JSON.stringify(eventBatch);
   sseClients.forEach(function (response) {
-    response.write("data: " + eventPayload + "\n\n");
+    response.write("data: " + payload + "\n\n");
   });
 }
 
-function normalizeIncomingEvent(rawEvent) {
-  return {
-    type: rawEvent.type || "custom",
-    timestamp: rawEvent.timestamp || new Date().toISOString(),
-    sessionId: rawEvent.sessionId || "unknown-session",
-    userId: rawEvent.userId || null,
-    deployVersion: rawEvent.deployVersion || "unknown",
-    appName: rawEvent.appName || "candidate_1_demo",
-    url: rawEvent.url || "",
-    route: rawEvent.route || "/",
-    data: rawEvent.data && typeof rawEvent.data === "object" ? rawEvent.data : {},
-    receivedAt: new Date().toISOString(),
-  };
-}
-
+/**
+ * Resolve URL aliases to concrete static paths.
+ *
+ * @param {string} pathname - Incoming URL pathname.
+ * @returns {string}
+ */
 function resolveStaticPath(pathname) {
-  if (pathname === "/" || pathname === "") return "/index.html";
-  if (pathname === "/demo" || pathname === "/demo/") return "/demo/index.html";
-  if (pathname === "/sdk/watchtower.js") return "/sdk/watchtower.js";
+  if (pathname === "/" || pathname === "") {
+    return "/index.html";
+  }
+  if (pathname === "/demo" || pathname === "/demo/") {
+    return "/demo/index.html";
+  }
   return pathname;
 }
 
+/**
+ * Serve a static file from the prototype 1 root, with traversal protection.
+ *
+ * @param {http.ServerResponse} response - HTTP response object.
+ * @param {string} pathname - Incoming URL pathname.
+ * @returns {void}
+ */
 function serveStaticFile(response, pathname) {
-  var candidateRoot = path.join(__dirname, "..");
-  var requestedPath = resolveStaticPath(pathname);
-  var filePath = path.join(candidateRoot, requestedPath);
-  var resolvedFilePath = path.resolve(filePath);
+  const prototypeRoot = path.resolve(__dirname, "..");
+  const requestedPath = resolveStaticPath(pathname);
+  const candidatePath = path.resolve(path.join(prototypeRoot, requestedPath));
 
-  if (!resolvedFilePath.startsWith(path.resolve(candidateRoot))) {
+  if (!candidatePath.startsWith(prototypeRoot)) {
     response.writeHead(403);
     response.end("Forbidden");
     return;
   }
 
-  fs.stat(resolvedFilePath, function (error, fileStat) {
+  fs.stat(candidatePath, function (error, fileStat) {
     if (error || !fileStat.isFile()) {
       response.writeHead(404);
       response.end("Not found");
       return;
     }
-
-    var extension = path.extname(resolvedFilePath);
+    const extension = path.extname(candidatePath);
     response.writeHead(200, {
       "Content-Type": MIME[extension] || "application/octet-stream",
     });
-    fs.createReadStream(resolvedFilePath).pipe(response);
+    fs.createReadStream(candidatePath).pipe(response);
   });
 }
 
-function buildLatencySummary() {
-  var latencyByRoute = {};
+/**
+ * Handle `POST /api/events`. Accepts either a single event or `{events: [...]}`,
+ * validates each event, persists the valid ones, and broadcasts to SSE.
+ *
+ * @param {http.IncomingMessage} request - HTTP request.
+ * @param {http.ServerResponse} response - HTTP response.
+ * @returns {Promise<void>}
+ */
+async function handleIngestEvents(request, response) {
+  let body;
+  try {
+    body = await readJsonBody(request);
+  } catch (_error) {
+    sendJson(response, 400, { error: "Invalid JSON" });
+    return;
+  }
 
-  storedEvents.forEach(function (eventRecord) {
-    if (eventRecord.type !== "pageload" || !eventRecord.data || eventRecord.data.duration == null) {
+  const incomingEvents = Array.isArray(body && body.events)
+    ? body.events
+    : Array.isArray(body)
+    ? body
+    : [body];
+
+  const validEvents = [];
+  let rejected = 0;
+  for (const candidate of incomingEvents) {
+    const validation = eventStoreModule.validateEvent(candidate);
+    if (!validation.ok) {
+      rejected += 1;
+      continue;
+    }
+    validEvents.push(candidate);
+  }
+
+  let storedEvents = [];
+  if (validEvents.length > 0) {
+    try {
+      storedEvents = store.insertEventBatch(validEvents);
+      store.pruneOldest(MAX_EVENTS);
+    } catch (error) {
+      console.error("[prototype_1] Failed to insert events:", error);
+      sendJson(response, 500, { error: "Failed to store events" });
       return;
-    }
-
-    var routeName = eventRecord.route || "/";
-    if (!latencyByRoute[routeName]) latencyByRoute[routeName] = [];
-
-    latencyByRoute[routeName].push({
-      duration: eventRecord.data.duration,
-      timestamp: eventRecord.timestamp,
-    });
-  });
-
-  return Object.keys(latencyByRoute).reduce(function (summary, routeName) {
-    var durations = latencyByRoute[routeName].map(function (point) {
-      return point.duration;
-    });
-    summary[routeName] = {
-      count: durations.length,
-      p50: Math.round(calculatePercentile(durations, 50)),
-      p95: Math.round(calculatePercentile(durations, 95)),
-      avg: Math.round(calculateAverage(durations)),
-      points: latencyByRoute[routeName].slice(-24),
-    };
-    return summary;
-  }, {});
-}
-
-function buildSeries(events, valueGetter) {
-  var labels = ["1", "2", "3", "4", "5", "6", "7"];
-  var series = [0, 0, 0, 0, 0, 0, 0];
-  var relevantEvents = events.slice(-7);
-
-  relevantEvents.forEach(function (eventRecord, index) {
-    series[labels.length - relevantEvents.length + index] = valueGetter(eventRecord, index, relevantEvents);
-  });
-
-  return {
-    labels: labels,
-    values: series,
-  };
-}
-
-function getNotificationAnalytics() {
-  var breakdownCounts = {
-    performance: 0,
-    errors: 0,
-    feedback: 0,
-    clicks: 0,
-  };
-  var feedbackRatings = [];
-  var feedbackBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-
-  storedEvents.forEach(function (eventRecord) {
-    if (eventRecord.type === "pageload") breakdownCounts.performance += 1;
-    if (eventRecord.type === "error") breakdownCounts.errors += 1;
-    if (eventRecord.type === "click") breakdownCounts.clicks += 1;
-    if (eventRecord.type === "feedback") {
-      breakdownCounts.feedback += 1;
-      if (Number.isFinite(eventRecord.data.rating)) {
-        feedbackRatings.push(eventRecord.data.rating);
-        feedbackBreakdown[eventRecord.data.rating] = (feedbackBreakdown[eventRecord.data.rating] || 0) + 1;
-      }
-    }
-  });
-
-  return {
-    breakdownCounts: breakdownCounts,
-    feedbackAverage: feedbackRatings.length ? calculateAverage(feedbackRatings) : 0,
-    feedbackTotal: feedbackRatings.length,
-    feedbackBreakdown: feedbackBreakdown,
-  };
-}
-
-function getDashboardStats() {
-  var activeSessionIds = new Set();
-  var recentWindow = Date.now() - ACTIVE_USER_WINDOW;
-  var errorsByVersion = {};
-  var recentErrors = [];
-  var recentActivity = [];
-  var analytics = getNotificationAnalytics();
-  var customActivityTotal = 0;
-
-  for (var index = storedEvents.length - 1; index >= 0; index -= 1) {
-    var eventRecord = storedEvents[index];
-    var eventTimestamp = new Date(eventRecord.timestamp).getTime();
-
-    if (eventTimestamp >= recentWindow) {
-      activeSessionIds.add(eventRecord.sessionId);
-    }
-
-    if (eventRecord.type === "error") {
-      var versionName = eventRecord.deployVersion || "unknown";
-      errorsByVersion[versionName] = (errorsByVersion[versionName] || 0) + 1;
-      if (recentErrors.length < 20) recentErrors.push(eventRecord);
-    }
-
-    if (
-      eventRecord.type === "custom" ||
-      eventRecord.type === "login" ||
-      eventRecord.type === "feedback"
-    ) {
-      customActivityTotal += 1;
-    }
-
-    if (recentActivity.length < 20) {
-      recentActivity.push(eventRecord);
     }
   }
 
-  var userSeries = buildSeries(storedEvents, function (_, index, relevantEvents) {
-    var uniqueSessionIds = new Set();
-    relevantEvents.slice(0, index + 1).forEach(function (seriesEvent) {
-      uniqueSessionIds.add(seriesEvent.sessionId);
-    });
-    return uniqueSessionIds.size;
-  });
+  if (storedEvents.length > 0) {
+    broadcastEvents(storedEvents);
+  }
 
-  var activitySeries = buildSeries(storedEvents, function (eventRecord) {
-    if (eventRecord.type === "custom" || eventRecord.type === "feedback" || eventRecord.type === "login") {
-      return 1;
-    }
-    return 0;
+  sendJson(response, 200, {
+    accepted: storedEvents.length,
+    rejected,
+    events: storedEvents,
   });
-
-  return {
-    activeUsers: activeSessionIds.size,
-    totalEvents: storedEvents.length,
-    totalErrors: recentErrors.length,
-    errorsByVersion: errorsByVersion,
-    latencyByRoute: buildLatencySummary(),
-    recentErrors: recentErrors,
-    recentActivity: recentActivity,
-    analytics: {
-      userSeries: userSeries,
-      activitySeries: activitySeries,
-      breakdownCounts: analytics.breakdownCounts,
-      feedbackAverage: analytics.feedbackAverage,
-      feedbackTotal: analytics.feedbackTotal,
-      feedbackBreakdown: analytics.feedbackBreakdown,
-      customActivityTotal: customActivityTotal,
-    },
-  };
 }
 
-const server = http.createServer(function (request, response) {
-  var parsedUrl = new URL(request.url, "http://localhost");
-  var pathname = parsedUrl.pathname;
+/**
+ * Handle `GET /api/events` with optional `type`, `version`, and `limit` filters.
+ *
+ * @param {http.ServerResponse} response - HTTP response.
+ * @param {URL} parsedUrl - Parsed request URL.
+ * @returns {void}
+ */
+function handleListEvents(response, parsedUrl) {
+  const typeFilter = parsedUrl.searchParams.get("type");
+  const versionFilter = parsedUrl.searchParams.get("version");
+  const rawLimit = parsedUrl.searchParams.get("limit");
+  const parsedLimit = rawLimit ? parseInt(rawLimit, 10) : 100;
+  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 100;
+
+  const events = store.getEvents({
+    type: typeFilter || undefined,
+    version: versionFilter || undefined,
+    limit,
+  });
+
+  sendJson(response, 200, { events });
+}
+
+/**
+ * Handle `GET /api/stats`.
+ *
+ * @param {http.ServerResponse} response - HTTP response.
+ * @returns {void}
+ */
+function handleStats(response) {
+  const stats = store.getStats(ACTIVE_USER_WINDOW_MS);
+  sendJson(response, 200, stats);
+}
+
+/**
+ * Handle `GET /api/health`.
+ *
+ * @param {http.ServerResponse} response - HTTP response.
+ * @returns {void}
+ */
+function handleHealth(response) {
+  sendJson(response, 200, {
+    status: "ok",
+    storage: "sqlite",
+    databasePath: DATABASE_PATH,
+    eventCount: store.countEvents(),
+    knownEventTypes: eventStoreModule.KNOWN_EVENT_TYPES,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Handle `GET /api/events/stream`. Subscribes the response to the SSE
+ * broadcast set until the connection is closed.
+ *
+ * @param {http.IncomingMessage} request - HTTP request.
+ * @param {http.ServerResponse} response - HTTP response.
+ * @returns {void}
+ */
+function handleEventStream(request, response) {
+  applyCors(response);
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  response.write(":\n\n");
+  sseClients.add(response);
+  request.on("close", function () {
+    sseClients.delete(response);
+  });
+}
+
+const server = http.createServer(async function (request, response) {
+  const parsedUrl = new URL(request.url, "http://localhost");
+  const pathname = parsedUrl.pathname;
 
   if (request.method === "OPTIONS") {
     applyCors(response);
@@ -333,78 +308,48 @@ const server = http.createServer(function (request, response) {
     return;
   }
 
+  if (request.method === "GET" && pathname === "/api/health") {
+    handleHealth(response);
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/events") {
-    readJsonBody(request)
-      .then(function (requestBody) {
-        var rawEvents = Array.isArray(requestBody.events) ? requestBody.events : [requestBody];
-        var normalizedEvents = rawEvents.filter(isValidEvent).map(normalizeIncomingEvent);
-
-        normalizedEvents.forEach(function (eventRecord) {
-          storedEvents.push(eventRecord);
-        });
-
-        while (storedEvents.length > MAX_EVENTS) storedEvents.shift();
-
-        if (normalizedEvents.length > 0) {
-          broadcastEvents(normalizedEvents);
-        }
-
-        sendJson(response, 200, { accepted: normalizedEvents.length });
-      })
-      .catch(function () {
-        sendJson(response, 400, { error: "Invalid JSON" });
-      });
+    await handleIngestEvents(request, response);
     return;
   }
 
   if (request.method === "GET" && pathname === "/api/events") {
-    var typeFilter = parsedUrl.searchParams.get("type");
-    var versionFilter = parsedUrl.searchParams.get("version");
-    var limit = parseInt(parsedUrl.searchParams.get("limit") || "100", 10);
-    var filteredEvents = storedEvents;
-
-    if (typeFilter) {
-      filteredEvents = filteredEvents.filter(function (eventRecord) {
-        return eventRecord.type === typeFilter;
-      });
-    }
-
-    if (versionFilter) {
-      filteredEvents = filteredEvents.filter(function (eventRecord) {
-        return eventRecord.deployVersion === versionFilter;
-      });
-    }
-
-    sendJson(response, 200, { events: filteredEvents.slice(-limit) });
+    handleListEvents(response, parsedUrl);
     return;
   }
 
   if (request.method === "GET" && pathname === "/api/stats") {
-    sendJson(response, 200, getDashboardStats());
+    handleStats(response);
     return;
   }
 
   if (request.method === "GET" && pathname === "/api/events/stream") {
-    applyCors(response);
-    response.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    response.write(":\n\n");
-    sseClients.add(response);
-    request.on("close", function () {
-      sseClients.delete(response);
-    });
+    handleEventStream(request, response);
     return;
   }
 
   serveStaticFile(response, pathname);
 });
 
-server.listen(PORT, function () {
-  console.log("Candidate 1 dashboard running at http://localhost:" + PORT);
-  console.log("  Dashboard : http://localhost:" + PORT + "/");
-  console.log("  Demo app  : http://localhost:" + PORT + "/demo");
-  console.log("  SDK       : http://localhost:" + PORT + "/sdk/watchtower.js");
-});
+if (require.main === module) {
+  server.listen(PORT, function () {
+    console.log("Prototype 1 (SQLite) WatchTower running at http://localhost:" + PORT);
+    console.log("  Dashboard : http://localhost:" + PORT + "/");
+    console.log("  Demo app  : http://localhost:" + PORT + "/demo");
+    console.log("  SDK       : http://localhost:" + PORT + "/sdk/watchtower.js");
+    console.log("  Health    : http://localhost:" + PORT + "/api/health");
+    console.log("  Database  : " + DATABASE_PATH);
+  });
+}
+
+module.exports = {
+  server,
+  store,
+  database,
+  DATABASE_PATH,
+};

@@ -10,7 +10,9 @@
 (function (global) {
   "use strict";
 
-  var DEFAULT_ENDPOINT = "/api/events";
+  var DEFAULT_ENDPOINT =
+  global.WATCHTOWER_API_URL ||
+  "/api/events";
   var FLUSH_INTERVAL = 2000;
   var SESSION_KEY = "__wt_sid";
   var inMemorySessionId = null;
@@ -120,7 +122,23 @@
     this._bindErrors();
     this._bindPerformance();
     this._startFlush();
+    this._emitInitialPageView();
   }
+
+  /**
+   * Emit a `page_view` event the first time the SDK initializes for the
+   * current document. The event is enqueued so it joins the next flush
+   * cycle along with any other captured signals.
+   *
+   * @private
+   * @returns {void}
+   */
+  WatchTower.prototype._emitInitialPageView = function () {
+    this._enqueue("page_view", {
+      title: typeof document !== "undefined" ? document.title : "",
+      referrer: typeof document !== "undefined" ? document.referrer : "",
+    });
+  };
 
   /**
    * Queue a new event for the next flush cycle.
@@ -316,5 +334,55 @@
     });
   };
 
+  /**
+   * Lightweight reusable helper that POSTs a single event to `/api/events`.
+   *
+   * Useful for ad-hoc verification (for example from the browser DevTools
+   * console) and for the local test buttons in the demo app. The helper
+   * sets `Content-Type: application/json`, sends the event with
+   * `keepalive: true` so it can complete during page unload, and silently
+   * swallows network failures so the host page never breaks.
+   *
+   * The function returns a Promise that resolves with the parsed JSON
+   * response on success and `null` on failure.
+   *
+   * @param {Object} event - Event payload (camelCase or snake_case fields).
+   * @param {string} [endpoint] - Override the default `/api/events` endpoint.
+   * @returns {Promise<Object|null>} Server response on success, `null` on failure.
+   */
+  function sendWatchTowerEvent(event, endpoint) {
+    const url = endpoint || DEFAULT_ENDPOINT;
+    const payload = event && typeof event === "object" ? event : {};
+
+    if (!payload.timestamp) {
+      payload.timestamp = new Date().toISOString();
+    }
+    if (!payload.sessionId && !payload.session_id) {
+      payload.sessionId = getSessionId();
+    }
+
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          return null;
+        }
+        return response.json().catch(function () {
+          return null;
+        });
+      })
+      .catch(function (error) {
+        if (typeof console !== "undefined" && console && typeof console.warn === "function") {
+          console.warn("[WatchTower] sendWatchTowerEvent failed:", error && error.message ? error.message : error);
+        }
+        return null;
+      });
+  }
+
   global.WatchTower = WatchTower;
+  global.sendWatchTowerEvent = sendWatchTowerEvent;
 })(window);
