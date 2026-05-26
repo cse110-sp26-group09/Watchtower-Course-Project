@@ -1,28 +1,79 @@
-# WatchTower Candidate 1
+# WatchTower Prototype 1
 
-A responsive WatchTower candidate based on the wireframes, now wired to a monitored demo app and lightweight event-ingestion server.
+A responsive WatchTower dashboard candidate based on the wireframes,
+wired to a monitored ShopDemo app and a lightweight SQLite-backed event
+ingestion server.
 
-## Open It
-
-Run the Candidate 1 server:
+## Run It
 
 ```bash
-node src/candidate_1/server/server.js
+npm install
+npm run start:prototype1
 ```
 
-Then open:
+Open in a browser:
 
-- Dashboard: `http://localhost:3100/`
-- Demo app: `http://localhost:3100/demo`
+- **Dashboard:** <http://localhost:3000/>
+- **Monitored demo app:** <http://localhost:3000/demo>
+- **Health probe:** <http://localhost:3000/api/health>
+- **Browser SDK:** <http://localhost:3000/sdk/watchtower.js>
 
-## What Is Included
+> The default `npm start` script still launches Prototype 2 on port 3000.
+> Use `npm run start:prototype1` for the SQLite-backed flow.
 
-- Responsive WatchTower app shell
-- Home dashboard with live health summary, issue queue, build metadata, and recent events
-- Analytics view with user activity, purchases, latency, feedback, and service charts
-- Settings view with profile, accessibility, and notification accordions
-- Desktop side navigation and mobile bottom navigation
-- Interactive view switching, settings accordions, assignment controls, and visual preference toggles
-- Browser SDK copied from the prototype for tracking errors, page-load latency, clicks, and custom events
-- Monitored demo app that generates real events for Candidate 1
-- Candidate 1 server with `/api/events`, `/api/stats`, and `/api/events/stream`
+## What's Included
+
+- Responsive WatchTower app shell.
+- Home dashboard with live health summary, issue queue, build metadata, and recent events.
+- Analytics view with user activity, purchases, latency, feedback, and service charts.
+- Settings view with profile, accessibility, and notification accordions.
+- Desktop side navigation and mobile bottom navigation.
+- Browser SDK that captures `page_view`, `error`, performance, click, and custom events.
+- Monitored ShopDemo app with a "Local SQLite verification" panel for one-click event generation.
+- HTTP server with `/api/health`, `/api/events`, `/api/stats`, and `/api/events/stream`.
+
+## Storage
+
+Events are persisted to a single SQLite file via
+[`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3):
+
+- **Path:** `data/prototype_1/watchtower.sqlite` (created automatically).
+- **Override:** `WATCHTOWER_P1_DB=/abs/path/file.sqlite`.
+- **Schema and verification flow:** see
+  [`docs/architecture/event-storage.md`](../../docs/architecture/event-storage.md).
+
+The legacy SQLite spike at `server/server-1.1.js` and the legacy
+`app.db` file are kept in the repo for reference and are **not** used
+by the active server. Both will be removed once the team agrees the
+SQLite-promoted flow is stable.
+
+## Layout
+
+```
+prototype_1/
+├── README.md              this file
+├── index.html             dashboard shell
+├── style.css              dashboard styles
+├── app.js                 dashboard logic
+├── assets/                logos
+├── demo/                  monitored ShopDemo app served at /demo
+│   ├── index.html
+│   ├── app.js             includes "Local SQLite verification" panel
+│   └── style.css
+├── sdk/
+│   └── watchtower.js      browser SDK with `sendWatchTowerEvent` helper
+└── server/
+    ├── server.js          ACTIVE: SQLite-backed HTTP server
+    ├── event-store.js     better-sqlite3 wrapper + pure helpers (unit tested)
+    └── server-1.1.js      legacy SQLite spike, kept for reference
+```
+
+## Tests
+
+```bash
+npm run test:unit                                      # event-store + shared utils
+npx playwright test tests/e2e/prototype1-sqlite.spec.js  # boots its own server
+```
+
+The e2e suite uses port `3110` and a temp database, so it does not
+collide with a running local Prototype 1 server.
