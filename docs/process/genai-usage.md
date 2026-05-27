@@ -40,6 +40,13 @@
 - **Description:** Used Codex to create a example of what a requirement would look like and used it as a template to create other requirements 
 
 # Sprint 2:
+- **Name:** James Villanueva
+- **Date:** 05/10/2026
+- **Sprint #**: 2
+- **Model:**Codex 5.5 high reasoning
+- **LOC:** 3512
+- **Scale:** `prototype_1`
+- **Description:** Pasted in wireframe and created prototype based off wireframe. Then iteratively made it better after each run. 
 
 # Sprint 3:
 - **Name:** Hemendra Ande
