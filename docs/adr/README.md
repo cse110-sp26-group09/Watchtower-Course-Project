@@ -47,17 +47,23 @@ What other options did we evaluate and why were they not chosen?
 ## Current ADRs
 
 ### ADR 0001: Initial WatchTower Architecture
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** *(Sprint 1)*
 - **Summary:** Lightweight static prototype using vanilla JavaScript, HTML, CSS, and Node.js backend
-- **Link:** [ADR-0001.md](ADR-0001.md) or see content below
+- **Link:** [ADR-0001.md](./ADR-0001.md) or see content below
 
 ### ADR-0002: Use Node.js for WatchTower Backend
 - **Status:** Accepted
 - **Date:** *(Sprint 3)*
 - **Summary:** Usage of Node.js as backend due to its simply front-backend integration, live event handling capacity, and native JSON handling. 
-- **Link:** [ADR-0002.md](ADR-0002.md) or see content below
+- **Link:** [ADR-0002.md](./ADR-0002.md) or see content below
 
+
+### ADR-0003: Use SQLite for WatchTower Event Storage
+- **Status:** Accepted
+- **Date:** *(Sprint 4)*
+- **Summary:** Usage of SQLite as the primary database due to its lightweight setup and easy integration with the Node.js backend architecture.
+- **Link:** [ADR-0003.md](./ADR-0003.md) or see content below
 ## Writing ADRs
 
 ### When to Write an ADR
@@ -158,78 +164,148 @@ This approach keeps the project simple, easy to deploy, and easier for all team 
 These may be considered later only if approved and justified.
 
 --- 
-# ADR-0002: Use Node.js for WatchTower Backend
+## ADR-0002: Use Node.js for WatchTower Backend
 
-- **Status:** Proposed  
+- **Status:** Accepted  
 - **Date:** 2026-05-20  
 
-## Context
+### Context
 
 WatchTower is a centralized observability system that captures:
-- application events
+- user interaction
 - errors
 - performance signals
 - deployment telemetry
-- live operational updates
 
 The system requires:
-- realtime event handling
-- asynchronous network communication
+- live event updates
+- network communication
 - lightweight deployment compatibility
 
 ---
 
-## Decision
+### Decision
 
 Use **Node.js** as the backend runtime for WatchTower.
 
 ---
 
-## Rationale
+### Rationale
 
 - Node.js is optimized for **I/O-bound and event-driven systems**
 - WatchTower primarily handles:
   - incoming telemetry
-  - websocket connections
+  - DB connections
   - network requests
   - streaming updates
 - Node.js supports realtime communication naturally through:
-  - WebSockets
   - async event handling
-  - streams
-- JSON handling is native and aligns well with browser-based telemetry payloads
-- Shared JavaScript semantics between frontend and backend reduce development complexity
-- Lightweight architecture supports rapid iteration and deployment
+  - event loops
+  - callback functions
+- JSON handling is native and aligns well with browser-based telemetry data
+- Shared style wtih JS so frontend and backend readability is increased and complexity is reduced
 
 ---
 
-## Alternatives Considered
+### Alternatives Considered
 
-### Go
-Rejected due to slower iteration speed and increased backend complexity for the project scope.
+#### Go
+Rejected due to skill overhead needed to proficiently write in Go and increased backend complexity.
 
-### Python
-Rejected because realtime websocket/event handling is less natural compared to Node.js.
+#### Python
+Rejected because of potential compilation overhead and less natural live event handling.
 
-### Java/Spring
-Rejected due to excessive architectural overhead for a lightweight observability platform.
+#### Java/Spring
+Rejected due to architectural and technical overhead.
 
 ---
 
-## Consequences
+### Consequences
 
-### Positive
+#### Positive
 - Strong realtime support
 - Efficient concurrent connection handling
 - Fast prototyping
 - Simplified frontend/backend integration
 
-### Negative
+#### Negative
 - CPU-intensive operations can block the event loop
 - Heavy computation may require worker threads or external services
 
 ---
 
-## Conclusion
+### Conclusion
 
-Node.js was selected because WatchTower is fundamentally an event-driven realtime system, making Node.js a strong fit for handling asynchronous telemetry ingestion and live operational updates.
+Node.js was selected due to it being able to efficiently handle asynchronous telemetry ingestion and live operational updates, key specifications for a Watchtower.
+
+---
+
+## ADR-0003: Use SQLite for WatchTower Event Storage
+
+- **Status:** Accepted  
+- **Date:** 2026-05-26  
+
+### Context
+
+WatchTower requires persistent storage for:
+- user interactions
+- error logs
+- performance metrics
+- user feedback
+- deployment metadata
+
+The database solution must:
+- remain lightweight for MVP development
+- support rapid development
+- minimize complexity
+- work well with Node.js
+
+---
+
+### Decision
+
+Use **SQLite** as the primary database for WatchTower.
+
+---
+
+### Rationale
+
+- SQLite is lightweight
+- No separate database server setup is required
+- Can easily switch to more powerful databases if needed
+- Fast local development and testing
+- Works naturally with Node.js backend architecture
+- Suitable for moderate workloads
+
+---
+
+### Alternatives Considered
+
+#### PostgreSQL
+Rejected due to increased infrastructure and thus overhead needed for a working prototype.
+
+#### MongoDB
+Rejected because WatchTower's event structure works better for relational (SQL) queries.
+
+#### MySQL
+Rejected due to unnecessary server management complexity compared to SQLite.
+
+---
+
+### Consequences
+
+#### Positive
+- Simple setup
+- Lightweight deployment
+- Fast prototyping
+
+#### Negative
+- Not ideal for very high workloads
+- Less scalable than dedicated database servers
+- May require migration to PostgreSQL or another DB if system scale increases
+
+---
+
+### Conclusion
+
+SQLite was selected because it provides a lightweight, low-maintenance, and development-friendly persistence layer that aligns well with WatchTower’s current scope.
