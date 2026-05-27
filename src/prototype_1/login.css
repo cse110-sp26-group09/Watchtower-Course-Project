@@ -126,7 +126,13 @@ a:hover {
   gap: 14px;
 }
 
-.login-form label {
+.field-group {
+  display: grid;
+  gap: 7px;
+}
+
+.login-form label,
+.field-group label {
   display: grid;
   gap: 7px;
   color: var(--ink-soft);
