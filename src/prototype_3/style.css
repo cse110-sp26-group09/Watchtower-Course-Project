@@ -739,7 +739,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 
 .health-summary {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(460px, 1.45fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
   margin-bottom: 18px;
@@ -751,7 +751,6 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 }
 
 .health-summary-head {
-  grid-column: 1 / -1;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -771,6 +770,12 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   font-size: 20px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.health-head-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .health-radar-card {
@@ -850,6 +855,11 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   display: grid;
   align-content: start;
   gap: 10px;
+}
+
+.summary-text {
+  margin: 0;
+  color: var(--ink-soft);
 }
 
 .summary-copy h2,
@@ -1042,22 +1052,34 @@ body.dashboard-mode-developer .summary-metrics {
   margin: 0;
 }
 
-.developer-home-insight-grid {
+.developer-home-insight-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.developer-insight-card {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--surface-muted);
+.developer-health-summary-card .panel-header {
+  margin-bottom: 10px;
 }
 
-.developer-insight-card h3 {
-  margin: 0 0 10px;
-  font-size: 15px;
+.developer-insight-panel {
+  padding: 14px;
+}
+
+.developer-insight-panel .panel-header {
+  margin-bottom: 10px;
+}
+
+.developer-home-insight-row .developer-insight-panel:nth-child(1) {
+  border-color: rgba(212, 93, 76, 0.45);
+}
+
+.developer-home-insight-row .developer-insight-panel:nth-child(2) {
+  border-color: rgba(214, 159, 47, 0.45);
+}
+
+.developer-home-insight-row .developer-insight-panel:nth-child(3) {
+  border-color: rgba(45, 167, 141, 0.45);
 }
 
 .developer-insight-list {
@@ -2036,6 +2058,10 @@ body.text-compact {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .developer-home-insight-row {
+    grid-template-columns: 1fr;
+  }
+
   .settings-preview {
     position: static;
   }
@@ -2265,7 +2291,7 @@ body.text-compact {
     grid-template-columns: 1fr;
   }
 
-  .developer-home-insight-grid {
+  .developer-home-insight-row {
     grid-template-columns: 1fr;
   }
 }
