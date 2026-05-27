@@ -389,6 +389,21 @@ a {
   vertical-align: -1px;
 }
 
+.metric-icon.latency {
+  border-radius: 50%;
+  position: relative;
+}
+
+.metric-icon.latency::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 2px;
+  height: 5px;
+  background: currentColor;
+}
+
 body.dark-mode {
   --bg: #0f141a;
   --surface: #151d26;
@@ -907,6 +922,16 @@ code {
   gap: 12px;
 }
 
+body.dashboard-mode-developer .summary-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1400px) {
+  body.dashboard-mode-developer .summary-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .metric-tile {
   min-height: 128px;
   display: flex;
@@ -919,6 +944,10 @@ code {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-muted);
+}
+
+.summary-metrics .metric-tile {
+  grid-column: auto;
 }
 
 .metric-tile.warning {
@@ -1011,6 +1040,71 @@ code {
 .developer-issue-tools .inline-status {
   grid-column: 1 / -1;
   margin: 0;
+}
+
+.developer-home-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.developer-insight-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-muted);
+}
+
+.developer-insight-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.developer-insight-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.developer-insight-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-left-color: #7a8b84;
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px 10px;
+}
+
+.developer-insight-list li.severity-high {
+  border-left-color: var(--coral);
+}
+
+.developer-insight-list li.severity-medium {
+  border-left-color: var(--amber);
+}
+
+.developer-insight-list li .rank {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.developer-insight-list li span {
+  color: var(--ink-soft);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.developer-insight-list li strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 .compact-list {
@@ -2168,6 +2262,10 @@ body.text-compact {
 
 @media (max-width: 1120px) {
   .developer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .developer-home-insight-grid {
     grid-template-columns: 1fr;
   }
 }

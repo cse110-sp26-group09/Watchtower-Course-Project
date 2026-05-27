@@ -113,6 +113,11 @@
               <strong id="version-count">0</strong>
               <span class="metric-trend neutral">Deploys seen</span>
             </button>
+            <button class="metric-tile metric-link developer-metric-tile" data-dashboard-mode="developer" type="button" data-view="analytics" data-scroll-target="latency-chart-title" hidden>
+              <span class="metric-label"><i class="metric-icon latency" aria-hidden="true"></i>Latency windows</span>
+              <strong id="developer-latency-peak">0 ms</strong>
+              <span class="metric-trend negative">Peak p95</span>
+            </button>
           </div>
         </section>
 
@@ -186,6 +191,35 @@
                 <ul class="compact-list" id="developer-traffic-peaks">
                   <li><span>Waiting for load samples</span><strong>0/min</strong></li>
                 </ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel developer-only-panel developer-home-insights" data-dashboard-mode="developer" aria-labelledby="developer-home-insights-title" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Developer overview</p>
+                <h2 id="developer-home-insights-title">Top issues, latency windows, and traffic peaks</h2>
+              </div>
+            </div>
+            <div class="developer-home-insight-grid">
+              <article class="developer-insight-card">
+                <h3>Top issues</h3>
+                <ol class="developer-insight-list" id="developer-insight-issues">
+                  <li><span>Waiting for issues</span><strong>0</strong></li>
+                </ol>
+              </article>
+              <article class="developer-insight-card">
+                <h3>High latency windows</h3>
+                <ol class="developer-insight-list" id="developer-insight-latency">
+                  <li><span>Waiting for route telemetry</span><strong>0 ms</strong></li>
+                </ol>
+              </article>
+              <article class="developer-insight-card">
+                <h3>Peak traffic</h3>
+                <ol class="developer-insight-list" id="developer-insight-traffic">
+                  <li><span>Waiting for activity samples</span><strong>0/min</strong></li>
+                </ol>
               </article>
             </div>
           </section>
