@@ -1633,23 +1633,17 @@
     if (!issueListContainer) return;
     let prepped = getFilteredIssues();
 
-    if (developerHealthSummaryCopy) {
-      let slowRouteLine = healthScores.slowestRoute
-        ? 'Slowest route is ' + healthScores.slowestRouteName + ' at p95 ' + healthScores.slowestRoute.p95 + ' ms.'
-        : 'Waiting for pageload telemetry to measure route latency.';
-      developerHealthSummaryCopy.textContent =
-        'Health score balances uptime pressure, error rate, latency, ingestion, and user feedback. ' + slowRouteLine;
+    if (!prepped || prepped.length === 0) {
+      issueListContainer.innerHTML = '<div class="empty-state compact">No error definitions matched filters.</div>';
+      if (issueExpandToggleButton) issueExpandToggleButton.hidden = true;
+      return;
     }
 
-    if (developerHealthPriorityListContainer) {
-      let alerts = [];
-      let topFeature = deriveFeatureCounts(events || [])[0];
-
-      if ((stats.totalErrors || 0) > 0) {
-        alerts.push('<li><span aria-hidden="true">!</span> ' + escapeHtml(String(stats.totalErrors)) + ' open errors are currently pending triage.</li>');
-      } else {
-        alerts.push('<li><span aria-hidden="true">!</span> No open errors right now. Keep monitoring as new deploys roll out.</li>');
-      }
+    let visible = uiState.issuesExpanded ? prepped.length : Math.min(3, prepped.length);
+    issueListContainer.innerHTML = prepped.slice(0, visible).map(function (eventRecord, idx) {
+      let sev = toIssueSeverity(eventRecord);
+      let issueId = getIssueIdentifier(eventRecord, idx);
+      let assignedName = uiState.issueAssignments[issueId] || "";
 
       let options = ['<option value="">Unassigned</option>']
         .concat(uiState.issueAssignees.map(function (name) {
@@ -1679,8 +1673,6 @@
       if (prepped.length > 3) {
         issueExpandToggleButton.textContent = uiState.issuesExpanded ? "Show fewer metrics" : "Show older issues (" + (prepped.length - 3) + ")";
       }
-
-      developerHealthPriorityListContainer.innerHTML = alerts.join('');
     }
   }
 

@@ -381,11 +381,12 @@
 
   WatchTower.prototype._bindWebVitals = function () {
     let sdkInstance = this;
-    if (typeof PerformanceObserver === "undefined") return;
+    let PerformanceObserverCtor = global.PerformanceObserver;
+    if (typeof PerformanceObserverCtor === "undefined") return;
 
     function observeMetric(entryType, metricName, transform) {
       try {
-        let observer = new PerformanceObserver(function (entryList) {
+        let observer = new PerformanceObserverCtor(function (entryList) {
           let entries = entryList.getEntries();
           if (!entries || entries.length === 0) return;
           let latest = entries[entries.length - 1];
