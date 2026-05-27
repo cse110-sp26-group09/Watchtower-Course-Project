@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WatchTower</title>
+  <link rel="icon" type="image/png" href="assets/watchtower-logo.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body class="landing">
+  <header class="topbar landing-topbar">
+    <div class="topbar-left">
+      <a class="brand" href="#home" aria-label="WatchTower landing">
+        <span class="brand-mark" aria-hidden="true">
+          <img class="brand-logo" src="assets/watchtower-logo.png" alt="" loading="eager" decoding="async">
+        </span>
+        <span class="brand-label">WatchTower</span>
+      </a>
+    </div>
+
+    <div class="topbar-actions landing-topbar-actions">
+      <button class="primary-button landing-cta primary-cta" type="button" data-action="go-login">Get Started</button>
+    </div>
+  </header>
+
+  <main class="landing-main" id="home">
+    <section class="landing-section hero" aria-label="Hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>One dashboard for errors, performance, and user feedback</h1>
+          <p class="lead">
+            WatchTower unifies exceptions, slowdowns, and real user reports so you can pinpoint issues faster and ship with confidence.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
+            <button class="ghost-button tertiary-cta" type="button" data-action="open-snippet">View install snippet</button>
+          </div>
+          <section class="panel team-screenshot" aria-label="Meet the team">
+            <h2 class="team-screenshot-title">Meet the team</h2>
+            <img class="team-screenshot-image" src="assets/team-screenshot.png" alt="WatchTower team" loading="lazy" decoding="async">
+          </section>
+        </div>
+
+        <section class="hero-visual" aria-label="Dashboard preview">
+          <div class="panel hero-panel">
+            <div class="hero-panel-header">
+              <span class="eyebrow">Project</span>
+              <div class="project-selector" role="listbox" aria-label="Project selector">
+                <span class="project-dot" aria-hidden="true"></span>
+                <span>web-storefront</span>
+                <span class="project-chevron" aria-hidden="true">▾</span>
+              </div>
+            </div>
+
+            <div class="stacked-panels" role="group" aria-label="Three stacked panels">
+              <section class="stack-card" aria-label="Error feed">
+                <header>
+                  <span class="stack-title">Error feed</span>
+                  <span class="stack-badge badge-coral">2 spikes</span>
+                </header>
+                <ol class="stack-list">
+                  <li><span class="pill pill-coral">TypeError</span><span class="stack-row">Cannot read properties of undefined</span></li>
+                  <li><span class="pill pill-amber">Network</span><span class="stack-row">POST /checkout 502</span></li>
+                  <li><span class="pill pill-muted">Info</span><span class="stack-row">Errors grouped by signature</span></li>
+                </ol>
+              </section>
+
+              <section class="stack-card" aria-label="Performance timeline">
+                <header>
+                  <span class="stack-title">Performance timeline</span>
+                  <span class="stack-badge badge-teal">p95 ↑</span>
+                </header>
+                <div class="mini-timeline" aria-hidden="true">
+                  <span style="height: 40%"></span>
+                  <span style="height: 55%"></span>
+                  <span style="height: 72%"></span>
+                  <span style="height: 60%"></span>
+                  <span style="height: 84%"></span>
+                  <span style="height: 58%"></span>
+                  <span style="height: 66%"></span>
+                  <span style="height: 48%"></span>
+                </div>
+                <p class="stack-hint">Correlate slowdowns with routes, resources, and releases.</p>
+              </section>
+
+              <section class="stack-card" aria-label="Feedback inbox">
+                <header>
+                  <span class="stack-title">Feedback inbox</span>
+                  <span class="stack-badge badge-blue">3 new</span>
+                </header>
+                <ul class="stack-list compact">
+                  <li><span class="pill pill-blue">Checkout</span><span class="stack-row">“Payment button froze”</span></li>
+                  <li><span class="pill pill-blue">Search</span><span class="stack-row">“Results take forever”</span></li>
+                  <li><span class="pill pill-muted">Session</span><span class="stack-row">Context auto-attached</span></li>
+                </ul>
+              </section>
+            </div>
+
+            <div class="correlation-highlight" role="region" aria-label="Correlation highlight">
+              <span class="highlight-chip"><span class="highlight-dot" aria-hidden="true"></span>Deploy 1.8.4 → error spike + p95 regression</span>
+              <span class="highlight-chip muted">Click any row to see full session context</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="landing-section" id="how-it-works" aria-label="How it works">
+      <h2>From install to insight in three steps</h2>
+      <div class="steps-grid">
+        <article class="panel step-card">
+          <h3>Install the snippet</h3>
+          <p>Add one script tag to your app. Automatic error, performance, and feedback capture starts immediately.</p>
+        </article>
+        <article class="panel step-card">
+          <h3>Reproduce and record</h3>
+          <p>Trigger an error or load a page. WatchTower logs exceptions, key timings, and optional user feedback in one place.</p>
+        </article>
+        <article class="panel step-card">
+          <h3>Investigate and fix</h3>
+          <p>Open the unified dashboard to see root causes, slow endpoints, and user context—then prioritize and resolve.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section" id="capabilities" aria-label="Key capabilities">
+      <h2>What you get on day one</h2>
+      <ul class="capabilities-grid">
+        <li class="panel capability-card">
+          <div class="capability-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 4.6 3.1 19.1a1 1 0 0 0 .9 1.4h16a1 1 0 0 0 .9-1.4L13.7 4.6a1 1 0 0 0-1.4 0Z"></path></svg>
+          </div>
+          <h3>Error Tracking</h3>
+          <p>See aggregated exceptions with stack traces and frequency. Spot top offenders and confirm fixes with trend charts.</p>
+        </li>
+        <li class="panel capability-card">
+          <div class="capability-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 13a7 7 0 1 1 14 0"></path><path d="M12 13 16 9"></path><path d="M12 20a7 7 0 0 0 7-7"></path></svg>
+          </div>
+          <h3>Performance Monitoring</h3>
+          <p>Track page loads, API latency, and slow resources. Identify regressions and measure impact by release.</p>
+        </li>
+        <li class="panel capability-card">
+          <div class="capability-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"></path></svg>
+          </div>
+          <h3>User Feedback Capture</h3>
+          <p>Collect lightweight user reports tied to sessions and events. Cut guesswork with context-rich submissions.</p>
+        </li>
+        <li class="panel capability-card">
+          <div class="capability-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M8 3h8"></path><path d="M7 7h10"></path><path d="M7 11h10"></path><path d="M7 15h6"></path><path d="M9 19h6"></path></svg>
+          </div>
+          <h3>Deploy Correlation</h3>
+          <p>Map errors and performance shifts to specific releases. Know when a deploy caused a spike and roll back with confidence.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="landing-section" id="who-its-for" aria-label="Who it’s for">
+      <h2>Who it’s for</h2>
+      <div class="personas-grid">
+        <article class="panel persona-card">
+          <h3>Developers</h3>
+          <p>Get actionable stack traces and timings without wiring custom tooling.</p>
+        </article>
+        <article class="panel persona-card">
+          <h3>Technical Leads</h3>
+          <p>Monitor stability and performance across releases to protect velocity.</p>
+        </article>
+        <article class="panel persona-card">
+          <h3>Product Managers</h3>
+          <p>See user-reported issues and impact to prioritize the next fix.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section cta-section" id="get-started" aria-label="Get started">
+      <div class="panel cta-panel">
+        <div>
+          <h2>15 minutes to full visibility</h2>
+          <p class="lead">One script tag, automatic capture, immediate insights.</p>
+          <p class="trust-note">Runs client-side; uses local storage; no backend required for MVP.</p>
+        </div>
+        <div class="cta-actions">
+          <button class="primary-button primary-cta" type="button" data-action="go-login">Get started free</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="sticky-cta" role="region" aria-label="Sticky actions">
+    <button class="primary-button primary-cta" type="button" data-action="go-login">Start in 15 minutes</button>
+  </div>
+
+  <div class="modal-overlay" hidden>
+    <div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="snippet-title">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Install</p>
+          <h2 id="snippet-title">Add one script tag</h2>
+        </div>
+        <button class="icon-button modal-close" type="button" data-action="close-snippet" aria-label="Close install snippet">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <p class="modal-copy">Drop this into your app. It starts capturing errors, performance, and feedback automatically.</p>
+      <div class="code-block" role="group" aria-label="Install snippet">
+        <pre><code id="snippet-code">&lt;script src=&quot;./sdk/watchtower.js&quot; data-project=&quot;YOUR_PROJECT&quot;&gt;&lt;/script&gt;</code></pre>
+        <div class="code-actions">
+          <button class="ghost-button" type="button" data-action="copy-snippet">Copy</button>
+          <a class="ghost-button" href="#how-it-works">How it works</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="landing.js" defer></script>
+</body>
+</html>
