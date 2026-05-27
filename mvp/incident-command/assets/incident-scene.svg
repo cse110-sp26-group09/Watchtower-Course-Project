@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Incident command simulator preview</title>
+  <desc id="desc">Stylized operations room with alert panels and response controls.</desc>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#122b4d"/>
+      <stop offset="1" stop-color="#0a1329"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g1)"/>
+  <rect x="70" y="80" width="1060" height="540" rx="30" fill="#0f213c" stroke="#2b4e79"/>
+  <rect x="130" y="140" width="300" height="160" rx="18" fill="#1c3256"/>
+  <rect x="450" y="140" width="300" height="160" rx="18" fill="#2a274f"/>
+  <rect x="770" y="140" width="300" height="160" rx="18" fill="#3e223d"/>
+  <rect x="130" y="340" width="940" height="220" rx="18" fill="#0a172c" stroke="#2d476c" stroke-dasharray="8 8"/>
+  <circle cx="280" cy="220" r="32" fill="#42d3e8"/>
+  <circle cx="600" cy="220" r="32" fill="#b89cff"/>
+  <circle cx="920" cy="220" r="32" fill="#ff7c73"/>
+  <text x="170" y="265" fill="#d7ebff" font-size="34" font-family="Segoe UI, Arial, sans-serif">Acknowledge</text>
+  <text x="488" y="265" fill="#e2d9ff" font-size="34" font-family="Segoe UI, Arial, sans-serif">Escalate</text>
+  <text x="835" y="265" fill="#ffd9d4" font-size="34" font-family="Segoe UI, Arial, sans-serif">Rollback</text>
+  <text x="170" y="470" fill="#93b6dd" font-size="30" font-family="Segoe UI, Arial, sans-serif">Incident Timeline + Team Actions</text>
+</svg>

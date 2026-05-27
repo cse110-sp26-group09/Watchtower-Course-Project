@@ -40,13 +40,8 @@
 - **Description:** Used Codex to create a example of what a requirement would look like and used it as a template to create other requirements 
 
 # Sprint 2:
-- **Name:** James Villanueva
-- **Date:** 05/10/2026
-- **Sprint #**: 2
-- **Model:**Codex 5.5 high reasoning
-- **LOC:** 3512
-- **Scale:** `prototype_1`
-- **Description:** Pasted in wireframe and created prototype based off wireframe. Then iteratively made it better after each run. 
+
+
 
 # Sprint 3:
 - **Name:** Hemendra Ande
@@ -72,35 +67,13 @@
 - **LOC:** +1,520 lines written -3,803 lines deleted
 - **Scale:** Updated src/prototype_1/assets/watchtower-dark-logo.png, src/prototype_1/assets/watchtower-logo.png, src/prototype_1/server/index.html, src/prototype_1/server/style.css, src/prototype_1/server/app.js, src/prototype_1/server/#style.css
 - **Description:** Asked GenAI to implement a dark / light theme , improved UI / UX, make it compatible with the backend, fixed couple UI issues, implemented professor's feedback, aiming to make it more simplistic and UI friendly.
----
-- **Name:** Josh Victoria
-- **Date:** 05/20/2026
-- **Sprint #**: 3 
-- **Model:**Gemini flash 3
-- **LOC:** 14
-- **Scale:** `Adr/ReadME.md`
-- **Description:** Used Gemini to generate a couple of alternatives for our ADR with a small description of what their strengths are
----
-- **Name:** Jason Nguyen
-- **Date:** 05/24/2026
-- **Sprint #**: 3 
-- **Model:** GPT-5.3-Codex (Medium reasoning)
-- **LOC:** 394
-- **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
-- **Description:** Used codex to generate a server that connects a database using the event schemas defined for our project.
----
-- **Name:** Jason Nguyen
-- **Date:** 05/24/2026
-- **Sprint #**: 3 
-- **Model:** GPT-5.3-Codex (Medium reasoning)
-- **LOC:** 602
-- **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
-- **Description:** Used codex to update server.js to integrate with our prototype 1 demo and watchtower app.
----
-- **Name:** Jason Nguyen
-- **Date:** 05/24/2026
-- **Sprint #**: 3 
-- **Model:** GPT-5.3-Codex (Medium reasoning)
-- **LOC:** 604
-- **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
-- **Description:** Used codex to update server-1.1.js JSDoc to use classic JSDoc grammar.
+
+# Sprint 4:
+- **Name:** Hieu Le
+- **Date:** 
+- **Sprint #:**
+- **Model:** What model and version of GenAI did you use (e.g. Codex 5.2 medium reasoning)
+- **LOC:** How many lines of code did it write
+- **Scale:** What files/folders did GenAI change/create in codebase (e.g. in 'x' file, 'y' folder)
+- **Description:** Give a small description of what you asked GenAI to do and why it was it was needed.
+- **Prompt:** What prompt did you feed model
