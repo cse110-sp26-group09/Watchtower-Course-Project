@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Incident Command Simulator | WatchTower MVP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="../index.html">Back to MVP Lab</a>
+    <p>Incident Command Simulator</p>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Scenario</p>
+        <h1>Checkout outage during peak traffic</h1>
+        <p>Act like an on-call responder. Every action emits telemetry-like events, changing system risk and team load.</p>
+      </div>
+      <img src="./assets/incident-scene.svg" alt="Incident response room illustration">
+    </section>
+
+    <section class="kpis" aria-label="Incident KPIs">
+      <article><span>Incident score</span><strong id="incident-score">42</strong><small>/100 risk</small></article>
+      <article><span>Open criticals</span><strong id="open-criticals">3</strong><small>needs action</small></article>
+      <article><span>Avg response</span><strong id="avg-response">48s</strong><small>team latency</small></article>
+      <article><span>Alert pressure</span><strong id="alert-pressure">High</strong><small>noise level</small></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Control Deck</h2>
+        <p class="sub">Choose actions. Each button has tradeoffs.</p>
+        <div class="controls">
+          <button data-action="ack">Acknowledge Alert</button>
+          <button data-action="assign">Assign Engineer</button>
+          <button data-action="rollback">Rollback Deploy</button>
+          <button data-action="scale">Scale Service</button>
+          <button data-action="mute">Mute 15m</button>
+          <button data-action="drill">Run Fire Drill</button>
+          <button data-action="chaos">Inject New Fault</button>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Why this matters</h2>
+        <ul class="explain">
+          <li><strong>Acknowledge</strong>: reduces panic but does not fix root cause.</li>
+          <li><strong>Assign</strong>: improves ownership clarity and MTTR.</li>
+          <li><strong>Rollback</strong>: high-impact, usually lowers error rate quickly.</li>
+          <li><strong>Mute</strong>: lowers alert fatigue but increases blind-spot risk.</li>
+        </ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Live Event Feed</h2>
+        <ol id="feed" aria-live="polite"></ol>
+      </article>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
