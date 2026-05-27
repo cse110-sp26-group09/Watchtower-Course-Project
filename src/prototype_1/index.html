@@ -144,7 +144,13 @@
             <p class="eyebrow">Incident response</p>
             <h1 id="issues-page-title">Triage queue</h1>
           </div>
-          <button class="ghost-button" type="button">Export CSV</button>
+          <div class="page-toolbar">
+            <div class="view-actions" role="group" aria-label="Issue view navigation">
+              <button class="ghost-button" type="button" data-nav-action="back">Back</button>
+              <button class="ghost-button" type="button" data-view="home">Home</button>
+            </div>
+            <button class="ghost-button" type="button">Export CSV</button>
+          </div>
         </div>
 
         <div class="issues-toolbar" role="group" aria-label="Issue sorting and filtering controls">
@@ -219,7 +225,13 @@
               <p class="eyebrow">Production reliability</p>
               <h1 id="health-title">Production health</h1>
             </div>
-            <strong id="health-summary-text">Waiting for health telemetry</strong>
+            <div class="page-toolbar">
+              <strong id="health-summary-text">Waiting for health telemetry</strong>
+              <div class="view-actions" role="group" aria-label="Health view navigation">
+                <button class="ghost-button" type="button" data-nav-action="back">Back</button>
+                <button class="ghost-button" type="button" data-view="home">Home</button>
+              </div>
+            </div>
           </div>
           <div class="summary-copy">
             <p class="status-token good" id="health-status-token">Healthy</p>
@@ -271,10 +283,16 @@
             <p class="eyebrow">Long term trends</p>
             <h1 id="analytics-title">Analytics</h1>
           </div>
-          <div class="segmented-control" role="group" aria-label="Time range">
-            <button class="active" type="button" data-range="24h">24h</button>
-            <button type="button" data-range="7d">7d</button>
-            <button type="button" data-range="30d">30d</button>
+          <div class="page-toolbar">
+            <div class="view-actions" role="group" aria-label="Analytics view navigation">
+              <button class="ghost-button" type="button" data-nav-action="back">Back</button>
+              <button class="ghost-button" type="button" data-view="home">Home</button>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Time range">
+              <button class="active" type="button" data-range="24h">24h</button>
+              <button type="button" data-range="7d">7d</button>
+              <button type="button" data-range="30d">30d</button>
+            </div>
           </div>
         </div>
 
@@ -387,11 +405,17 @@
             <p class="eyebrow">Workspace controls</p>
             <h1 id="settings-title">Settings</h1>
           </div>
-          <div class="profile-chip">
-            <span>AD</span>
-            <div>
-              <strong id="profile-display-name">Aditya</strong>
-              <small>Admin</small>
+          <div class="page-toolbar">
+            <div class="view-actions" role="group" aria-label="Settings view navigation">
+              <button class="ghost-button" type="button" data-nav-action="back">Back</button>
+              <button class="ghost-button" type="button" data-view="home">Home</button>
+            </div>
+            <div class="profile-chip">
+              <span>AD</span>
+              <div>
+                <strong id="profile-display-name">Aditya</strong>
+                <small>Admin</small>
+              </div>
             </div>
           </div>
         </div>

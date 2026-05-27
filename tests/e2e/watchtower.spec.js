@@ -19,8 +19,12 @@
  */
 
 const { test, expect } = require("@playwright/test");
+const path = require("path");
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const PROTOTYPE_1_URL = "file:///" + path
+  .resolve(__dirname, "../../src/prototype_1/index.html")
+  .replace(/\\/g, "/");
 
 test.describe("WatchTower dashboard (prototype 2)", () => {
   test("home view loads with WatchTower title, hero stats, and sidebar nav", async ({ page }) => {
@@ -90,6 +94,33 @@ test.describe("WatchTower hosted ShopDemo (/demo)", () => {
     await expect(page).toHaveTitle(/ShopDemo|WatchTower/i);
     await expect(page.locator("nav .brand")).toContainText(/ShopDemo/i);
     await expect(page.locator("#app h2")).toContainText(/Welcome to ShopDemo/i);
+  });
+});
+
+test.describe("WatchTower prototype 1 static navigation", () => {
+  test("sidebar route state stays in sync with Back and Home", async ({ page }) => {
+    await page.goto(PROTOTYPE_1_URL);
+
+    await page.locator(".sidebar [data-view='analytics']").click();
+    await expect(page).toHaveURL(/#analytics$/);
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+    await expect(page.locator(".sidebar [data-view='analytics']")).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("#analytics-view").getByRole("button", { name: "Back" })).toBeVisible();
+    await expect(page.locator("#analytics-view").getByRole("button", { name: "Home" })).toBeVisible();
+
+    await page.locator(".sidebar [data-view='settings']").click();
+    await expect(page).toHaveURL(/#settings$/);
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(page.locator(".sidebar [data-view='settings']")).toHaveAttribute("aria-current", "page");
+
+    await page.locator("#settings-view").getByRole("button", { name: "Back" }).click();
+    await expect(page).toHaveURL(/#analytics$/);
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+
+    await page.locator("#analytics-view").getByRole("button", { name: "Home" }).click();
+    await expect(page).toHaveURL(/#home$/);
+    await expect(page.locator("#home-view")).toBeVisible();
+    await expect(page.locator(".sidebar [data-view='home']")).toHaveAttribute("aria-current", "page");
   });
 });
 
@@ -184,8 +215,3 @@ test.describe("WatchTower JSON API", () => {
     }
   });
 });
-
-// NOTE: The current `npm start` script only runs the prototype 2 server.
-// The static prototype 1 candidate (`src/prototype_1/`) is opened directly
-// in a browser (see its README) and is not served by the same HTTP server,
-// so it is intentionally not covered by these e2e tests.

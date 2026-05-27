@@ -32,6 +32,15 @@ Open in a browser:
 - Monitored ShopDemo app with a "Local SQLite verification" panel for one-click event generation.
 - HTTP server with `/api/health`, `/api/events`, `/api/stats`, and `/api/events/stream`.
 
+## Navigation Polish
+
+- Sidebar, mobile navigation, topbar shortcuts, and in-page metric links all use the same hash-based routes.
+- Secondary screens include Back and Home controls so users can leave Analytics, Settings, Health, and Issues without a dead-end.
+- Active sidebar and mobile navigation states are synced with the visible route.
+- UI check screenshots:
+  - [Analytics navigation](../../docs/design/media/prototype-1-navigation-analytics.png)
+  - [Settings navigation](../../docs/design/media/prototype-1-navigation-settings.png)
+
 ## Storage
 
 Events are persisted to a single SQLite file via
