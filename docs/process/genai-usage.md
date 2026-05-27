@@ -104,3 +104,12 @@
 - **LOC:** 604
 - **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
 - **Description:** Used codex to update server-1.1.js JSDoc to use classic JSDoc grammar.
+---
+# Sprint 4
+- **Name:** Josh Victoria
+- **Date:** 05/26/2026
+- **Sprint #**: 4
+- **Model:**Gemini flash 3
+- **LOC:** 3549
+- **Scale:** `Course-Project/src/Landing-Page/`
+- **Description:** Used Gemini to generate a landing page based off of a wire frame then tweaked that inital page
