@@ -32,3 +32,20 @@ This may make the settings somewhat cluttered but it will result in less button 
 ## Alternatives Considered
 Navigative through tabs 
 
+# DR 0003: Consistent Navigation State
+
+## Status
+Accepted for Sprint 2 cleanup
+
+## Context
+The prototypes use lightweight single-page navigation. Some screens could change content without a durable route, which made browser Back/Forward behavior and active navigation states harder to predict.
+
+## Decision
+Prototype navigation should use simple hash-based routes, keep active navigation states in sync with the visible screen, and provide Back and Home controls on secondary screens.
+
+## Consequences
+Users can return to the home screen from key flows, share or reload routed prototype screens, and avoid dead-end states during demos.
+
+## Alternatives Considered
+Full client-side routing library
+

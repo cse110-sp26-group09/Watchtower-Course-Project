@@ -1,8 +1,12 @@
 "use strict";
 
 const { test, expect } = require("@playwright/test");
+const path = require("path");
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const CANDIDATE_1_URL = "file:///" + path
+  .resolve(__dirname, "../../src/candidate_1/index.html")
+  .replace(/\\/g, "/");
 
 test.describe("WatchTower smoke tests", () => {
   test("dashboard page loads with the WatchTower title and key panels", async ({ page }) => {
@@ -23,6 +27,27 @@ test.describe("WatchTower smoke tests", () => {
     await expect(page).toHaveTitle(/ShopDemo|WatchTower/i);
     await expect(page.locator("nav .brand")).toContainText(/ShopDemo/i);
     await expect(page.locator("#app")).toBeVisible();
+  });
+
+  test("candidate dashboard keeps sidebar route state in sync with Back and Home", async ({ page }) => {
+    await page.goto(CANDIDATE_1_URL);
+
+    await page.locator(".sidebar [data-view='analytics']").click();
+    await expect(page).toHaveURL(/#analytics$/);
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+    await expect(page.locator(".sidebar [data-view='analytics']")).toHaveAttribute("aria-current", "page");
+
+    await page.locator(".sidebar [data-view='settings']").click();
+    await expect(page).toHaveURL(/#settings$/);
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(page).toHaveURL(/#analytics$/);
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+
+    await page.locator("#analytics-view").getByRole("button", { name: "Home" }).click();
+    await expect(page).toHaveURL(/#home$/);
+    await expect(page.getByRole("heading", { name: "Production health" })).toBeVisible();
   });
 
   test("GET /api/stats returns JSON with the documented shape", async ({ playwright }) => {

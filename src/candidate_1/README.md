@@ -16,5 +16,11 @@ src/candidate_1/index.html
 - Home dashboard with live health summary, issue queue, build metadata, and recent events
 - Analytics view with user activity, purchases, latency, feedback, and service charts
 - Settings view with profile, accessibility, and notification accordions
-- Desktop side navigation and mobile bottom navigation
+- Desktop side navigation and mobile bottom navigation with hash routes
+- Back/Home controls from secondary screens
 - Interactive view switching, settings accordions, assignment controls, and visual preference toggles
+
+## Navigation Screenshots
+
+- [Analytics view with Back/Home controls](../../docs/design/media/candidate-1-navigation-analytics.png)
+- [Settings view with Back/Home controls](../../docs/design/media/candidate-1-navigation-settings.png)

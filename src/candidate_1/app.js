@@ -2,7 +2,10 @@
   "use strict";
 
   var availableViewNames = ["home", "analytics", "settings"];
+  var currentViewName = "home";
+  var previousViewName = null;
   var viewToggleElements = document.querySelectorAll("[data-view]");
+  var backNavigationButtons = document.querySelectorAll("[data-nav-action='back']");
   var timeRangeButtons = document.querySelectorAll(".segmented-control button");
   var settingsAccordionButtons = document.querySelectorAll(".settings-trigger");
   var assignmentDropdowns = document.querySelectorAll(".assign-control select");
@@ -14,10 +17,16 @@
    * navigation control to reflect the current selection.
    *
    * @param {string} selectedViewName - The target view id prefix.
+   * @param {Object} [options] - Navigation options.
    * @returns {void}
    */
-  function activateView(selectedViewName) {
+  function activateView(selectedViewName, options) {
     if (availableViewNames.indexOf(selectedViewName) === -1) return;
+
+    if (selectedViewName !== currentViewName && !(options && options.fromHash)) {
+      previousViewName = currentViewName;
+    }
+    currentViewName = selectedViewName;
 
     availableViewNames.forEach(function (viewName) {
       var targetViewPanel = document.getElementById(viewName + "-view");
@@ -28,11 +37,18 @@
     });
 
     viewToggleElements.forEach(function (viewToggleElement) {
-      viewToggleElement.classList.toggle("active", viewToggleElement.getAttribute("data-view") === selectedViewName);
+      var isCurrentToggle = viewToggleElement.getAttribute("data-view") === selectedViewName;
+      viewToggleElement.classList.toggle("active", isCurrentToggle);
+      if (viewToggleElement.classList.contains("nav-button") || viewToggleElement.classList.contains("mobile-nav-button")) {
+        if (isCurrentToggle) viewToggleElement.setAttribute("aria-current", "page");
+        else viewToggleElement.removeAttribute("aria-current");
+      }
     });
 
     document.title = "WatchTower - " + selectedViewName.charAt(0).toUpperCase() + selectedViewName.slice(1);
-    window.location.hash = selectedViewName;
+    if (!(options && options.fromHash) && window.location.hash !== "#" + selectedViewName) {
+      window.location.hash = selectedViewName;
+    }
   }
 
   /**
@@ -47,6 +63,24 @@
         if (viewToggleElement.tagName === "A") event.preventDefault();
         activateView(selectedViewName);
       });
+    });
+  }
+
+  /**
+   * Add predictable return behavior for secondary views.
+   *
+   * @returns {void}
+   */
+  function initializeBackNavigation() {
+    backNavigationButtons.forEach(function (backNavigationButton) {
+      backNavigationButton.addEventListener("click", function () {
+        activateView(previousViewName || "home");
+      });
+    });
+
+    window.addEventListener("hashchange", function () {
+      var hashViewName = window.location.hash.replace("#", "");
+      activateView(availableViewNames.indexOf(hashViewName) === -1 ? "home" : hashViewName, { fromHash: true });
     });
   }
 
@@ -147,6 +181,7 @@
     var initialHashViewName = window.location.hash.replace("#", "");
 
     initializeViewNavigation();
+    initializeBackNavigation();
     initializeTimeRangeButtons();
     initializeSettingsAccordions();
     initializeAssignmentDropdowns();
