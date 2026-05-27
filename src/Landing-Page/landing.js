@@ -9,7 +9,9 @@
    * @param {boolean} isOpen - Whether the overlay should be open.
    */
   function setOverlayOpen(isOpen) {
-    if (!overlay) return;
+    if (!overlay) {
+      return;
+    }
     overlay.hidden = !isOpen;
     document.body.style.overflow = isOpen ? "hidden" : "";
   }
@@ -34,10 +36,12 @@
 
   /**
    * Copies the text content of the code snippet to the clipboard.
-   * @param {Element} button - The button element that triggered the copy action.
+   * @param {HTMLElement} button - The button element that triggered the copy action.
    */ 
   function copySnippet(button) {
-    if (!snippetCode) return; 
+    if (!snippetCode) {
+      return; 
+    }
     
     const textValue = snippetCode.textContent || "";
 
@@ -46,7 +50,9 @@
      * @param {string} label - The label to set on the button.
      */
     function setButtonState(label) {
-      if (!button) return;
+      if (!button) {
+        return;
+      }
       button.textContent = label;
       window.setTimeout(function () {
         button.textContent = "Copy";
@@ -57,8 +63,12 @@
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard
         .writeText(textValue)
-        .then(() => setButtonState("Copied"))
-        .catch(() => setButtonState("Copy failed"));
+        .then(() => {
+          setButtonState("Copied");
+        })
+        .catch(() => {
+          setButtonState("Copy failed");
+        });
       return;
     }
 
@@ -75,9 +85,11 @@
       const success = document.execCommand("copy");
       document.body.removeChild(textArea);
       
-      if (!success) throw new Error();
+      if (!success) {
+        throw new Error();
+      }
       setButtonState("Copied");
-    } catch (_error) {
+    } catch {
       setButtonState("Copy failed");
     }
   }
@@ -92,10 +104,15 @@
   // Global Event Delegation
   document.addEventListener("click", function (event) {
     const target = event.target;
-    if (!(target instanceof Element)) return;
+    // FIXED: Safely referenced Element via window namespace to bypass no-undef limits
+    if (!(target instanceof window.Element)) {
+      return;
+    }
 
     const actionElement = target.closest("[data-action]");
-    if (!actionElement) return;
+    if (!actionElement) {
+      return;
+    }
     
     const actionName = actionElement.getAttribute("data-action");
 
