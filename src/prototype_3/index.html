@@ -108,16 +108,21 @@
               <strong id="total-errors">0</strong>
               <span class="metric-trend negative">Needs review</span>
             </button>
-            <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-radar-title">
+            <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-title">
               <span class="metric-label"><i class="metric-icon deploys" aria-hidden="true"></i>Deploy versions</span>
               <strong id="version-count">0</strong>
               <span class="metric-trend neutral">Deploys seen</span>
+            </button>
+            <button class="metric-tile metric-link developer-metric-tile" data-dashboard-mode="developer" type="button" data-view="analytics" data-scroll-target="latency-chart-title" hidden>
+              <span class="metric-label"><i class="metric-icon latency" aria-hidden="true"></i>Latency windows</span>
+              <strong id="developer-latency-peak">0 ms</strong>
+              <span class="metric-trend negative">Peak p95</span>
             </button>
           </div>
         </section>
 
         <div class="home-grid compact-home-grid">
-          <section class="panel build-panel" aria-labelledby="build-title">
+          <section class="panel build-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="build-title">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">User behavior</p>
@@ -127,7 +132,7 @@
             <div class="metadata-grid" id="build-metadata"></div>
           </section>
 
-          <section class="panel activity-panel" aria-labelledby="activity-title">
+          <section class="panel activity-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="activity-title">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Stream</p>
@@ -149,359 +154,58 @@
             </ul>
           </section>
 
-          <section class="panel developer-only-panel developer-workbench" data-dashboard-mode="developer" aria-labelledby="developer-diagnostics-title" hidden>
-
-            <div class="developer-workbench-tabs" role="tablist" aria-label="Developer tooling">
-              <button class="devtab-button active" type="button" role="tab" aria-selected="true" data-devtab="stream">Live Stream</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="schema">Schema</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="replay">Session Replay</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="sdk">SDK</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="query">Query</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="flags">Flags</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="identity">Identity</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="performance">Performance</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="errors">Errors</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="pipeline">Pipeline</button>
-              <button class="devtab-button" type="button" role="tab" aria-selected="false" data-devtab="governance">Governance</button>
-            </div>
-
-            <section class="devtab-panel active" id="devtab-stream" data-devtab-panel="stream">
-              <div class="dev-filter-grid">
-                <label class="field-row" for="dev-filter-event">
-                  <span>Event name</span>
-                  <input id="dev-filter-event" type="text" placeholder="checkout_error">
-                </label>
-                <label class="field-row" for="dev-filter-user">
-                  <span>User</span>
-                  <input id="dev-filter-user" type="text" placeholder="user id">
-                </label>
-                <label class="field-row" for="dev-filter-session">
-                  <span>Session</span>
-                  <input id="dev-filter-session" type="text" placeholder="session id">
-                </label>
-                <label class="field-row" for="dev-filter-environment">
-                  <span>Environment</span>
-                  <select id="dev-filter-environment">
-                    <option value="">All</option>
-                    <option value="production">production</option>
-                    <option value="staging">staging</option>
-                    <option value="development">development</option>
-                    <option value="preview">preview</option>
-                  </select>
-                </label>
-                <label class="field-row" for="dev-filter-sdk">
-                  <span>SDK version</span>
-                  <input id="dev-filter-sdk" type="text" placeholder="wt-js-0.3.0">
-                </label>
-                <label class="field-row" for="dev-filter-date-from">
-                  <span>Date from</span>
-                  <input id="dev-filter-date-from" type="datetime-local">
-                </label>
-                <label class="field-row" for="dev-filter-date-to">
-                  <span>Date to</span>
-                  <input id="dev-filter-date-to" type="datetime-local">
-                </label>
-                <label class="field-row dev-filter-search" for="dev-filter-search">
-                  <span>Search</span>
-                  <input id="dev-filter-search" type="text" placeholder="Search payload, tags, paths">
-                </label>
-                <div class="dev-filter-actions">
-                  <button class="primary-button" id="dev-stream-apply" type="button">Apply Filters</button>
-                  <button class="ghost-button" id="dev-stream-reset" type="button">Reset</button>
+          <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
+            <article class="panel developer-insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Current errors</p>
+                  <h2 id="developer-home-insights-title">Top 3 issues</h2>
                 </div>
               </div>
+              <ol class="developer-insight-list" id="developer-insight-issues">
+                <li><span>Waiting for issues</span><strong>0</strong></li>
+              </ol>
+            </article>
 
-              <div class="dev-stream-layout">
-                <section class="dev-stream-list-wrap">
-                  <header>
-                    <h3>Incoming events</h3>
-                    <p id="dev-stream-meta">No events loaded yet.</p>
-                  </header>
-                  <div class="dev-stream-list" id="dev-stream-list" role="listbox" aria-label="Realtime event stream"></div>
-                  <button class="ghost-button dev-load-more" id="dev-stream-load-more" type="button">Load older events</button>
-                </section>
-                <aside class="dev-event-inspector">
-                  <header>
-                    <h3>Payload inspector</h3>
-                    <button class="ghost-button" id="dev-copy-json" type="button">Copy JSON</button>
-                  </header>
-                  <dl class="dev-event-meta" id="dev-event-meta">
-                    <div><dt>Event</dt><dd>None selected</dd></div>
-                    <div><dt>Session</dt><dd>-</dd></div>
-                    <div><dt>User</dt><dd>-</dd></div>
-                    <div><dt>Latency</dt><dd>-</dd></div>
-                    <div><dt>Ingested</dt><dd>-</dd></div>
-                  </dl>
-                  <pre id="dev-event-json" class="dev-json-view">{}</pre>
-                </aside>
+            <article class="panel developer-insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Avg latency</p>
+                  <h2>High latency windows</h2>
+                </div>
               </div>
-            </section>
+              <ol class="developer-insight-list" id="developer-insight-latency">
+                <li><span>Waiting for route telemetry</span><strong>0 ms</strong></li>
+              </ol>
+            </article>
 
-            <section class="devtab-panel" id="devtab-schema" data-devtab-panel="schema" hidden>
-              <div class="developer-grid">
-                <article class="developer-span-2">
-                  <h3>Event schema registry</h3>
-                  <div class="dev-table-wrap">
-                    <table class="dev-table" id="dev-schema-table">
-                      <thead>
-                        <tr>
-                          <th>Event</th>
-                          <th>Volume</th>
-                          <th>Schema drift</th>
-                          <th>Malformed</th>
-                          <th>First seen</th>
-                          <th>Last seen</th>
-                        </tr>
-                      </thead>
-                      <tbody></tbody>
-                    </table>
-                  </div>
-                </article>
-                <article class="developer-span-2">
-                  <h3>Property types</h3>
-                  <div class="dev-table-wrap">
-                    <table class="dev-table" id="dev-schema-properties">
-                      <thead>
-                        <tr>
-                          <th>Event</th>
-                          <th>Property</th>
-                          <th>Types</th>
-                          <th>Coverage</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody></tbody>
-                    </table>
-                  </div>
-                </article>
+            <article class="panel developer-insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Uptime + traffic</p>
+                  <h2>Peak traffic</h2>
+                </div>
               </div>
-            </section>
+              <ol class="developer-insight-list" id="developer-insight-traffic">
+                <li><span>Waiting for activity samples</span><strong>0/min</strong></li>
+              </ol>
+            </article>
+          </section>
 
-            <section class="devtab-panel" id="devtab-replay" data-devtab-panel="replay" hidden>
-              <div class="dev-replay-layout">
-                <section class="dev-replay-sessions">
-                  <header>
-                    <h3>Sessions</h3>
-                    <p id="dev-session-meta">No sessions loaded.</p>
-                  </header>
-                  <ul class="compact-list" id="dev-session-list"></ul>
-                </section>
-                <section class="dev-replay-overlay">
-                  <header>
-                    <h3>Session overlay</h3>
-                    <p id="dev-session-selected">Select a session to inspect timeline, errors, and route transitions.</p>
-                  </header>
-                  <div class="developer-grid">
-                    <article>
-                      <h3>Console + network failures</h3>
-                      <ul class="compact-list" id="dev-session-failures"></ul>
-                    </article>
-                    <article>
-                      <h3>Feature flags in session</h3>
-                      <ul class="compact-list" id="dev-session-flags"></ul>
-                    </article>
-                    <article class="developer-span-2">
-                      <h3>User timeline</h3>
-                      <ol class="event-timeline" id="dev-session-timeline"></ol>
-                    </article>
-                  </div>
-                </section>
+          <section class="panel developer-only-panel developer-health-summary-card" data-dashboard-mode="developer" aria-labelledby="developer-health-summary-title" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Developer health summary</p>
+                <h2 id="developer-health-summary-title">System summary from current telemetry</h2>
               </div>
-            </section>
-
-            <section class="devtab-panel" id="devtab-sdk" data-devtab-panel="sdk" hidden>
-              <div class="developer-kpi-grid dev-kpi-expanded">
-                <article class="summary-chip"><p>Dropped events</p><strong id="dev-sdk-dropped">0</strong></article>
-                <article class="summary-chip"><p>Retry queue</p><strong id="dev-sdk-retry-health">stable</strong></article>
-                <article class="summary-chip"><p>Delivery success</p><strong id="dev-sdk-success-rate">100%</strong></article>
-                <article class="summary-chip"><p>Offline buffered</p><strong id="dev-sdk-offline-buffered">0</strong></article>
-                <article class="summary-chip"><p>Ad blocker</p><strong id="dev-sdk-adblock">No</strong></article>
-                <article class="summary-chip"><p>Throughput/min</p><strong id="dev-sdk-throughput">0</strong></article>
-              </div>
-              <div class="dev-table-wrap">
-                <table class="dev-table" id="dev-sdk-version-table">
-                  <thead>
-                    <tr>
-                      <th>SDK Version</th>
-                      <th>Event Volume</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="devtab-panel" id="devtab-query" data-devtab-panel="query" hidden>
-              <div class="dev-query-layout">
-                <section>
-                  <h3>HogQL-style playground</h3>
-                  <textarea id="dev-query-editor" spellcheck="false">SELECT eventName, COUNT(*) AS count FROM events GROUP BY eventName ORDER BY count DESC LIMIT 12</textarea>
-                  <div class="split-actions">
-                    <button class="primary-button" id="dev-query-run" type="button">Run Query</button>
-                    <button class="ghost-button" id="dev-query-save" type="button">Save Query</button>
-                    <select id="dev-query-saved" aria-label="Saved queries"></select>
-                  </div>
-                  <p class="inline-status" id="dev-query-meta">Ready.</p>
-                  <div class="dev-table-wrap">
-                    <table class="dev-table" id="dev-query-results">
-                      <thead></thead>
-                      <tbody></tbody>
-                    </table>
-                  </div>
-                </section>
-                <aside>
-                  <h3>Schema explorer</h3>
-                  <ul class="compact-list" id="dev-query-fields"></ul>
-                  <h3>Execution history</h3>
-                  <ul class="compact-list" id="dev-query-history"></ul>
-                </aside>
-              </div>
-            </section>
-
-            <section class="devtab-panel" id="devtab-flags" data-devtab-panel="flags" hidden>
-              <div class="developer-issue-tools dev-flag-controls">
-                <label class="field-row" for="dev-flag-user-select">
-                  <span>User</span>
-                  <select id="dev-flag-user-select"></select>
-                </label>
-                <label class="field-row" for="dev-flag-env-select">
-                  <span>Environment</span>
-                  <select id="dev-flag-env-select">
-                    <option value="production">production</option>
-                    <option value="staging">staging</option>
-                    <option value="development">development</option>
-                    <option value="preview">preview</option>
-                  </select>
-                </label>
-                <label class="field-row" for="dev-flag-country">
-                  <span>Country</span>
-                  <input id="dev-flag-country" type="text" value="US" maxlength="3">
-                </label>
-                <button class="primary-button" id="dev-flag-evaluate" type="button">Evaluate Flags</button>
-              </div>
-              <div class="dev-table-wrap">
-                <table class="dev-table" id="dev-flag-evaluations">
-                  <thead>
-                    <tr>
-                      <th>Flag</th>
-                      <th>Rollout</th>
-                      <th>Status</th>
-                      <th>Reasoning</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-              <h3>Exposure history</h3>
-              <ul class="compact-list" id="dev-flag-history"></ul>
-            </section>
-
-            <section class="devtab-panel" id="devtab-identity" data-devtab-panel="identity" hidden>
-              <div class="developer-grid">
-                <article class="developer-span-2">
-                  <h3>Identity graph</h3>
-                  <svg id="dev-identity-graph" class="identity-graph" viewBox="0 0 960 240" aria-label="Identity resolution graph"></svg>
-                </article>
-                <article>
-                  <h3>Duplicate identities</h3>
-                  <ul class="compact-list" id="dev-identity-duplicates"></ul>
-                </article>
-                <article>
-                  <h3>Merge history</h3>
-                  <ul class="compact-list" id="dev-identity-merges"></ul>
-                </article>
-              </div>
-            </section>
-
-            <section class="devtab-panel" id="devtab-performance" data-devtab-panel="performance" hidden>
-              <div class="developer-kpi-grid dev-kpi-expanded">
-                <article class="summary-chip"><p>Page load p95</p><strong id="dev-perf-pageload">0 ms</strong></article>
-                <article class="summary-chip"><p>LCP p95</p><strong id="dev-perf-lcp">0 ms</strong></article>
-                <article class="summary-chip"><p>CLS p95</p><strong id="dev-perf-cls">0</strong></article>
-                <article class="summary-chip"><p>INP p95</p><strong id="dev-perf-inp">0 ms</strong></article>
-                <article class="summary-chip"><p>API latency p95</p><strong id="dev-perf-api">0 ms</strong></article>
-                <article class="summary-chip"><p>Bundle p95</p><strong id="dev-perf-bundle">0 KB</strong></article>
-              </div>
-              <ul class="compact-list" id="dev-perf-routes"></ul>
-            </section>
-
-            <section class="devtab-panel" id="devtab-errors" data-devtab-panel="errors" hidden>
-              <div class="dev-table-wrap">
-                <table class="dev-table" id="dev-errors-table">
-                  <thead>
-                    <tr>
-                      <th>Error signature</th>
-                      <th>Count</th>
-                      <th>Affected users</th>
-                      <th>Release</th>
-                      <th>Last seen</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-              <div class="developer-grid">
-                <article>
-                  <h3>Error trend</h3>
-                  <ul class="compact-list" id="dev-error-trend"></ul>
-                </article>
-                <article>
-                  <h3>Latest stack traces</h3>
-                  <ul class="compact-list" id="dev-error-latest"></ul>
-                </article>
-              </div>
-            </section>
-
-            <section class="devtab-panel" id="devtab-pipeline" data-devtab-panel="pipeline" hidden>
-              <div class="developer-kpi-grid dev-kpi-expanded">
-                <article class="summary-chip"><p>Queue depth</p><strong id="dev-pipeline-queue">0</strong></article>
-                <article class="summary-chip"><p>Processing p95</p><strong id="dev-pipeline-latency">0 ms</strong></article>
-                <article class="summary-chip"><p>Webhook failures</p><strong id="dev-pipeline-webhooks">0</strong></article>
-                <article class="summary-chip"><p>Retry attempts</p><strong id="dev-pipeline-retries">0</strong></article>
-                <article class="summary-chip"><p>Warehouse sync</p><strong id="dev-pipeline-warehouse">healthy</strong></article>
-                <article class="summary-chip"><p>Ingestion throughput</p><strong id="dev-pipeline-throughput">0/min</strong></article>
-              </div>
-              <div class="dev-table-wrap">
-                <table class="dev-table" id="dev-pipeline-logs">
-                  <thead>
-                    <tr>
-                      <th>Timestamp</th>
-                      <th>Channel</th>
-                      <th>Status</th>
-                      <th>Message</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="devtab-panel" id="devtab-governance" data-devtab-panel="governance" hidden>
-              <div class="developer-kpi-grid dev-kpi-expanded">
-                <article class="summary-chip"><p>Retention</p><strong id="dev-retention-days">30 days</strong></article>
-                <article class="summary-chip"><p>PII detections</p><strong id="dev-governance-pii-count">0</strong></article>
-                <article class="summary-chip"><p>Audit events</p><strong id="dev-governance-audit-count">0</strong></article>
-                <article class="summary-chip"><p>Environments</p><strong id="dev-governance-env-count">0</strong></article>
-              </div>
-              <div class="developer-grid">
-                <article>
-                  <h3>PII detections</h3>
-                  <ul class="compact-list" id="dev-pii-detections"></ul>
-                </article>
-                <article>
-                  <h3>Masking rules</h3>
-                  <ul class="compact-list" id="dev-mask-rules"></ul>
-                </article>
-                <article>
-                  <h3>Audit logs</h3>
-                  <ul class="compact-list" id="dev-audit-log"></ul>
-                </article>
-                <article>
-                  <h3>Access controls</h3>
-                  <ul class="compact-list" id="dev-access-controls"></ul>
-                </article>
-              </div>
-            </section>
+              <button class="ghost-button metric-link" type="button" data-view="health" data-scroll-target="health-title">Open health view</button>
+            </div>
+            <p class="summary-text" id="developer-health-summary-copy">
+              Waiting for telemetry from the monitored app to compute health state.
+            </p>
+            <ul class="priority-list" id="developer-health-priority-list">
+              <li><span aria-hidden="true">!</span> Waiting for live data from the monitored demo app.</li>
+            </ul>
           </section>
         </div>
       </section>
@@ -610,17 +314,10 @@
               <p class="eyebrow">Production reliability</p>
               <h1 id="health-title">Production health</h1>
             </div>
-            <strong id="health-summary-text">Waiting for health telemetry</strong>
-          </div>
-          <div class="summary-copy">
-            <p class="status-token good" id="health-status-token">Healthy</p>
-            <h2 id="health-radar-title">System health profile</h2>
-            <p id="health-copy">
-              Reliability score is computed from availability, error pressure, latency, signal quality, and user feedback.
-            </p>
-            <ul class="priority-list" id="health-priority-list">
-              <li><span aria-hidden="true">!</span> Waiting for live data from the monitored demo app.</li>
-            </ul>
+            <div class="health-head-stats">
+              <p class="status-token good" id="health-status-token">Healthy</p>
+              <strong id="health-summary-text">Waiting for health telemetry</strong>
+            </div>
           </div>
           <div class="health-radar-card">
             <svg class="health-radar" id="health-radar-chart" viewBox="0 0 520 340" role="img" aria-labelledby="health-radar-svg-title">

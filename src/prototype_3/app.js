@@ -40,7 +40,8 @@
   let sidebarErrorsValue = document.getElementById("sidebar-errors");
   let sidebarUsersValue = document.getElementById("sidebar-users");
   let sidebarEventsValue = document.getElementById("sidebar-events");
-  let healthPriorityListContainer = document.getElementById("health-priority-list");
+  let developerHealthSummaryCopy = document.getElementById("developer-health-summary-copy");
+  let developerHealthPriorityListContainer = document.getElementById("developer-health-priority-list");
   let issueListContainer = document.getElementById("issue-list");
   let serviceStackContainer = document.getElementById("service-stack");
   let featureHotspotsContainer = document.getElementById("build-metadata");
@@ -69,7 +70,6 @@
   let signOutButton = document.getElementById("sign-out-button");
   let healthSummaryText = document.getElementById("health-summary-text");
   let healthStatusToken = document.getElementById("health-status-token");
-  let healthCopy = document.getElementById("health-copy");
   let healthRadarGrid = document.getElementById("health-radar-grid");
   let healthRadarAxis = document.getElementById("health-radar-axis");
   let healthRadarShape = document.getElementById("health-radar-shape");
@@ -83,6 +83,10 @@
   let developerTopIssues = document.getElementById("developer-top-issues");
   let developerLatencyWindows = document.getElementById("developer-latency-windows");
   let developerTrafficPeaks = document.getElementById("developer-traffic-peaks");
+  let developerLatencyPeakValue = document.getElementById("developer-latency-peak");
+  let developerInsightIssues = document.getElementById("developer-insight-issues");
+  let developerInsightLatency = document.getElementById("developer-insight-latency");
+  let developerInsightTraffic = document.getElementById("developer-insight-traffic");
   let developerIssueSearchInput = document.getElementById("developer-issue-search");
   let developerMuteToggleButton = document.getElementById("developer-mute-toggle");
   let developerMuteStatusLine = document.getElementById("developer-mute-status");
@@ -1165,21 +1169,30 @@
     }
   }
 
-  function renderDeveloperWorkbench(insights) {
-    uiState.developerInsights = insights || null;
-    if (!insights) return;
+  function renderDeveloperHomeDiagnostics(stats) {
+    let routeNames = Object.keys(stats.latencyByRoute || {}).sort(function (leftRoute, rightRoute) {
+      return ((stats.latencyByRoute[rightRoute] || {}).p95 || 0) - ((stats.latencyByRoute[leftRoute] || {}).p95 || 0);
+    });
 
-    renderSchemaRegistry(insights);
-    renderSessionReplay(insights);
-    renderSdkDiagnostics(insights);
-    renderQueryExplorer(insights);
-    renderFeatureFlagDebugger(insights);
-    renderIdentityGraph(insights);
-    renderPerformanceMonitoring(insights);
-    renderErrorMonitoring(insights);
-    renderPipelineObservability(insights);
-    renderGovernance(insights);
-  }
+    if (developerLatencyPeakValue) {
+      if (routeNames.length === 0) {
+        developerLatencyPeakValue.textContent = "0 ms";
+      } else {
+        let peakRouteStats = stats.latencyByRoute[routeNames[0]] || {};
+        developerLatencyPeakValue.textContent = String(peakRouteStats.p95 || 0) + " ms";
+      }
+    }
+
+    if (developerRouteTable) {
+      if (routeNames.length === 0) {
+        developerRouteTable.innerHTML = '<li><span>/</span><strong>Waiting for samples</strong></li>';
+      } else {
+        developerRouteTable.innerHTML = routeNames.slice(0, 6).map(function (routeName) {
+          let routeStats = stats.latencyByRoute[routeName] || {};
+          return '<li><span>' + escapeHtml(routeName) + '</span><strong>' + String(routeStats.p95 || 0) + ' ms</strong></li>';
+        }).join('');
+      }
+    }
 
   function initializeDeveloperWorkbench() {
     if (developerTabButtons.length === 0) return;
@@ -1246,6 +1259,64 @@
         });
       });
     }
+
+    if (developerInsightIssues) {
+      let signatureCounts = {};
+      errors.forEach(function (eventRecord) {
+        let message = eventRecord && eventRecord.data && eventRecord.data.message ? String(eventRecord.data.message) : "Unknown error";
+        signatureCounts[message] = (signatureCounts[message] || 0) + 1;
+      });
+
+      let rankedSignatures = Object.keys(signatureCounts).sort(function (leftMessage, rightMessage) {
+        return signatureCounts[rightMessage] - signatureCounts[leftMessage];
+      }).slice(0, 3);
+
+      if (rankedSignatures.length === 0) {
+        developerInsightIssues.innerHTML = '<li class="severity-medium"><span class="rank">#1</span><span>Waiting for issues</span><strong>0</strong></li>';
+      } else {
+        developerInsightIssues.innerHTML = rankedSignatures.map(function (message, index) {
+          let severityClass = index === 0 ? "severity-high" : "severity-medium";
+          return '<li class="' + severityClass + '"><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(message) + '</span><strong>' + String(signatureCounts[message]) + '</strong></li>';
+        }).join('');
+      }
+    }
+
+    if (developerInsightLatency) {
+      if (routeNames.length === 0) {
+        developerInsightLatency.innerHTML = '<li><span class="rank">#1</span><span>Waiting for route telemetry</span><strong>0 ms</strong></li>';
+      } else {
+        developerInsightLatency.innerHTML = routeNames.slice(0, 3).map(function (routeName, index) {
+          let routeStats = stats.latencyByRoute[routeName] || {};
+          let routeP95 = Number(routeStats.p95 || 0);
+          let severityClass = routeP95 >= 1000 ? "severity-high" : (routeP95 >= 450 ? "severity-medium" : "");
+          return '<li class="' + severityClass + '"><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(routeName) + '</span><strong>' + String(routeP95) + ' ms</strong></li>';
+        }).join('');
+      }
+    }
+
+    if (developerInsightTraffic) {
+      let hourCounts = {};
+      (activityEvents || []).forEach(function (eventRecord) {
+        let timestamp = getValidTimestamp(eventRecord && eventRecord.timestamp);
+        if (!timestamp) return;
+        let hourKey = new Date(timestamp).toISOString().slice(0, 13);
+        hourCounts[hourKey] = (hourCounts[hourKey] || 0) + 1;
+      });
+
+      let topHours = Object.keys(hourCounts).sort(function (leftHour, rightHour) {
+        return hourCounts[rightHour] - hourCounts[leftHour];
+      }).slice(0, 3);
+
+      if (topHours.length === 0) {
+        developerInsightTraffic.innerHTML = '<li><span class="rank">#1</span><span>Waiting for activity samples</span><strong>0/min</strong></li>';
+      } else {
+        developerInsightTraffic.innerHTML = topHours.map(function (hourKey, index) {
+          let localHour = new Date(hourKey + ":00:00Z").toLocaleTimeString([], { hour: "numeric" });
+          return '<li><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(localHour) + '</span><strong>' + String(hourCounts[hourKey]) + '/min</strong></li>';
+        }).join('');
+      }
+    }
+  }
 
     if (devQueryRunButton && devQueryEditor) {
       devQueryRunButton.addEventListener("click", function () { runDeveloperQuery(devQueryEditor.value.trim()); });
@@ -1562,17 +1633,23 @@
     if (!issueListContainer) return;
     let prepped = getFilteredIssues();
 
-    if (!prepped || prepped.length === 0) {
-      issueListContainer.innerHTML = '<div class="empty-state compact">No error definitions matched filters.</div>';
-      if (issueExpandToggleButton) issueExpandToggleButton.hidden = true;
-      return;
+    if (developerHealthSummaryCopy) {
+      let slowRouteLine = healthScores.slowestRoute
+        ? 'Slowest route is ' + healthScores.slowestRouteName + ' at p95 ' + healthScores.slowestRoute.p95 + ' ms.'
+        : 'Waiting for pageload telemetry to measure route latency.';
+      developerHealthSummaryCopy.textContent =
+        'Health score balances uptime pressure, error rate, latency, ingestion, and user feedback. ' + slowRouteLine;
     }
 
-    let visible = uiState.issuesExpanded ? prepped.length : Math.min(3, prepped.length);
-    issueListContainer.innerHTML = prepped.slice(0, visible).map(function (eventRecord, idx) {
-      let sev = toIssueSeverity(eventRecord);
-      let issueId = getIssueIdentifier(eventRecord, idx);
-      let assignedName = uiState.issueAssignments[issueId] || "";
+    if (developerHealthPriorityListContainer) {
+      let alerts = [];
+      let topFeature = deriveFeatureCounts(events || [])[0];
+
+      if ((stats.totalErrors || 0) > 0) {
+        alerts.push('<li><span aria-hidden="true">!</span> ' + escapeHtml(String(stats.totalErrors)) + ' open errors are currently pending triage.</li>');
+      } else {
+        alerts.push('<li><span aria-hidden="true">!</span> No open errors right now. Keep monitoring as new deploys roll out.</li>');
+      }
 
       let options = ['<option value="">Unassigned</option>']
         .concat(uiState.issueAssignees.map(function (name) {
@@ -1602,6 +1679,8 @@
       if (prepped.length > 3) {
         issueExpandToggleButton.textContent = uiState.issuesExpanded ? "Show fewer metrics" : "Show older issues (" + (prepped.length - 3) + ")";
       }
+
+      developerHealthPriorityListContainer.innerHTML = alerts.join('');
     }
   }
 

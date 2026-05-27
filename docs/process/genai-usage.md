@@ -5,6 +5,7 @@
 [Sprint 1](#sprint-1)
 [Sprint 2](#sprint-2)
 [Sprint 3](#sprint-3)
+[Sprint 4](#sprint-4)
 ---
 ## GenAI Usage format:
 - **Name:**
@@ -38,16 +39,11 @@
 - **LOC:** 9
 - **Scale:** `requirements.md`
 - **Description:** Used Codex to create a example of what a requirement would look like and used it as a template to create other requirements 
-
+===
 # Sprint 2:
-- **Name:** James Villanueva
-- **Date:** 05/10/2026
-- **Sprint #**: 2
-- **Model:**Codex 5.5 high reasoning
-- **LOC:** 3512
-- **Scale:** `prototype_1`
-- **Description:** Pasted in wireframe and created prototype based off wireframe. Then iteratively made it better after each run. 
 
+
+===
 # Sprint 3:
 - **Name:** Hemendra Ande
 - **Date:** May 20, 2026
@@ -104,3 +100,22 @@
 - **LOC:** 604
 - **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
 - **Description:** Used codex to update server-1.1.js JSDoc to use classic JSDoc grammar.
+===
+# Sprint 4
+- **Name:** Josh Victoria
+- **Date:** 05/26/2026
+- **Sprint #**: 4
+- **Model:**Gemini flash 3
+- **LOC:** 3549
+- **Scale:** `Course-Project/src/Landing-Page/`
+- **Description:** Used Gemini to generate a landing page based off of a wire frame then tweaked that inital page
+
+- **Name:** Hieu Le
+- **Date:** 
+- **Sprint #:**
+- **Model:** What model and version of GenAI did you use (e.g. Codex 5.2 medium reasoning)
+- **LOC:** How many lines of code did it write
+- **Scale:** What files/folders did GenAI change/create in codebase (e.g. in 'x' file, 'y' folder)
+- **Description:** Give a small description of what you asked GenAI to do and why it was it was needed.
+- **Prompt:** What prompt did you feed model
+
