@@ -64,6 +64,20 @@ What other options did we evaluate and why were they not chosen?
 - **Date:** *(Sprint 4)*
 - **Summary:** Usage of SQLite as the primary database due to its lightweight setup and easy integration with the Node.js backend architecture.
 - **Link:** [ADR-0003.md](./ADR-0003.md) or see content below
+
+### ADR-0004: Use Navigation Timing API for Frontend Performance Telemetry
+- **Status:** Proposed
+- **Date:** *(Sprint 4)*
+- **Summary:** Usage of the browser-native Navigation Timing API for frontend performance and Real User Monitoring (RUM) metrics.
+- **Link:** [ADR-0004.md](./ADR-0004.md) or see content below
+
+### ADR-0005: Use Beacon API for Reliable Telemetry Delivery
+- **Status:** Proposed
+- **Date:** *(Sprint 4)*
+- **Summary:** Usage of the browser-native Beacon API for frontend telemetry delivery and session finalization events.
+- **Link:** [ADR-0005.md](./ADR-0005.md) or see content below
+
+
 ## Writing ADRs
 
 ### When to Write an ADR
@@ -308,4 +322,181 @@ Rejected due to unnecessary server management complexity compared to SQLite.
 
 ### Conclusion
 
-SQLite was selected because it provides a lightweight, low-maintenance, and development-friendly persistence layer that aligns well with WatchTower’s current scope.
+SQLite was selected because it provides a lightweight and low-maintenance framework that suits with WatchTower’s current (MVP) scope.
+
+## ADR-0004: Use Navigation Timing API for Frontend Performance Metrics
+
+### Status
+Proposed
+
+### Date
+2026-05-26
+
+---
+
+### Context
+
+WatchTower aims to provide lightweight frontend observability for:
+- application performance
+- user experience feedback
+- operational diagnostics
+
+The system requires a native way to accurately collect lighweight frontend page
+
+WatchTower also requires:
+- low-overhead (low latency) metric collection
+- standardized browser timing data
+- compatibility with modern browsers
+- support for Real User Monitoring (RUM)
+
+---
+
+### Decision
+
+Use the browser-native Navigation Timing API as the primary mechanism for collecting frontend page load performance telemetry.
+
+---
+
+### Rationale
+
+- Enables collection of:
+  - Time To First Byte (TTFB)
+  - DOMContentLoaded timing
+  - full page load duration
+  - navigation type
+- Requires no external SDKs
+- Lightweight and supported by modern browsers
+
+---
+
+### Alternatives Considered
+
+#### Custom JavaScript Timing Logic
+
+Rejected because manually measuring events is less accurate and harder to maintain.
+
+#### Third-Party Observability SDKs
+
+Rejected due to:
+- dependency overhead
+- marrying decision
+- increased third party dependencies
+- unnecessary complexity for current project scope
+
+#### Resource Timing API Only
+
+Rejected because Resource Timing focuses on asset timing rather than full page navigation metrics.
+
+---
+
+### Consequences
+
+#### Positive
+- Lightweight implementation
+- Accurate browser-native timing metrics
+- No external dependency overhead
+- Enables future RUM and performance dashboard features
+
+#### Negative
+- Browser support differences may require normalization logic
+- Only captures navigation-level metrics
+- Does not provide deeper interaction latency metrics alone
+
+---
+
+### Conclusion
+
+The Navigation Timing API was selected because it provides lightweight, standardized, and browser-native performance telemetry suitable for WatchTower’s frontend observability goals.
+
+---
+
+## ADR-0005: Use Beacon API for Telemetry Delivery
+
+### Status
+Proposed
+
+### Date
+2026-05-26
+
+---
+
+### Context
+
+WatchTower requires reliable frontend telemetry delivery for:
+- session summaries
+- performance reports
+- frontend error diagnostics
+- user interaction telemetry
+
+Traditional asynchronous HTTP requests may fail during:
+- page unload
+- navigation events
+- tab closure
+- browser backgrounding
+
+This can result in information loss and incomplete observability data.
+
+WatchTower requires a mechanism for reliably transmitting final-session telemetry events without affecting user experience.
+
+---
+
+### Decision
+
+Use the browser-native Beacon API fortelemetry delivery and session finalization events.
+
+---
+
+### Rationale
+
+- Beacon API is specifically designed for lightweight asynchronous telemetry delivery
+- Allows telemetry transmission during:
+  - tab close
+  - page refresh
+  - route navigation
+  - browser backgrounding
+- Does not block page unload or navigation
+- Reduces telemetry loss during session termination
+- Lightweight and browser-native
+- Best for:
+  - frontend observability
+  - analytics
+  - error reporting
+  - performance telemetry
+
+---
+
+### Alternatives Considered
+
+#### Standard Fetch API
+
+Rejected because requests may be cancelled during unload or navigation events.
+
+#### Fetch API with `keepalive`
+
+Considered but rejected as the primary mechanism because browser support and reliability is not as reliable as Beacon APIsemantics.
+
+#### WebSockets
+
+Rejected because bidirectional connections arenot needed for a monitoring app.
+
+---
+
+### Consequences
+
+#### Positive
+- Improved telemetry reliability
+- Better session-end diagnostics
+- Minimal user experience impact
+- Lightweight implementation with no external dependencies
+
+#### Negative
+- Limited payload size
+- No response body handling
+- Best-effort delivery only
+- Not suitable for transactional or critical application operations
+
+---
+
+### Conclusion
+
+The Beacon API was selected because it provides a lightweight and unload-safe mechanism for transmitting critical frontend telemetry data, improving the reliability and completeness of WatchTower observability signals.

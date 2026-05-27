@@ -1,0 +1,82 @@
+:root {
+  --bg: #071124;
+  --bg-soft: #0e1c36;
+  --ink: #edf4fb;
+  --muted: #9cb3cc;
+  --line: #24466f;
+  --accent: #2fc4d6;
+  --accent-2: #ff6f61;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1000px 700px at -10% -20%, #163b66 0%, transparent 56%),
+    radial-gradient(900px 600px at 110% -10%, #2f305e 0%, transparent 52%),
+    var(--bg);
+}
+h1, h2 { font-family: "Space Grotesk", sans-serif; }
+.lab-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 20px 60px;
+}
+.lab-header h1 {
+  margin: 6px 0 10px;
+  line-height: 1.1;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: .8rem;
+}
+.subtitle {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--muted);
+}
+.cards {
+  margin-top: 26px;
+  display: grid;
+  gap: 16px;
+}
+.card {
+  border: 1px solid var(--line);
+  background: linear-gradient(155deg, rgba(17,31,58,.95), rgba(11,24,45,.92));
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+}
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card div { padding: 20px; }
+.card h2 { margin: 0 0 6px; }
+.card p { margin: 0 0 16px; color: var(--muted); }
+.card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #03101f;
+  background: linear-gradient(120deg, var(--accent), #8ee5ef);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.card:last-child a {
+  background: linear-gradient(120deg, var(--accent-2), #ffb58f);
+}
+@media (max-width: 860px) {
+  .card { grid-template-columns: 1fr; }
+  .card img { max-height: 220px; }
+}
