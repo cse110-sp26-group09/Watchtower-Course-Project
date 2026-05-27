@@ -4,6 +4,7 @@
   var POLL_INTERVAL = 3000;
   var availableViewNames = ["home", "issues", "health", "analytics", "settings"];
   var viewToggleElements = document.querySelectorAll("[data-view]");
+  var backNavigationButtons = document.querySelectorAll("[data-nav-action='back']");
   var timeRangeButtons = document.querySelectorAll(".segmented-control button");
   var settingsAccordionButtons = document.querySelectorAll(".settings-trigger");
   var highContrastToggle = document.getElementById("contrast-toggle");
@@ -79,6 +80,8 @@
   var ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
   var LIGHT_LOGO_PATH = "assets/watchtower-logo.png";
   var DARK_LOGO_PATH = "assets/watchtower-dark-logo.png";
+  var currentViewName = "home";
+  var previousViewName = null;
 
   var uiState = {
     selectedRange: "24h",
@@ -155,8 +158,20 @@
     notificationStatusLine.textContent = getActiveMuteMessage();
   }
 
-  function activateView(selectedViewName) {
+  function getValidViewNameFromHash() {
+    var hashViewName = window.location.hash.replace("#", "");
+    return availableViewNames.indexOf(hashViewName) === -1 ? "home" : hashViewName;
+  }
+
+  function activateView(selectedViewName, options) {
     if (availableViewNames.indexOf(selectedViewName) === -1) return;
+
+    if (!options || !options.fromHash) {
+      if (selectedViewName !== currentViewName) {
+        previousViewName = currentViewName;
+      }
+    }
+    currentViewName = selectedViewName;
 
     availableViewNames.forEach(function (viewName) {
       var targetViewPanel = document.getElementById(viewName + "-view");
@@ -167,11 +182,25 @@
     });
 
     viewToggleElements.forEach(function (viewToggleElement) {
-      viewToggleElement.classList.toggle("active", viewToggleElement.getAttribute("data-view") === selectedViewName);
+      var isActiveToggle = viewToggleElement.getAttribute("data-view") === selectedViewName;
+      viewToggleElement.classList.toggle("active", isActiveToggle);
+
+      if (
+        viewToggleElement.classList.contains("nav-button") ||
+        viewToggleElement.classList.contains("mobile-nav-button")
+      ) {
+        if (isActiveToggle) {
+          viewToggleElement.setAttribute("aria-current", "page");
+        } else {
+          viewToggleElement.removeAttribute("aria-current");
+        }
+      }
     });
 
     document.title = "WatchTower - " + selectedViewName.charAt(0).toUpperCase() + selectedViewName.slice(1);
-    window.location.hash = selectedViewName;
+    if ((!options || !options.fromHash) && window.location.hash !== "#" + selectedViewName) {
+      window.location.hash = selectedViewName;
+    }
   }
 
   function scrollToTarget(targetId) {
@@ -196,6 +225,18 @@
           }, 140);
         }
       });
+    });
+  }
+
+  function initializeBackNavigation() {
+    backNavigationButtons.forEach(function (backNavigationButton) {
+      backNavigationButton.addEventListener("click", function () {
+        activateView(previousViewName || "home");
+      });
+    });
+
+    window.addEventListener("hashchange", function () {
+      activateView(getValidViewNameFromHash(), { fromHash: true });
     });
   }
 
@@ -1386,9 +1427,8 @@
   }
 
   function initializeWatchTowerFrontend() {
-    var initialHashViewName = window.location.hash.replace("#", "");
-
     initializeViewNavigation();
+    initializeBackNavigation();
     initializeTimeRangeButtons();
     initializeSettingsAccordions();
     initializeIssueControls();
@@ -1400,7 +1440,7 @@
     initializeProfileControls();
     initializeManualRefresh();
     initializeLiveEventStream();
-    activateView(availableViewNames.indexOf(initialHashViewName) === -1 ? "home" : initialHashViewName);
+    activateView(getValidViewNameFromHash(), { fromHash: true });
     fetchDashboardStats();
     setInterval(fetchDashboardStats, POLL_INTERVAL);
   }

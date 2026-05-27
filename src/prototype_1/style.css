@@ -674,6 +674,18 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   white-space: nowrap;
 }
 
+.page-toolbar,
+.view-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .icon-button {
   display: grid;
   width: 38px;
@@ -2005,6 +2017,16 @@ body.text-compact {
   .panel-header,
   .page-heading {
     flex-direction: column;
+  }
+
+  .page-toolbar,
+  .view-actions {
+    width: 100%;
+  }
+
+  .view-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .issues-toolbar {
