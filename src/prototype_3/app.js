@@ -38,7 +38,8 @@
   let sidebarErrorsValue = document.getElementById("sidebar-errors");
   let sidebarUsersValue = document.getElementById("sidebar-users");
   let sidebarEventsValue = document.getElementById("sidebar-events");
-  let healthPriorityListContainer = document.getElementById("health-priority-list");
+  let developerHealthSummaryCopy = document.getElementById("developer-health-summary-copy");
+  let developerHealthPriorityListContainer = document.getElementById("developer-health-priority-list");
   let issueListContainer = document.getElementById("issue-list");
   let serviceStackContainer = document.getElementById("service-stack");
   let featureHotspotsContainer = document.getElementById("build-metadata");
@@ -67,7 +68,6 @@
   let signOutButton = document.getElementById("sign-out-button");
   let healthSummaryText = document.getElementById("health-summary-text");
   let healthStatusToken = document.getElementById("health-status-token");
-  let healthCopy = document.getElementById("health-copy");
   let healthRadarGrid = document.getElementById("health-radar-grid");
   let healthRadarAxis = document.getElementById("health-radar-axis");
   let healthRadarShape = document.getElementById("health-radar-shape");
@@ -1226,15 +1226,15 @@
       healthStatusToken.classList.add(statusClass);
     }
 
-    if (healthCopy) {
+    if (developerHealthSummaryCopy) {
       let slowRouteLine = healthScores.slowestRoute
         ? 'Slowest route is ' + healthScores.slowestRouteName + ' at p95 ' + healthScores.slowestRoute.p95 + ' ms.'
         : 'Waiting for pageload telemetry to measure route latency.';
-      healthCopy.textContent =
+      developerHealthSummaryCopy.textContent =
         'Health score balances uptime pressure, error rate, latency, ingestion, and user feedback. ' + slowRouteLine;
     }
 
-    if (healthPriorityListContainer) {
+    if (developerHealthPriorityListContainer) {
       let alerts = [];
       let topFeature = deriveFeatureCounts(events || [])[0];
 
@@ -1256,7 +1256,7 @@
         alerts.push('<li><span aria-hidden="true">!</span> No feedback submissions yet. Prompt users to submit quick ratings.</li>');
       }
 
-      healthPriorityListContainer.innerHTML = alerts.join('');
+      developerHealthPriorityListContainer.innerHTML = alerts.join('');
     }
   }
 

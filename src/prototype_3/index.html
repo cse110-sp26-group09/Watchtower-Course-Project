@@ -108,7 +108,7 @@
               <strong id="total-errors">0</strong>
               <span class="metric-trend negative">Needs review</span>
             </button>
-            <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-radar-title">
+            <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-title">
               <span class="metric-label"><i class="metric-icon deploys" aria-hidden="true"></i>Deploy versions</span>
               <strong id="version-count">0</strong>
               <span class="metric-trend neutral">Deploys seen</span>
@@ -122,7 +122,7 @@
         </section>
 
         <div class="home-grid compact-home-grid">
-          <section class="panel build-panel" aria-labelledby="build-title">
+          <section class="panel build-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="build-title">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">User behavior</p>
@@ -132,7 +132,7 @@
             <div class="metadata-grid" id="build-metadata"></div>
           </section>
 
-          <section class="panel activity-panel" aria-labelledby="activity-title">
+          <section class="panel activity-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="activity-title">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Stream</p>
@@ -154,74 +154,58 @@
             </ul>
           </section>
 
-          <section class="panel developer-only-panel" data-dashboard-mode="developer" aria-labelledby="developer-diagnostics-title" hidden>
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Developer diagnostics</p>
-                <h2 id="developer-diagnostics-title">Route and release signals</h2>
+          <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
+            <article class="panel developer-insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Current errors</p>
+                  <h2 id="developer-home-insights-title">Top 3 issues</h2>
+                </div>
               </div>
-            </div>
-            <div class="developer-grid">
-              <article>
-                <h3>Latency by route (p95)</h3>
-                <ul class="compact-list" id="developer-route-table">
-                  <li><span>/</span><strong>Waiting for samples</strong></li>
-                </ul>
-              </article>
-              <article>
-                <h3>Errors by deploy version</h3>
-                <ul class="compact-list" id="developer-version-table">
-                  <li><span>No errors yet</span><strong>0</strong></li>
-                </ul>
-              </article>
-              <article class="developer-span-2">
-                <h3>Top issue signatures</h3>
-                <ul class="compact-list" id="developer-top-issues">
-                  <li><span>No active signatures</span><strong>0</strong></li>
-                </ul>
-              </article>
-              <article>
-                <h3>High latency windows</h3>
-                <ul class="compact-list" id="developer-latency-windows">
-                  <li><span>No route telemetry yet</span><strong>0 ms</strong></li>
-                </ul>
-              </article>
-              <article>
-                <h3>Traffic peaks</h3>
-                <ul class="compact-list" id="developer-traffic-peaks">
-                  <li><span>Waiting for load samples</span><strong>0/min</strong></li>
-                </ul>
-              </article>
-            </div>
+              <ol class="developer-insight-list" id="developer-insight-issues">
+                <li><span>Waiting for issues</span><strong>0</strong></li>
+              </ol>
+            </article>
+
+            <article class="panel developer-insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Avg latency</p>
+                  <h2>High latency windows</h2>
+                </div>
+              </div>
+              <ol class="developer-insight-list" id="developer-insight-latency">
+                <li><span>Waiting for route telemetry</span><strong>0 ms</strong></li>
+              </ol>
+            </article>
+
+            <article class="panel developer-insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Uptime + traffic</p>
+                  <h2>Peak traffic</h2>
+                </div>
+              </div>
+              <ol class="developer-insight-list" id="developer-insight-traffic">
+                <li><span>Waiting for activity samples</span><strong>0/min</strong></li>
+              </ol>
+            </article>
           </section>
 
-          <section class="panel developer-only-panel developer-home-insights" data-dashboard-mode="developer" aria-labelledby="developer-home-insights-title" hidden>
+          <section class="panel developer-only-panel developer-health-summary-card" data-dashboard-mode="developer" aria-labelledby="developer-health-summary-title" hidden>
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Developer overview</p>
-                <h2 id="developer-home-insights-title">Top issues, latency windows, and traffic peaks</h2>
+                <p class="eyebrow">Developer health summary</p>
+                <h2 id="developer-health-summary-title">System summary from current telemetry</h2>
               </div>
+              <button class="ghost-button metric-link" type="button" data-view="health" data-scroll-target="health-title">Open health view</button>
             </div>
-            <div class="developer-home-insight-grid">
-              <article class="developer-insight-card">
-                <h3>Top issues</h3>
-                <ol class="developer-insight-list" id="developer-insight-issues">
-                  <li><span>Waiting for issues</span><strong>0</strong></li>
-                </ol>
-              </article>
-              <article class="developer-insight-card">
-                <h3>High latency windows</h3>
-                <ol class="developer-insight-list" id="developer-insight-latency">
-                  <li><span>Waiting for route telemetry</span><strong>0 ms</strong></li>
-                </ol>
-              </article>
-              <article class="developer-insight-card">
-                <h3>Peak traffic</h3>
-                <ol class="developer-insight-list" id="developer-insight-traffic">
-                  <li><span>Waiting for activity samples</span><strong>0/min</strong></li>
-                </ol>
-              </article>
-            </div>
+            <p class="summary-text" id="developer-health-summary-copy">
+              Waiting for telemetry from the monitored app to compute health state.
+            </p>
+            <ul class="priority-list" id="developer-health-priority-list">
+              <li><span aria-hidden="true">!</span> Waiting for live data from the monitored demo app.</li>
+            </ul>
           </section>
         </div>
       </section>
@@ -330,17 +314,10 @@
               <p class="eyebrow">Production reliability</p>
               <h1 id="health-title">Production health</h1>
             </div>
-            <strong id="health-summary-text">Waiting for health telemetry</strong>
-          </div>
-          <div class="summary-copy">
-            <p class="status-token good" id="health-status-token">Healthy</p>
-            <h2 id="health-radar-title">System health profile</h2>
-            <p id="health-copy">
-              Reliability score is computed from availability, error pressure, latency, signal quality, and user feedback.
-            </p>
-            <ul class="priority-list" id="health-priority-list">
-              <li><span aria-hidden="true">!</span> Waiting for live data from the monitored demo app.</li>
-            </ul>
+            <div class="health-head-stats">
+              <p class="status-token good" id="health-status-token">Healthy</p>
+              <strong id="health-summary-text">Waiting for health telemetry</strong>
+            </div>
           </div>
           <div class="health-radar-card">
             <svg class="health-radar" id="health-radar-chart" viewBox="0 0 520 340" role="img" aria-labelledby="health-radar-svg-title">
