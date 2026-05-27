@@ -95,8 +95,8 @@
   let THEME_STORAGE_KEY = "watchtower_theme_mode";
   let DASHBOARD_MODE_STORAGE_KEY = "watchtower_dashboard_mode";
   let ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
-  let LIGHT_LOGO_PATH = "assets/watchtower-logo.png";
-  let DARK_LOGO_PATH = "assets/watchtower-dark-logo.png";
+  let LIGHT_LOGO_PATH = "assets/watchtower-transparent.png";
+  let DARK_LOGO_PATH = "assets/watchtower-transparent.png";
 
   let uiState = {
     selectedRange: "24h",
