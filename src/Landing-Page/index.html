@@ -32,17 +32,17 @@
           <p class="lead">
             WatchTower unifies exceptions, slowdowns, and real user reports so you can pinpoint issues faster and ship with confidence.
           </p>
-	          <div class="hero-actions">
-	            <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
-	            <button class="ghost-button tertiary-cta" type="button" data-action="open-snippet">View install snippet</button>
-	          </div>
-	          <div class="panel team-screenshot" aria-label="Meet the team">
-	            <h3 class="team-screenshot-title">Meet the team</h3>
-	            <img class="team-screenshot-image" src="assets/team-screenshot.png" alt="WatchTower team" loading="lazy" decoding="async">
-	          </div>
-	        </div>
+          <div class="hero-actions">
+            <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
+            <button class="ghost-button tertiary-cta" type="button" data-action="open-snippet">View install snippet</button>
+          </div>
+          <section class="panel team-screenshot" aria-label="Meet the team">
+            <h2 class="team-screenshot-title">Meet the team</h2>
+            <img class="team-screenshot-image" src="assets/team-screenshot.png" alt="WatchTower team" loading="lazy" decoding="async">
+          </section>
+        </div>
 
-        <div class="hero-visual" aria-label="Dashboard preview">
+        <section class="hero-visual" aria-label="Dashboard preview">
           <div class="panel hero-panel">
             <div class="hero-panel-header">
               <span class="eyebrow">Project</span>
@@ -97,12 +97,12 @@
               </section>
             </div>
 
-            <div class="correlation-highlight" aria-label="Correlation highlight">
+            <div class="correlation-highlight" role="region" aria-label="Correlation highlight">
               <span class="highlight-chip"><span class="highlight-dot" aria-hidden="true"></span>Deploy 1.8.4 → error spike + p95 regression</span>
               <span class="highlight-chip muted">Click any row to see full session context</span>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </section>
 
@@ -126,36 +126,36 @@
 
     <section class="landing-section" id="capabilities" aria-label="Key capabilities">
       <h2>What you get on day one</h2>
-      <div class="capabilities-grid" role="list">
-        <article class="panel capability-card" role="listitem">
+      <ul class="capabilities-grid">
+        <li class="panel capability-card">
           <div class="capability-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 4.6 3.1 19.1a1 1 0 0 0 .9 1.4h16a1 1 0 0 0 .9-1.4L13.7 4.6a1 1 0 0 0-1.4 0Z"></path></svg>
           </div>
           <h3>Error Tracking</h3>
           <p>See aggregated exceptions with stack traces and frequency. Spot top offenders and confirm fixes with trend charts.</p>
-        </article>
-        <article class="panel capability-card" role="listitem">
+        </li>
+        <li class="panel capability-card">
           <div class="capability-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M5 13a7 7 0 1 1 14 0"></path><path d="M12 13 16 9"></path><path d="M12 20a7 7 0 0 0 7-7"></path></svg>
           </div>
           <h3>Performance Monitoring</h3>
           <p>Track page loads, API latency, and slow resources. Identify regressions and measure impact by release.</p>
-        </article>
-        <article class="panel capability-card" role="listitem">
+        </li>
+        <li class="panel capability-card">
           <div class="capability-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"></path></svg>
           </div>
           <h3>User Feedback Capture</h3>
           <p>Collect lightweight user reports tied to sessions and events. Cut guesswork with context-rich submissions.</p>
-        </article>
-        <article class="panel capability-card" role="listitem">
+        </li>
+        <li class="panel capability-card">
           <div class="capability-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M8 3h8"></path><path d="M7 7h10"></path><path d="M7 11h10"></path><path d="M7 15h6"></path><path d="M9 19h6"></path></svg>
           </div>
           <h3>Deploy Correlation</h3>
           <p>Map errors and performance shifts to specific releases. Know when a deploy caused a spike and roll back with confidence.</p>
-        </article>
-      </div>
+        </li>
+      </ul>
     </section>
 
     <section class="landing-section" id="who-its-for" aria-label="Who it’s for">
