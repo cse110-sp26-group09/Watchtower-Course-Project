@@ -1,158 +1,88 @@
 # WatchTower Prototype 1
 
-A lightweight vanilla JavaScript implementation demonstrating core WatchTower observability features.
+A responsive WatchTower dashboard candidate based on the wireframes,
+wired to a monitored ShopDemo app and a lightweight SQLite-backed event
+ingestion server.
 
-## Overview
+## Run It
 
-This prototype showcases the fundamental capabilities of WatchTower:
+```bash
+npm install
+npm run start:prototype1
+```
 
-- **Frontend Error Tracking** – Capture and log unhandled JavaScript errors
-- **Performance Monitoring** – Track page load times and route-specific latency
-- **User Interaction Capture** – Record user actions (clicks, form submissions, navigation)
-- **Backend Event API** – Receive, store, and retrieve events
-- **Real-Time Dashboard** – Display error feeds, latency metrics, and active user counts
+Open in a browser:
 
-## Project Structure
+- **Dashboard:** <http://localhost:3000/>
+- **Monitored demo app:** <http://localhost:3000/demo>
+- **Health probe:** <http://localhost:3000/api/health>
+- **Browser SDK:** <http://localhost:3000/sdk/watchtower.js>
+
+> The default `npm start` script still launches Prototype 2 on port 3000.
+> Use `npm run start:prototype1` for the SQLite-backed flow.
+
+## What's Included
+
+- Responsive WatchTower app shell.
+- Home dashboard with live health summary, issue queue, build metadata, and recent events.
+- Analytics view with user activity, purchases, latency, feedback, and service charts.
+- Settings view with profile, accessibility, and notification accordions.
+- Desktop side navigation and mobile bottom navigation.
+- Browser SDK that captures `page_view`, `error`, performance, click, and custom events.
+- Monitored ShopDemo app with a "Local SQLite verification" panel for one-click event generation.
+- HTTP server with `/api/health`, `/api/events`, `/api/stats`, and `/api/events/stream`.
+
+## Navigation Polish
+
+- Sidebar, mobile navigation, topbar shortcuts, and in-page metric links all use the same hash-based routes.
+- Secondary screens include Back and Home controls so users can leave Analytics, Settings, Health, and Issues without a dead-end.
+- Active sidebar and mobile navigation states are synced with the visible route.
+- UI check screenshots:
+  - [Analytics navigation](../../docs/design/media/prototype-1-navigation-analytics.png)
+  - [Settings navigation](../../docs/design/media/prototype-1-navigation-settings.png)
+
+## Storage
+
+Events are persisted to a single SQLite file via
+[`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3):
+
+- **Path:** `data/prototype_1/watchtower.sqlite` (created automatically).
+- **Override:** `WATCHTOWER_P1_DB=/abs/path/file.sqlite`.
+- **Schema and verification flow:** see
+  [`docs/architecture/event-storage.md`](../../docs/architecture/event-storage.md).
+
+The legacy SQLite spike at `server/server-1.1.js` and the legacy
+`app.db` file are kept in the repo for reference and are **not** used
+by the active server. Both will be removed once the team agrees the
+SQLite-promoted flow is stable.
+
+## Layout
 
 ```
 prototype_1/
-├── dashboard/           # Real-time monitoring interface
-│   ├── app.js          # Dashboard logic
-│   ├── index.html      # UI markup
-│   └── style.css       # Styling
-├── demo/               # Interactive demo page
-│   ├── app.js          # Demo app logic
-│   ├── index.html      # Demo page with test events
-│   └── style.css       # Demo styling
-├── hosted_demo/        # Standalone static demo for public hosting
-│   ├── app.js          # Hosted demo app logic
-│   ├── index.html      # Static-host-friendly demo page
-│   ├── README.md       # Deploy and sync instructions
-│   └── style.css       # Hosted demo styling
-├── sdk/                # JavaScript monitoring SDK
-│   └── watchtower.js   # Core SDK for error/event capture
-├── server/             # Backend API
-│   └── server.js       # Node.js event handler
-└── package.json        # Dependencies and scripts
+├── README.md              this file
+├── index.html             dashboard shell
+├── style.css              dashboard styles
+├── app.js                 dashboard logic
+├── assets/                logos
+├── demo/                  monitored ShopDemo app served at /demo
+│   ├── index.html
+│   ├── app.js             includes "Local SQLite verification" panel
+│   └── style.css
+├── sdk/
+│   └── watchtower.js      browser SDK with `sendWatchTowerEvent` helper
+└── server/
+    ├── server.js          ACTIVE: SQLite-backed HTTP server
+    ├── event-store.js     better-sqlite3 wrapper + pure helpers (unit tested)
+    └── server-1.1.js      legacy SQLite spike, kept for reference
 ```
 
-## Setup & Installation
+## Tests
 
-### Prerequisites
-- Node.js and npm
-- A modern web browser
-
-### Getting Started
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Start the backend server:**
-   ```bash
-   npm start
-   ```
-   The server runs on `http://localhost:3000`
-
-3. **Open the dashboard:**
-   - Navigate to `http://localhost:3000/dashboard`
-
-4. **Trigger events:**
-   - Open the demo page: `http://localhost:3000/demo`
-   - Interact with the page to generate events
-   - Watch them appear in the dashboard in real time
-
-## Components
-
-### SDK (`sdk/watchtower.js`)
-
-The core monitoring library included on client pages.
-
-**Features:**
-- Automatic error capture
-- Performance API integration
-- Event tracking and reporting
-- Configurable event forwarding
-
-**Usage:**
-```html
-<script src="/sdk/watchtower.js"></script>
-<script>
-  WatchTower.init({
-    apiEndpoint: 'http://localhost:3000/api/events'
-  });
-</script>
+```bash
+npm run test:unit                                      # event-store + shared utils
+npx playwright test tests/e2e/prototype1-sqlite.spec.js  # boots its own server
 ```
 
-### Dashboard (`dashboard/`)
-
-Real-time visualization of monitored events.
-
-**Displays:**
-- Error feed with timestamps and stack traces
-- Latency chart showing performance over time
-- Active user count
-
-### Server (`server/server.js`)
-
-Simple Node.js backend that receives events and serves the dashboard.
-
-**Endpoints:**
-- `POST /api/events` – Receive events from clients
-- `GET /api/events` – Retrieve stored events
-- `GET /dashboard` – Serve dashboard UI
-- `GET /demo` – Serve demo page
-
-## Running the Demo
-
-1. Start the server: `npm start`
-2. Open `http://localhost:3000/demo` in your browser
-3. Interact with the demo page (trigger errors, navigate, etc.)
-4. Switch to the dashboard tab to see real-time updates
-
-## Hosted Demo
-
-For a static-hostable ShopDemo that can be used online without a WatchTower backend, see [hosted_demo/README.md](hosted_demo/README.md).
-
-## Testing
-
-To validate the SDK and server:
-
-1. Open the demo page
-2. Check the browser console for SDK logs
-3. Verify events appear in the dashboard
-4. Check network tab to see API calls
-
-## Limitations & Future Improvements
-
-This prototype uses mock/test data in many places. For production:
-
-- Add persistent database (currently in-memory)
-- Implement user session tracking
-- Add deployment version detection
-- Enhance error categorization and pattern detection
-- Add alerting for critical errors or performance issues
-- Implement data retention and cleanup policies
-
-## Development Notes
-
-- This prototype prioritizes simplicity and speed over scalability
-- All code is vanilla JavaScript with no external frameworks
-- The backend is intentionally simple to demonstrate the concept
-- See [docs/adr/](../../docs/adr/) for architectural decisions
-
-## Contributing
-
-Before making changes:
-
-1. Review [workflow guidelines](../../docs/process/workflow.md)
-2. Check the [git workflow](../../docs/process/git-workflow.md)
-3. Follow the [documentation standards](../../docs/README.md)
-
-## Related Documentation
-
-- [Project Overview](../../README.md)
-- [Architecture Decisions](../../docs/adr/)
-- [Requirements](../../docs/product/requirements.md)
-- [Design](../../docs/design/)
+The e2e suite uses port `3110` and a temp database, so it does not
+collide with a running local Prototype 1 server.

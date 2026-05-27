@@ -9,7 +9,7 @@ const {
   normalizeFeedbackEvent,
   calculateAverage,
   calculatePercentile,
-} = require("../../src/prototype_1/utils/event-utils");
+} = require("../../src/shared/utils/event-utils");
 
 describe("createBaseEvent", () => {
   test("includes type, timestamp, and data fields", () => {
@@ -29,6 +29,11 @@ describe("createBaseEvent", () => {
   test("coerces non-object data into an empty object", () => {
     const event = createBaseEvent("error", "not an object");
     expect(event.data).toEqual({});
+  });
+
+  test("always produces an event that passes isValidEvent", () => {
+    expect(isValidEvent(createBaseEvent("click", { target: "BUTTON" }))).toBe(true);
+    expect(isValidEvent(createBaseEvent())).toBe(true);
   });
 });
 
@@ -91,6 +96,13 @@ describe("normalizeErrorEvent", () => {
     const event = normalizeErrorEvent({ message: "boom" });
     expect(isValidEvent(event)).toBe(true);
   });
+
+  test("handles non-object input without throwing", () => {
+    const event = normalizeErrorEvent(undefined);
+    expect(event.type).toBe("error");
+    expect(event.data.message).toBe("Unknown error");
+    expect(isValidEvent(event)).toBe(true);
+  });
 });
 
 describe("normalizeFeedbackEvent", () => {
@@ -116,6 +128,11 @@ describe("normalizeFeedbackEvent", () => {
   test("defaults category to 'general'", () => {
     const event = normalizeFeedbackEvent({ message: "looks great" });
     expect(event.data.category).toBe("general");
+  });
+
+  test("produces a valid event envelope", () => {
+    expect(isValidEvent(normalizeFeedbackEvent({ rating: 4, message: "ok" }))).toBe(true);
+    expect(isValidEvent(normalizeFeedbackEvent(undefined))).toBe(true);
   });
 });
 
@@ -154,6 +171,14 @@ describe("calculatePercentile", () => {
   test("returns 0 for empty input or non-numeric percentile", () => {
     expect(calculatePercentile([], 50)).toBe(0);
     expect(calculatePercentile([1, 2, 3], "fifty")).toBe(0);
+  });
+
+  test("works on unsorted input without mutating it", () => {
+    const samples = [50, 10, 30, 90, 70, 20, 80, 40, 60, 100];
+    const before = samples.slice();
+    expect(calculatePercentile(samples, 50)).toBe(50);
+    expect(calculatePercentile(samples, 95)).toBe(100);
+    expect(samples).toEqual(before);
   });
 });
 

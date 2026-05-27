@@ -52,6 +52,12 @@ What other options did we evaluate and why were they not chosen?
 - **Summary:** Lightweight static prototype using vanilla JavaScript, HTML, CSS, and Node.js backend
 - **Link:** [ADR-0001.md](ADR-0001.md) or see content below
 
+### ADR-0002: Use Node.js for WatchTower Backend
+- **Status:** Accepted
+- **Date:** *(Sprint 3)*
+- **Summary:** Usage of Node.js as backend due to its simply front-backend integration, live event handling capacity, and native JSON handling. 
+- **Link:** [ADR-0002.md](ADR-0002.md) or see content below
+
 ## Writing ADRs
 
 ### When to Write an ADR
@@ -150,3 +156,80 @@ This approach keeps the project simple, easy to deploy, and easier for all team 
 - Full database integration – Not needed for prototype validation
 
 These may be considered later only if approved and justified.
+
+--- 
+# ADR-0002: Use Node.js for WatchTower Backend
+
+- **Status:** Proposed  
+- **Date:** 2026-05-20  
+
+## Context
+
+WatchTower is a centralized observability system that captures:
+- application events
+- errors
+- performance signals
+- deployment telemetry
+- live operational updates
+
+The system requires:
+- realtime event handling
+- asynchronous network communication
+- lightweight deployment compatibility
+
+---
+
+## Decision
+
+Use **Node.js** as the backend runtime for WatchTower.
+
+---
+
+## Rationale
+
+- Node.js is optimized for **I/O-bound and event-driven systems**
+- WatchTower primarily handles:
+  - incoming telemetry
+  - websocket connections
+  - network requests
+  - streaming updates
+- Node.js supports realtime communication naturally through:
+  - WebSockets
+  - async event handling
+  - streams
+- JSON handling is native and aligns well with browser-based telemetry payloads
+- Shared JavaScript semantics between frontend and backend reduce development complexity
+- Lightweight architecture supports rapid iteration and deployment
+
+---
+
+## Alternatives Considered
+
+### Go
+Rejected due to slower iteration speed and increased backend complexity for the project scope.
+
+### Python
+Rejected because realtime websocket/event handling is less natural compared to Node.js.
+
+### Java/Spring
+Rejected due to excessive architectural overhead for a lightweight observability platform.
+
+---
+
+## Consequences
+
+### Positive
+- Strong realtime support
+- Efficient concurrent connection handling
+- Fast prototyping
+- Simplified frontend/backend integration
+
+### Negative
+- CPU-intensive operations can block the event loop
+- Heavy computation may require worker threads or external services
+
+---
+
+## Conclusion
+
+Node.js was selected because WatchTower is fundamentally an event-driven realtime system, making Node.js a strong fit for handling asynchronous telemetry ingestion and live operational updates.

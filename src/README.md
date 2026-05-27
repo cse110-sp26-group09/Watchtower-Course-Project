@@ -1,24 +1,35 @@
 # Source Code
 
-This directory contains all implementation code for WatchTower, including prototypes and production-ready components.
+This directory contains all WatchTower implementation code. During Sprint 2 the team built two parallel prototypes; they are compared in [`docs/sprint/sprint-2-comparison-readout.md`](../docs/sprint/sprint-2-comparison-readout.md).
 
 ## Structure
 
-### `prototype_1/` – Current Development Prototype
+### `prototype_1/` – Static Frontend Candidate
 
-The primary prototype demonstrating core WatchTower functionality using vanilla web technologies.
+A standalone static dashboard (no backend, no SDK) modeled after the WatchTower wireframes. Useful for trying out UI layouts and accessibility controls.
 
-**What's inside:**
-- `dashboard/` – Real-time monitoring dashboard
-- `demo/` – Interactive demo page with example events
-- `hosted_demo/` – Static-hostable ShopDemo variant for online traffic checks
-- `sdk/` – JavaScript SDK (`watchtower.js`) for error and event capture
-- `server/` – Backend API for receiving and storing events
-- `package.json` – Dependencies and scripts
+- Open `src/prototype_1/index.html` directly in a browser.
+- See [`prototype_1/README.md`](prototype_1/README.md) for details.
+
+### `prototype_2/` – Full Vertical Slice (used by `npm start`)
+
+A working capture → ingest → display loop:
+
+- `index.html`, `dashboard.js`, `style.css` – three-view dashboard (Home, Analytics, Alerts).
+- `sdk.js` – client-side SDK that auto-captures `window.onerror` and Navigation Timing metrics and POSTs to `/api/events` in 2-second batches.
+- `server/server.js` – framework-free Node.js HTTP server that exposes `POST /api/events`, `GET /api/events`, `GET /api/stats`, and `GET /api/events/stream` (SSE) on port 3000.
+- `hosted_demo/` – static ShopDemo page for traffic checks.
+- `utils/event-utils.js` – thin re-export of the canonical `src/shared/utils/event-utils.js` for backwards compatibility.
+
+See [`prototype_2/README.md`](prototype_2/README.md) for details.
+
+### `shared/` – Cross-prototype utilities
+
+Code that both prototypes (and any Sprint 3 hybrid) can rely on:
+
+- `shared/utils/event-utils.js` – pure helpers for event validation, normalization, averaging, and percentile calculation. This is the source of truth; the prototype 2 path is a re-export shim.
 
 **Technologies:** HTML, CSS, JavaScript, Node.js
-
-**Get started:** See [prototype_1/README.md](prototype_1/README.md)
 
 ## Development Guidelines
 
@@ -46,10 +57,10 @@ The primary prototype demonstrating core WatchTower functionality using vanilla 
 
 As the project grows, this directory may include:
 
-- `sdk/` – Extracted into a standalone package
-- `dashboard/` – Extracted into a separate application
-- `server/` – Backend API as a separate service
-- `components/` – Reusable, shared components
+- `shared/sdk/` – SDK extracted from prototype 2 once both prototypes share it
+- `shared/server/` – Backend API as a shared module
+- `shared/components/` – Reusable UI components
+- `app/` – The chosen hybrid (renamed from prototype_2) after Sprint 3 kickoff
 
 ## Related Documentation
 
