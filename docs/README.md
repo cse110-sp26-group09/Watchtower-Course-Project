@@ -36,6 +36,7 @@ Establish and document how we work together.
 - [workflow.md](process/workflow.md) – Daily development workflow and best practices
 - [git-workflow.md](process/git-workflow.md) – Branching strategy and commit conventions
 - [genai-usage.md](process/genai-usage.md) – Guidelines for using generative AI tools responsibly
+- [jsdoc-standards.md](process/jsdoc-standards.md) - Guidelines for using JSdocs 
 
 ### 🔍 Research ([research/](research/))
 Document discovery, experimentation, and design thinking.
@@ -53,6 +54,10 @@ Images, diagrams, and visual assets for documentation and project materials.
 ### 🏗️ Architecture ([adr/](adr/))
 Record major technical decisions and trade-offs.
 - [Architectural Decision Records (ADRs)](adr/) – Documented reasoning for system design choices
+- [system-overview.md](architecture/system-overview.md) - overview of the system architecture
+- [api-contract-v1.md](architecture/api-contract-v1.md) - Documented usage of APIs
+- [event-schema-v1.md](architecture/event-schema-v1.md) - Documented event schemas
+- [external-test-app-plan.md](architecture/external-test-app-plan.md) - Plan for using external app for testing
 
 ### 💬 Meetings ([meetings/](meetings/))
 Preserve team discussions and decisions.

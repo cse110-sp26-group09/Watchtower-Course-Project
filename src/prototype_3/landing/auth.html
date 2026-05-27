@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WatchTower | Auth Review</title>
+  <link rel="stylesheet" href="./auth.css">
+</head>
+<body data-theme="dark">
+  <main class="auth-shell">
+    <section class="auth-brand">
+      <div class="brand-actions">
+        <a class="home-link" href="./index.html">Back to landing</a>
+        <button id="theme-toggle" type="button">Light mode</button>
+      </div>
+      <img src="../assets/watchtower-transparent.png" alt="WatchTower logo" onerror="this.style.display='none'">
+      <h1>WatchTower</h1>
+      <p>Static auth prototype for visual review. Backend auth and Google OAuth will be wired in a later sprint.</p>
+      <ul>
+        <li>Role-aware onboarding (Manager / Developer)</li>
+        <li>Google sign-in placeholder for upcoming integration</li>
+        <li>No live credentials or account creation yet</li>
+      </ul>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-heading">
+      <div class="tabs">
+        <button class="tab active" type="button" data-mode="login">Log in</button>
+        <button class="tab" type="button" data-mode="signup">Sign up</button>
+      </div>
+
+      <h2 id="auth-heading">Welcome back</h2>
+      <p class="subhead">Use this static screen to review visual flow and layout.</p>
+
+      <form id="auth-form" novalidate>
+        <label for="fullName" class="optional">Full name <span>(Sign up only)</span></label>
+        <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Alex Rivera">
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+
+        <label for="role">Default dashboard view</label>
+        <select id="role" name="role">
+          <option>Manager view</option>
+          <option>Developer view</option>
+        </select>
+
+        <button class="primary" type="button" id="primary-cta">Log in (static)</button>
+      </form>
+
+      <div class="divider"><span>or</span></div>
+      <button class="google" type="button" disabled>Continue with Google (Coming soon)</button>
+      <p class="legal">By continuing, you agree to the WatchTower prototype terms for class review.</p>
+    </section>
+  </main>
+
+  <script src="./auth.js"></script>
+</body>
+</html>

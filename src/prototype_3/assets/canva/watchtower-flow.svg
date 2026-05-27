@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">WatchTower flow placeholder</title>
+  <desc id="desc">Replace with Canva export for WatchTower architecture flow.</desc>
+  <rect width="800" height="500" fill="#0b1c29"/>
+  <text x="48" y="72" font-family="Segoe UI, Arial, sans-serif" font-size="34" fill="#dff3ff">WatchTower Flow</text>
+  <g stroke="#4f93b0" fill="#123247" stroke-width="2">
+    <rect x="48" y="120" width="160" height="90" rx="10"/>
+    <rect x="252" y="120" width="160" height="90" rx="10"/>
+    <rect x="456" y="120" width="160" height="90" rx="10"/>
+    <rect x="640" y="120" width="120" height="90" rx="10"/>
+  </g>
+  <g fill="#bfe3f6" font-family="Segoe UI, Arial, sans-serif" font-size="20">
+    <text x="80" y="174">Collect</text>
+    <text x="286" y="174">Classify</text>
+    <text x="502" y="174">Store</text>
+    <text x="668" y="174">Act</text>
+  </g>
+  <g stroke="#7ec2de" stroke-width="3" fill="none">
+    <path d="M208 166h42"/>
+    <path d="M412 166h42"/>
+    <path d="M616 166h20"/>
+  </g>
+  <text x="48" y="442" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#85aec2">Canva export placeholder - replace with your architecture image.</text>
+</svg>
