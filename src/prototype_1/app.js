@@ -78,8 +78,8 @@
   var ANALYTICS_RANGE_STORAGE_KEY = "watchtower_analytics_range";
   var THEME_STORAGE_KEY = "watchtower_theme_mode";
   var ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
-  var LIGHT_LOGO_PATH = "assets/watchtower-logo.png";
-  var DARK_LOGO_PATH = "assets/watchtower-dark-logo.png";
+  var LIGHT_LOGO_PATH = "assets/watchtower-transparent.png";
+  var DARK_LOGO_PATH = "assets/watchtower-transparent.png";
   var currentViewName = "home";
   var previousViewName = null;
 
