@@ -60,10 +60,10 @@ body {
 }
 
 .brand img {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .topnav {
