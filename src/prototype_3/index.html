@@ -145,7 +145,7 @@
           <section class="panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="manager-summary-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Manager summary</p>
+                <p class="eyebrow">Summary</p>
                 <h2 id="manager-summary-title">Operational highlights</h2>
               </div>
             </div>
@@ -320,13 +320,24 @@
             </div>
           </div>
           <div class="health-radar-card">
+            <div class="health-score-column">
+              <ul class="health-legend" id="health-legend"></ul>
+              <section class="health-status-key" aria-labelledby="health-status-key-title">
+                <h3 id="health-status-key-title">Status key</h3>
+                <ul class="health-status-list">
+                  <li><span class="status-token good">Healthy</span><strong>75-100</strong></li>
+                  <li><span class="status-token warning">Watch</span><strong>55-74</strong></li>
+                  <li><span class="status-token critical">Critical</span><strong>0-54</strong></li>
+                </ul>
+                <p>Score is determined by availability, error rate, latency, ingestion quality, feedback, and coverage.</p>
+              </section>
+            </div>
             <svg class="health-radar" id="health-radar-chart" viewBox="0 0 520 340" role="img" aria-labelledby="health-radar-svg-title">
               <title id="health-radar-svg-title">Radar chart of app health dimensions</title>
               <g class="health-radar-grid" id="health-radar-grid"></g>
               <g class="health-radar-axis" id="health-radar-axis"></g>
               <polygon class="health-radar-shape" id="health-radar-shape" points=""></polygon>
             </svg>
-            <ul class="health-legend" id="health-legend"></ul>
           </div>
         </section>
 
