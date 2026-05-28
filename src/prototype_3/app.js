@@ -308,6 +308,14 @@
     return new Intl.NumberFormat().format(Number(value) || 0);
   }
 
+  function calculatePercentile(values, percentile) {
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    let sortedValues = values.slice().sort(function (leftValue, rightValue) { return leftValue - rightValue; });
+    let index = Math.ceil((percentile / 100) * sortedValues.length) - 1;
+    let boundedIndex = Math.max(0, Math.min(index, sortedValues.length - 1));
+    return sortedValues[boundedIndex];
+  }
+
   function formatNotificationTime(dateValue) {
     return dateValue.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
@@ -2294,6 +2302,59 @@
     }).join("");
   }
 
+  function buildBreakdownCounts(eventsInRange) {
+    let counts = {
+      performance: 0,
+      errors: 0,
+      feedback: 0,
+      clicks: 0,
+    };
+
+    (eventsInRange || []).forEach(function (eventRecord) {
+      let eventType = eventRecord && eventRecord.type ? String(eventRecord.type) : "";
+
+      if (eventType === "pageload" || eventType === "performance") {
+        counts.performance += 1;
+      } else if (eventType === "error") {
+        counts.errors += 1;
+      } else if (eventType === "feedback") {
+        counts.feedback += 1;
+      } else if (eventType === "click" || eventType === "custom" || eventType === "login") {
+        counts.clicks += 1;
+      }
+    });
+
+    return counts;
+  }
+
+  function buildLatencySummaryFromEvents(events, _rangeName) {
+    let filteredEvents = getRangeEvents(events);
+    let routeBuckets = {};
+
+    filteredEvents.forEach(function (eventRecord) {
+      if (eventRecord.type !== "pageload") return;
+      if (!eventRecord.data || typeof eventRecord.data.duration !== "number") return;
+
+      let routeName = eventRecord.route || "/";
+      if (!routeBuckets[routeName]) routeBuckets[routeName] = [];
+      routeBuckets[routeName].push({
+        duration: Number(eventRecord.data.duration) || 0,
+        timestamp: eventRecord.timestamp,
+      });
+    });
+
+    return Object.keys(routeBuckets).reduce(function (summary, routeName) {
+      let points = routeBuckets[routeName].sort(function (leftPoint, rightPoint) {
+        return getValidTimestamp(leftPoint.timestamp) - getValidTimestamp(rightPoint.timestamp);
+      });
+      summary[routeName] = {
+        points: points,
+        p95: Math.round(calculatePercentile(points.map(function (point) { return point.duration; }), 95)),
+      };
+      return summary;
+    }, {});
+  }
+
   function renderEventBreakdown(events) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
@@ -2320,7 +2381,7 @@
     breakdownDonut.style.background = "conic-gradient(" + stops.join(", ") + ")";
     breakdownList.innerHTML = groups.map(function (group) {
       let pct = Math.round((group.count / total) * 100);
-      return '<li><span><i class="legend-dot ' + group.className + '"></i>' + group.key + '</span><strong>' + pct + '%</strong></li>';
+      return '<li><span><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong></li>';
     }).join("");
   }
 
@@ -2380,11 +2441,18 @@
     renderRatingSummary(rangeEvents);
     renderEventBreakdown(rangeEvents);
 
-    if (analyticsRangeUsers) analyticsRangeUsers.textContent = formatNumber(new Set(rangeEvents.map(function (eventRecord) { return eventRecord.userId; }).filter(Boolean)).size);
-    if (analyticsRangeActions) analyticsRangeActions.textContent = formatNumber(activitySeries.values.reduce(function (sum, value) { return sum + value; }, 0));
-    if (analyticsRangeLatency) analyticsRangeLatency.textContent = peakLatency + " ms";
-    if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " current bucket";
-    if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
+    if (analyticsRangeLatency) {
+      let routeNames = Object.keys(latencySummary || {});
+      if (routeNames.length === 0) {
+        analyticsRangeLatency.textContent = "0 ms";
+      } else {
+        let peakP95 = routeNames.reduce(function (runningPeak, routeName) {
+          let currentRoute = latencySummary[routeName] || {};
+          return Math.max(runningPeak, Number(currentRoute.p95) || 0);
+        }, 0);
+        analyticsRangeLatency.textContent = peakP95 + " ms";
+      }
+    }
   }
 
   function renderHealthSummary(stats, events) {

@@ -1,13 +1,13 @@
-# WatchTower Landing Page (MVP)
+# WatchTower Landing Page
 
-Static, single-page landing page styled to match `prototype_3`.
+Static single-page landing page for the WatchTower MVP.
 
 ## How to view
 
-Open `watchtower_landing/index.html` directly in a browser (no server required).
+Open `src/Landing-Page/index.html` directly in a browser, or serve the repo root locally and visit `/src/Landing-Page/index.html`.
 
 ## Navigation
 
-- Primary CTA (`Start in 15 minutes` / `Get started free`) goes to `../Log-In-Page/login.html`.
-- `View demo` links to `../prototype_3/index.html` (the dashboard expects the `prototype_3` server to be running for live data).
-
+- Primary CTAs go to `../Log-In-Page/login.html`.
+- The install snippet modal shows the SDK script tag.
+- The dashboard preview mirrors the Prototype 1 WatchTower dashboard structure.
