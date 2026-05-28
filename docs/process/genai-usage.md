@@ -31,7 +31,7 @@
 
 ---
 
-# Sprint 1:
+# Sprint 1
 - **Name:** Josh Victoria
 - **Date:** 05/10/2026
 - **Sprint #**: 1 
@@ -40,11 +40,12 @@
 - **Scale:** `requirements.md`
 - **Description:** Used Codex to create a example of what a requirement would look like and used it as a template to create other requirements 
 ===
-# Sprint 2:
+# Sprint 2
 
 
 ===
-# Sprint 3:
+# Sprint 3
+
 - **Name:** Hemendra Ande
 - **Date:** May 20, 2026
 - **Sprint #:** 3
@@ -68,7 +69,8 @@
 - **LOC:** +1,520 lines written -3,803 lines deleted
 - **Scale:** Updated src/prototype_1/assets/watchtower-dark-logo.png, src/prototype_1/assets/watchtower-logo.png, src/prototype_1/server/index.html, src/prototype_1/server/style.css, src/prototype_1/server/app.js, src/prototype_1/server/#style.css
 - **Description:** Asked GenAI to implement a dark / light theme , improved UI / UX, make it compatible with the backend, fixed couple UI issues, implemented professor's feedback, aiming to make it more simplistic and UI friendly.
----
+===
+
 - **Name:** Josh Victoria
 - **Date:** 05/20/2026
 - **Sprint #**: 3 
@@ -101,7 +103,9 @@
 - **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
 - **Description:** Used codex to update server-1.1.js JSDoc to use classic JSDoc grammar.
 ===
+
 # Sprint 4
+
 - **Name:** Josh Victoria
 - **Date:** 05/26/2026
 - **Sprint #**: 4
@@ -111,11 +115,20 @@
 - **Description:** Used Gemini to generate a landing page based off of a wire frame then tweaked that inital page
 
 - **Name:** Hieu Le
-- **Date:** 
-- **Sprint #:**
+- **Date:** 05/26/26
+- **Sprint #:** 4
 - **Model:** What model and version of GenAI did you use (e.g. Codex 5.2 medium reasoning)
 - **LOC:** How many lines of code did it write
 - **Scale:** What files/folders did GenAI change/create in codebase (e.g. in 'x' file, 'y' folder)
 - **Description:** Give a small description of what you asked GenAI to do and why it was it was needed.
 - **Prompt:** What prompt did you feed model
 
+
+- **Name:** Hemendra
+- **Date:** 05/27/26
+- **Sprint #:** Sprint 4
+- **Model:** OpenAI Codex
+- **LOC:** Approximately 2,000+ lines modified across Prototype 3 frontend/backend files
+- **Scale:** Modified src/prototype_3/app.js, src/prototype_3/index.html, src/prototype_3/style.css, src/prototype_3/server/server.js, and src/prototype_3/sdk/watchtower.js
+- **Description:** Asked GenAI to polish Prototype 3 and build out the Developer View for a PostHog-style analytics/observability platform. This was needed to make Developer View feel closer to DevTools/Datadog/Sentry/Segment debugger, with real event inspection, schema diagnostics, SDK health, query tools, feature flag debugging, identity resolution, performance/error monitoring, pipeline observability, governance panels, and CI fixes.
+- **Prompt:** Polish up the UI and features of prototype-3. Work on Prototype 3. Build a developer-focused analytics workspace that feels closer to Chrome DevTools, Datadog, Sentry, and Segment debugger than a traditional analytics dashboard. Prioritize observability, debugging, instrumentation trust, raw event inspection, schema validation, realtime diagnostics, and operational visibility. Implement live event stream, schema registry, session replay dev overlay, SDK diagnostics, query playground, feature flag debugger, identity resolution viewer, performance monitoring, error monitoring, pipeline observability, environment support, and data governance. Maintain existing code style and fix failing CI/lint issues.

@@ -216,7 +216,7 @@
             <p class="eyebrow">Incident response</p>
             <h1 id="issues-page-title">Triage queue</h1>
           </div>
-          <button class="ghost-button" type="button">Export CSV</button>
+          <button class="ghost-button" id="issue-export-csv" type="button">Export CSV</button>
         </div>
 
         <div class="issues-toolbar" role="group" aria-label="Issue sorting and filtering controls">
@@ -667,6 +667,8 @@
       </section>
     </main>
 
+    <div class="toast-stack" id="toast-stack" role="status" aria-live="polite" aria-label="Status updates"></div>
+
     <nav class="mobile-nav" aria-label="Mobile primary navigation">
       <button class="mobile-nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -707,6 +709,6 @@
     </nav>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=prototype3-dev-clean"></script>
 </body>
 </html>
