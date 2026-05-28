@@ -79,11 +79,11 @@ body {
 }
 
 .auth-brand img {
-  width: 68px;
-  height: 68px;
+  width: 92px;
+  height: 92px;
   object-fit: contain;
   border-radius: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .auth-brand h1 {
