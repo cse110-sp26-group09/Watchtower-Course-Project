@@ -26,8 +26,7 @@ forgot-password.html ──→ login.html   (via "Back to sign in" link)
 ```
 Log-In-Page/
 ├── assets/
-│   ├── watchtower-logo.png       # Main logo (light background)
-│   └── watchtower-dark-logo.png  # Dark background variant
+│   └── watchtower-transparent.png # Transparent WatchTower logo
 ├── login.html                    # Login page
 ├── signup.html                   # Sign up page
 ├── forgot-password.html          # Forgot password page
