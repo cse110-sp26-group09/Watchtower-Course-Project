@@ -1358,9 +1358,11 @@ code {
   margin-bottom: 2px;
 }
 
-.bundle-summary-bar h2 {
+.bundle-summary-bar h2,
+.bundle-title {
   margin: 0;
   font-size: 15px;
+  font-weight: 800;
   line-height: 1.25;
 }
 
