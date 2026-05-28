@@ -66,7 +66,7 @@
 - **Sprint #**: 3
 - **Model:**Codex 5.2 medium reasoning
 - **LOC:** +1,520 lines written -3,803 lines deleted
-- **Scale:** Updated src/prototype_1/assets/watchtower-dark-logo.png, src/prototype_1/assets/watchtower-logo.png, src/prototype_1/server/index.html, src/prototype_1/server/style.css, src/prototype_1/server/app.js, src/prototype_1/server/#style.css
+- **Scale:** Updated WatchTower transparent logo assets and related prototype 1 server files.
 - **Description:** Asked GenAI to implement a dark / light theme , improved UI / UX, make it compatible with the backend, fixed couple UI issues, implemented professor's feedback, aiming to make it more simplistic and UI friendly.
 ---
 - **Name:** Josh Victoria
