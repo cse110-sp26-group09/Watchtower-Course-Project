@@ -281,6 +281,14 @@
     return new Intl.NumberFormat().format(Number(value) || 0);
   }
 
+  function calculatePercentile(values, percentile) {
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    let sortedValues = values.slice().sort(function (leftValue, rightValue) { return leftValue - rightValue; });
+    let index = Math.ceil((percentile / 100) * sortedValues.length) - 1;
+    let boundedIndex = Math.max(0, Math.min(index, sortedValues.length - 1));
+    return sortedValues[boundedIndex];
+  }
+
   function formatNotificationTime(dateValue) {
     return dateValue.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
@@ -1564,22 +1572,6 @@
       return;
     }
 
-    if (healthStatusToken) {
-      let statusLabel = 'Healthy';
-      let statusClass = 'good';
-
-      if (healthScores.score < 55) {
-        statusLabel = 'Critical';
-        statusClass = 'critical';
-      } else if (healthScores.score < 75) {
-        statusLabel = 'Watch';
-        statusClass = 'warning';
-      }
-
-      healthStatusToken.textContent = statusLabel;
-      healthStatusToken.classList.remove('good', 'warning', 'critical');
-      healthStatusToken.classList.add(statusClass);
-    }
     let header = ["severity", "message", "route", "version", "app", "timestamp", "assignee"];
     let csvRows = [header.map(quoteCsvCell).join(",")].concat(rows.map(function (eventRecord, idx) {
       let issueId = getIssueIdentifier(eventRecord, idx);
