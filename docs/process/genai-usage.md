@@ -31,7 +31,7 @@
 
 ---
 
-# Sprint 1:
+# Sprint 1
 - **Name:** Josh Victoria
 - **Date:** 05/10/2026
 - **Sprint #**: 1 
@@ -40,11 +40,12 @@
 - **Scale:** `requirements.md`
 - **Description:** Used Codex to create a example of what a requirement would look like and used it as a template to create other requirements 
 ===
-# Sprint 2:
+# Sprint 2
 
 
 ===
-# Sprint 3:
+# Sprint 3
+
 - **Name:** Hemendra Ande
 - **Date:** May 20, 2026
 - **Sprint #:** 3
@@ -68,7 +69,8 @@
 - **LOC:** +1,520 lines written -3,803 lines deleted
 - **Scale:** Updated src/prototype_1/assets/watchtower-dark-logo.png, src/prototype_1/assets/watchtower-logo.png, src/prototype_1/server/index.html, src/prototype_1/server/style.css, src/prototype_1/server/app.js, src/prototype_1/server/#style.css
 - **Description:** Asked GenAI to implement a dark / light theme , improved UI / UX, make it compatible with the backend, fixed couple UI issues, implemented professor's feedback, aiming to make it more simplistic and UI friendly.
----
+===
+
 - **Name:** Josh Victoria
 - **Date:** 05/20/2026
 - **Sprint #**: 3 
@@ -101,6 +103,7 @@
 - **Scale:** `Course-Project/src/prototype_1/server/server-1.1.js`
 - **Description:** Used codex to update server-1.1.js JSDoc to use classic JSDoc grammar.
 ===
+
 # Sprint 4
 - **Name:** Josh Victoria
 - **Date:** 05/26/2026
@@ -111,8 +114,8 @@
 - **Description:** Used Gemini to generate a landing page based off of a wire frame then tweaked that inital page
 
 - **Name:** Hieu Le
-- **Date:** 
-- **Sprint #:**
+- **Date:** 5/26/27
+- **Sprint #:** 4
 - **Model:** What model and version of GenAI did you use (e.g. Codex 5.2 medium reasoning)
 - **LOC:** How many lines of code did it write
 - **Scale:** What files/folders did GenAI change/create in codebase (e.g. in 'x' file, 'y' folder)

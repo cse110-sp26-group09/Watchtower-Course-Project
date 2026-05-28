@@ -40,7 +40,8 @@
   let sidebarErrorsValue = document.getElementById("sidebar-errors");
   let sidebarUsersValue = document.getElementById("sidebar-users");
   let sidebarEventsValue = document.getElementById("sidebar-events");
-  let healthPriorityListContainer = document.getElementById("health-priority-list");
+  let developerHealthSummaryCopy = document.getElementById("developer-health-summary-copy");
+  let developerHealthPriorityListContainer = document.getElementById("developer-health-priority-list");
   let issueListContainer = document.getElementById("issue-list");
   let serviceStackContainer = document.getElementById("service-stack");
   let featureHotspotsContainer = document.getElementById("build-metadata");
@@ -70,6 +71,7 @@
   let healthSummaryText = document.getElementById("health-summary-text");
   let healthStatusToken = document.getElementById("health-status-token");
   let healthCopy = document.getElementById("health-copy");
+  let healthPriorityListContainer = document.getElementById("health-priority-list");
   let healthRadarGrid = document.getElementById("health-radar-grid");
   let healthRadarAxis = document.getElementById("health-radar-axis");
   let healthRadarShape = document.getElementById("health-radar-shape");
@@ -83,6 +85,10 @@
   let developerTopIssues = document.getElementById("developer-top-issues");
   let developerLatencyWindows = document.getElementById("developer-latency-windows");
   let developerTrafficPeaks = document.getElementById("developer-traffic-peaks");
+  let developerLatencyPeakValue = document.getElementById("developer-latency-peak");
+  let developerInsightIssues = document.getElementById("developer-insight-issues");
+  let developerInsightLatency = document.getElementById("developer-insight-latency");
+  let developerInsightTraffic = document.getElementById("developer-insight-traffic");
   let developerIssueSearchInput = document.getElementById("developer-issue-search");
   let developerMuteToggleButton = document.getElementById("developer-mute-toggle");
   let developerMuteStatusLine = document.getElementById("developer-mute-status");
@@ -1179,6 +1185,32 @@
     renderErrorMonitoring(insights);
     renderPipelineObservability(insights);
     renderGovernance(insights);
+  }
+
+  function renderDeveloperHomeDiagnostics(stats) {
+    let routeNames = Object.keys(stats.latencyByRoute || {}).sort(function (leftRoute, rightRoute) {
+      return ((stats.latencyByRoute[rightRoute] || {}).p95 || 0) - ((stats.latencyByRoute[leftRoute] || {}).p95 || 0);
+    });
+
+    if (developerLatencyPeakValue) {
+      if (routeNames.length === 0) {
+        developerLatencyPeakValue.textContent = "0 ms";
+      } else {
+        let peakRouteStats = stats.latencyByRoute[routeNames[0]] || {};
+        developerLatencyPeakValue.textContent = String(peakRouteStats.p95 || 0) + " ms";
+      }
+    }
+
+    if (developerRouteTable) {
+      if (routeNames.length === 0) {
+        developerRouteTable.innerHTML = '<li><span>/</span><strong>Waiting for samples</strong></li>';
+      } else {
+        developerRouteTable.innerHTML = routeNames.slice(0, 6).map(function (routeName) {
+          let routeStats = stats.latencyByRoute[routeName] || {};
+          return '<li><span>' + escapeHtml(routeName) + '</span><strong>' + String(routeStats.p95 || 0) + ' ms</strong></li>';
+        }).join('');
+      }
+    }
   }
 
   function initializeDeveloperWorkbench() {
