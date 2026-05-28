@@ -1844,13 +1844,34 @@
     return counts;
   }
 
-  function buildLatencySummaryFromEvents(events, rangeName) {
-    let filteredEvents = getEventsInSelectedRange(events, rangeName);
+  function buildLatencySummaryFromEvents(events, _rangeName) {
+    let filteredEvents = getRangeEvents(events);
     let routeBuckets = {};
 
     filteredEvents.forEach(function (eventRecord) {
       if (eventRecord.type !== "pageload") return;
       if (!eventRecord.data || typeof eventRecord.data.duration !== "number") return;
+
+      let routeName = eventRecord.route || "/";
+      if (!routeBuckets[routeName]) routeBuckets[routeName] = [];
+      routeBuckets[routeName].push({
+        duration: Number(eventRecord.data.duration) || 0,
+        timestamp: eventRecord.timestamp,
+      });
+    });
+
+    return Object.keys(routeBuckets).reduce(function (summary, routeName) {
+      let points = routeBuckets[routeName].sort(function (leftPoint, rightPoint) {
+        return getValidTimestamp(leftPoint.timestamp) - getValidTimestamp(rightPoint.timestamp);
+      });
+      summary[routeName] = {
+        points: points,
+        p95: Math.round(calculatePercentile(points.map(function (point) { return point.duration; }), 95)),
+      };
+      return summary;
+    }, {});
+  }
+
   function renderEventBreakdown(events) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
@@ -1877,7 +1898,7 @@
     breakdownDonut.style.background = "conic-gradient(" + stops.join(", ") + ")";
     breakdownList.innerHTML = groups.map(function (group) {
       let pct = Math.round((group.count / total) * 100);
-      return '<li><span><i class="legend-dot ' + group.className + '"></i>' + group.key + '</span><strong>' + pct + '%</strong></li>';
+      return '<li><span><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong></li>';
     }).join("");
   }
 
@@ -1917,26 +1938,34 @@
     }).join("");
   }
 
-  function renderAnalyticsPanels(stats, events) {
-    let rangeEvents = getRangeEvents(events);
-    let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
-    let userSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.userId ? 1 : 0; });
-    let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
-    let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
-      return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
-    }, 0);
+  function renderAnalyticsSummary(eventsInRange, latencySummary) {
+    if (analyticsRangeUsers) {
+      let usersSet = new Set();
+      eventsInRange.forEach(function (eventRecord) {
+        if (eventRecord.sessionId) usersSet.add(eventRecord.sessionId);
+      });
+      analyticsRangeUsers.textContent = String(usersSet.size);
+    }
 
-    renderBarChart(userChartContainer, userSeries.labels, userSeries.values, userSeries.values.length - 1);
-    renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1);
-    renderLatencyChart(stats);
-    renderRatingSummary(rangeEvents);
-    renderEventBreakdown(rangeEvents);
+    if (analyticsRangeActions) {
+      let actions = eventsInRange.filter(function (eventRecord) {
+        return eventRecord.type === "click" || eventRecord.type === "custom" || eventRecord.type === "feedback";
+      }).length;
+      analyticsRangeActions.textContent = String(actions);
+    }
 
-    if (analyticsRangeUsers) analyticsRangeUsers.textContent = formatNumber(new Set(rangeEvents.map(function (eventRecord) { return eventRecord.userId; }).filter(Boolean)).size);
-    if (analyticsRangeActions) analyticsRangeActions.textContent = formatNumber(activitySeries.values.reduce(function (sum, value) { return sum + value; }, 0));
-    if (analyticsRangeLatency) analyticsRangeLatency.textContent = peakLatency + " ms";
-    if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " current bucket";
-    if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
+    if (analyticsRangeLatency) {
+      let routeNames = Object.keys(latencySummary || {});
+      if (routeNames.length === 0) {
+        analyticsRangeLatency.textContent = "0 ms";
+      } else {
+        let peakP95 = routeNames.reduce(function (runningPeak, routeName) {
+          let currentRoute = latencySummary[routeName] || {};
+          return Math.max(runningPeak, Number(currentRoute.p95) || 0);
+        }, 0);
+        analyticsRangeLatency.textContent = peakP95 + " ms";
+      }
+    }
   }
 
   function renderHealthSummary(stats, events) {
@@ -1956,39 +1985,6 @@
     let statusClass = average >= 82 ? "good" : (average >= 62 ? "warning" : "danger");
     let statusText = average >= 82 ? "Healthy" : (average >= 62 ? "Watch" : "Action needed");
 
-    let counts = analytics.breakdownCounts || {
-      performance: 0,
-      errors: 0,
-      feedback: 0,
-      clicks: 0,
-    };
-    let totalCount = counts.performance + counts.errors + counts.feedback + counts.clicks;
-    let performancePct = totalCount === 0 ? 0 : Math.round((counts.performance / totalCount) * 100);
-    let errorsPct = totalCount === 0 ? 0 : Math.round((counts.errors / totalCount) * 100);
-    let feedbackPct = totalCount === 0 ? 0 : Math.round((counts.feedback / totalCount) * 100);
-    let clicksPct = totalCount === 0 ? 0 : Math.max(0, 100 - performancePct - errorsPct - feedbackPct);
-
-    breakdownDonut.style.background =
-      "conic-gradient(" +
-      "var(--teal) 0 " + performancePct + "%, " +
-      "var(--coral) " + performancePct + "% " + (performancePct + errorsPct) + "%, " +
-      "var(--amber) " + (performancePct + errorsPct) + "% " + (performancePct + errorsPct + feedbackPct) + "%, " +
-      "var(--blue) " + (performancePct + errorsPct + feedbackPct) + "% 100%)";
-
-    breakdownList.innerHTML =
-      '<li><span class="legend-dot teal"></span><span class="breakdown-label">Performance</span><strong>' + performancePct + "%</strong></li>" +
-      '<li><span class="legend-dot coral"></span><span class="breakdown-label">Errors</span><strong>' + errorsPct + "%</strong></li>" +
-      '<li><span class="legend-dot amber"></span><span class="breakdown-label">Feedback</span><strong>' + feedbackPct + "%</strong></li>" +
-      '<li><span class="legend-dot blue"></span><span class="breakdown-label">Clicks</span><strong>' + clicksPct + "%</strong></li>";
-  }
-
-  function renderAnalyticsSummary(eventsInRange, latencySummary) {
-    if (analyticsRangeUsers) {
-      let usersSet = new Set();
-      eventsInRange.forEach(function (eventRecord) {
-        if (eventRecord.sessionId) usersSet.add(eventRecord.sessionId);
-      });
-      analyticsRangeUsers.textContent = String(usersSet.size);
     if (healthSummaryText) healthSummaryText.textContent = average + "% reliability score";
     if (healthStatusToken) {
       healthStatusToken.className = "status-token " + statusClass;
@@ -2006,32 +2002,6 @@
         return '<li><span aria-hidden="true">!</span> ' + escapeHtml(item) + '</li>';
       }).join("");
     }
-  }
-
-  function renderAnalyticsPanels(stats, events) {
-    let analytics = stats.analytics || {};
-    let rangeSeries = buildRangeSeries(events, uiState.selectedRange);
-    let rangeLatencySummary = buildLatencySummaryFromEvents(events, uiState.selectedRange);
-    let rangeEvents = getEventsInSelectedRange(events, uiState.selectedRange);
-
-    renderBarChart(userChartContainer, rangeSeries.labels, rangeSeries.users, rangeSeries.users.length - 1);
-    renderBarChart(purchaseChartContainer, rangeSeries.labels, rangeSeries.actions, rangeSeries.actions.length - 1);
-    renderLatencyChart(Object.keys(rangeLatencySummary).length > 0 ? rangeLatencySummary : (stats.latencyByRoute || {}));
-    renderFeedbackPanel({
-      feedbackAverage: analytics.feedbackAverage || 0,
-      feedbackTotal: analytics.feedbackTotal || 0,
-      feedbackBreakdown: analytics.feedbackBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-    });
-    renderBreakdownPanel({
-      breakdownCounts: buildBreakdownCounts(rangeEvents),
-    });
-    renderAnalyticsSummary(rangeEvents, rangeLatencySummary);
-    renderDeveloperAnalyticsDiagnostics(rangeEvents, rangeLatencySummary);
-
-    if (userDeltaBadge) {
-      userDeltaBadge.textContent = rangeSeries.users.reduce(function (maxValue, value) {
-        return Math.max(maxValue, value);
-      }, 0) + " peak";
     if (healthLegend) {
       healthLegend.innerHTML = dimensions.map(function (item) {
         return '<li><span>' + escapeHtml(item.label) + '</span><strong>' + Math.round(item.value) + '%</strong></li>';
@@ -2063,6 +2033,27 @@
         return point[0].toFixed(1) + "," + point[1].toFixed(1);
       }).join(" "));
     }
+  }
+
+  function renderAnalyticsPanels(stats, events) {
+    let rangeEvents = getRangeEvents(events);
+    let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
+    let userSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.userId ? 1 : 0; });
+    let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
+    let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
+      return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
+    }, 0);
+
+    renderBarChart(userChartContainer, userSeries.labels, userSeries.values, userSeries.values.length - 1);
+    renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1);
+    renderLatencyChart(stats);
+    renderRatingSummary(rangeEvents);
+    renderEventBreakdown(rangeEvents);
+    renderAnalyticsSummary(rangeEvents, stats.latencyByRoute || {});
+
+    if (analyticsRangeLatency) analyticsRangeLatency.textContent = peakLatency + " ms";
+    if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " current bucket";
+    if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
   }
 
   function updateDashboardStats(stats, events) {
