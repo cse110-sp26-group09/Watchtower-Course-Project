@@ -2442,12 +2442,12 @@
     renderEventBreakdown(rangeEvents);
 
     if (analyticsRangeLatency) {
-      let routeNames = Object.keys(latencySummary || {});
+      let routeNames = Object.keys(stats.latencyByRoute || {});
       if (routeNames.length === 0) {
         analyticsRangeLatency.textContent = "0 ms";
       } else {
         let peakP95 = routeNames.reduce(function (runningPeak, routeName) {
-          let currentRoute = latencySummary[routeName] || {};
+          let currentRoute = stats.latencyByRoute[routeName] || {};
           return Math.max(runningPeak, Number(currentRoute.p95) || 0);
         }, 0);
         analyticsRangeLatency.textContent = peakP95 + " ms";

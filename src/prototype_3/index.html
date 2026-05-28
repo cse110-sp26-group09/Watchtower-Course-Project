@@ -235,55 +235,55 @@
                Three insight cards (errors/latency/traffic) each showing top-3 items.
                Clickable (bundle-clickable) to navigate to Issues or Analytics. -->
           <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
-            <article class="panel developer-insight-panel bundle-errors bundle-clickable" data-view="issues" data-scroll-target="issues-title" role="button" tabindex="0" aria-label="View issues">
+            <div class="panel developer-insight-panel bundle-errors bundle-clickable" data-view="issues" data-scroll-target="issues-title" tabindex="0" aria-label="View issues">
               <div class="bundle-summary-bar accent-errors">
                 <span class="bundle-icon-mark">&#9888;</span>
                 <div>
                   <p class="eyebrow">Current Issues</p>
-                  <h2 id="developer-home-insights-title">Top 3 issues</h2>
+                  <p class="bundle-title" id="developer-home-insights-title">Top 3 issues</p>
                   <p class="bundle-desc">Most urgent failures affecting active sessions.</p>
                 </div>
               </div>
               <ol class="developer-insight-list" id="developer-insight-issues">
                 <li><span>Waiting for issues</span><strong>0</strong></li>
               </ol>
-            </article>
+            </div>
 
-            <article class="panel developer-insight-panel bundle-latency bundle-clickable" data-view="analytics" data-scroll-target="latency-chart-title" role="button" tabindex="0" aria-label="View latency analytics">
+            <div class="panel developer-insight-panel bundle-latency bundle-clickable" data-view="analytics" data-scroll-target="latency-chart-title" tabindex="0" aria-label="View latency analytics">
               <div class="bundle-summary-bar accent-latency">
                 <span class="bundle-icon-mark">&#9201;</span>
                 <div>
                   <p class="eyebrow">Latency</p>
-                  <h2>High latency windows</h2>
+                  <p class="bundle-title">High latency windows</p>
                   <p class="bundle-desc">Routes with p95 latency above the watch threshold.</p>
                 </div>
               </div>
               <ol class="developer-insight-list" id="developer-insight-latency">
                 <li><span>Waiting for route telemetry</span><strong>0 ms</strong></li>
               </ol>
-            </article>
+            </div>
 
-            <article class="panel developer-insight-panel bundle-traffic bundle-clickable" data-view="analytics" data-scroll-target="user-chart-title" role="button" tabindex="0" aria-label="View traffic analytics">
+            <div class="panel developer-insight-panel bundle-traffic bundle-clickable" data-view="analytics" data-scroll-target="user-chart-title" tabindex="0" aria-label="View traffic analytics">
               <div class="bundle-summary-bar accent-traffic">
                 <span class="bundle-icon-mark">&#9652;</span>
                 <div>
                   <p class="eyebrow">Traffic</p>
-                  <h2>Peak traffic</h2>
+                  <p class="bundle-title">Peak traffic</p>
                   <p class="bundle-desc">Top request windows and load shifts.</p>
                 </div>
               </div>
               <ol class="developer-insight-list" id="developer-insight-traffic">
                 <li><span>Waiting for activity samples</span><strong>0/min</strong></li>
               </ol>
-            </article>
+            </div>
           </section>
 
           <!-- Developer home bottom row: two side-by-side panels.
                Left panel = Health radar + Overall score with breakdown.
                Right panel = Current Patch Notes showing deployed versions with error details. -->
           <div class="dev-home-bottom-row" data-dashboard-mode="developer" hidden>
-            <section class="panel developer-status-bar">
-              <div class="dev-status-col dev-status-radar" data-view="health" data-scroll-target="health-title" role="button" tabindex="0" aria-label="View full health details">
+            <div class="panel developer-status-bar">
+              <div class="dev-status-col dev-status-radar" data-view="health" data-scroll-target="health-title" tabindex="0" aria-label="View full health details">
                 <p class="eyebrow">System health</p>
                 <svg class="dev-mini-radar" id="dev-mini-radar" viewBox="0 0 200 200" role="img" aria-label="Health radar preview">
                   <g class="health-radar-grid" id="dev-mini-radar-grid"></g>
@@ -304,7 +304,7 @@
                   <li><span>Feedback</span><strong>0%</strong></li>
                 </ul>
               </div>
-            </section>
+            </div>
             <section class="panel dev-home-patches-panel">
               <div class="panel-header">
                 <div>
@@ -391,10 +391,10 @@
             </div>
           </div>
           <div class="developer-kpi-grid">
-            <article class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></article>
-            <article class="summary-chip"><p>Warning</p><strong id="dev-warning-count">0</strong></article>
-            <article class="summary-chip"><p>Info/Other</p><strong id="dev-info-count">0</strong></article>
-            <article class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></article>
+            <div class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></div>
+            <div class="summary-chip"><p>Warning</p><strong id="dev-warning-count">0</strong></div>
+            <div class="summary-chip"><p>Info/Other</p><strong id="dev-info-count">0</strong></div>
+            <div class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></div>
           </div>
           <div class="developer-issue-tools">
             <label class="field-row" for="developer-issue-search">
@@ -433,7 +433,7 @@
       <!-- ——— 3c. HEALTH VIEW ———
            Radar chart showing app health dimensions, service status stack, and incident feed. -->
       <section class="view" id="health-view" aria-labelledby="health-title" hidden>
-        <section class="health-summary">
+        <div class="health-summary">
           <div class="health-summary-head">
             <div>
               <p class="eyebrow">Production reliability</p>
@@ -464,7 +464,7 @@
               <polygon class="health-radar-shape" id="health-radar-shape" points=""></polygon>
             </svg>
           </div>
-        </section>
+        </div>
 
         <div class="health-grid">
           <section class="panel health-services-panel" aria-labelledby="health-services-title">
@@ -507,18 +507,18 @@
         </div>
 
         <section class="analytics-summary" aria-label="Analytics summary">
-          <article class="summary-chip">
+          <div class="summary-chip">
             <p>Range active users</p>
             <strong id="analytics-range-users">0</strong>
-          </article>
-          <article class="summary-chip">
+          </div>
+          <div class="summary-chip">
             <p>Range actions</p>
             <strong id="analytics-range-actions">0</strong>
-          </article>
-          <article class="summary-chip">
+          </div>
+          <div class="summary-chip">
             <p>Latency peak</p>
             <strong id="analytics-range-latency">0 ms</strong>
-          </article>
+          </div>
         </section>
 
         <div class="analytics-grid">
