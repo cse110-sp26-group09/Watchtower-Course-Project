@@ -132,7 +132,7 @@ a {
 
 .brand-mark {
   display: grid;
-  width: 34px;
+  width: 46px;
   height: 54px;
   flex: 0 0 auto;
   place-items: center;
@@ -1873,7 +1873,7 @@ body.text-compact {
   }
 
   .brand-mark {
-    width: 30px;
+    width: 40px;
     height: 48px;
   }
 
