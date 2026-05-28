@@ -1214,15 +1214,15 @@
       let statusClass = 'good';
 
       if (healthScores.score < 55) {
-        statusLabel = 'At risk';
-        statusClass = 'warning';
+        statusLabel = 'Critical';
+        statusClass = 'critical';
       } else if (healthScores.score < 75) {
         statusLabel = 'Watch';
         statusClass = 'warning';
       }
 
       healthStatusToken.textContent = statusLabel;
-      healthStatusToken.classList.remove('good', 'warning');
+      healthStatusToken.classList.remove('good', 'warning', 'critical');
       healthStatusToken.classList.add(statusClass);
     }
 
@@ -1424,6 +1424,31 @@
     };
   }
 
+  function buildBreakdownCounts(eventsInRange) {
+    let counts = {
+      performance: 0,
+      errors: 0,
+      feedback: 0,
+      clicks: 0,
+    };
+
+    (eventsInRange || []).forEach(function (eventRecord) {
+      let eventType = eventRecord && eventRecord.type ? String(eventRecord.type) : "";
+
+      if (eventType === "pageload" || eventType === "performance") {
+        counts.performance += 1;
+      } else if (eventType === "error") {
+        counts.errors += 1;
+      } else if (eventType === "feedback") {
+        counts.feedback += 1;
+      } else if (eventType === "click" || eventType === "custom" || eventType === "login") {
+        counts.clicks += 1;
+      }
+    });
+
+    return counts;
+  }
+
   function buildLatencySummaryFromEvents(events, rangeName) {
     let filteredEvents = getEventsInSelectedRange(events, rangeName);
     let routeBuckets = {};
@@ -1554,16 +1579,16 @@
 
     breakdownDonut.style.background =
       "conic-gradient(" +
-      "let(--teal) 0 " + performancePct + "%, " +
-      "let(--coral) " + performancePct + "% " + (performancePct + errorsPct) + "%, " +
-      "let(--amber) " + (performancePct + errorsPct) + "% " + (performancePct + errorsPct + feedbackPct) + "%, " +
-      "let(--blue) " + (performancePct + errorsPct + feedbackPct) + "% 100%)";
+      "var(--teal) 0 " + performancePct + "%, " +
+      "var(--coral) " + performancePct + "% " + (performancePct + errorsPct) + "%, " +
+      "var(--amber) " + (performancePct + errorsPct) + "% " + (performancePct + errorsPct + feedbackPct) + "%, " +
+      "var(--blue) " + (performancePct + errorsPct + feedbackPct) + "% 100%)";
 
     breakdownList.innerHTML =
-      '<li><span class="legend-dot teal"></span>Performance <strong>' + performancePct + "%</strong></li>" +
-      '<li><span class="legend-dot coral"></span>Errors <strong>' + errorsPct + "%</strong></li>" +
-      '<li><span class="legend-dot amber"></span>Feedback <strong>' + feedbackPct + "%</strong></li>" +
-      '<li><span class="legend-dot blue"></span>Clicks <strong>' + clicksPct + "%</strong></li>";
+      '<li><span class="legend-dot teal"></span><span class="breakdown-label">Performance</span><strong>' + performancePct + "%</strong></li>" +
+      '<li><span class="legend-dot coral"></span><span class="breakdown-label">Errors</span><strong>' + errorsPct + "%</strong></li>" +
+      '<li><span class="legend-dot amber"></span><span class="breakdown-label">Feedback</span><strong>' + feedbackPct + "%</strong></li>" +
+      '<li><span class="legend-dot blue"></span><span class="breakdown-label">Clicks</span><strong>' + clicksPct + "%</strong></li>";
   }
 
   function renderAnalyticsSummary(eventsInRange, latencySummary) {
@@ -1610,7 +1635,7 @@
       feedbackBreakdown: analytics.feedbackBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     });
     renderBreakdownPanel({
-      breakdownCounts: analytics.breakdownCounts || { performance: 0, errors: 0, feedback: 0, clicks: 0 },
+      breakdownCounts: buildBreakdownCounts(rangeEvents),
     });
     renderAnalyticsSummary(rangeEvents, rangeLatencySummary);
     renderDeveloperAnalyticsDiagnostics(rangeEvents, rangeLatencySummary);
