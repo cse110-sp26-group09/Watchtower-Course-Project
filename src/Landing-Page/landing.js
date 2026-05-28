@@ -3,6 +3,7 @@
 
   const overlay = document.querySelector(".modal-overlay");
   const snippetCode = document.getElementById("snippet-code");
+  const stickyCta = document.querySelector(".sticky-cta");
 
   /**
    * Sets the open state of the overlay.
@@ -32,6 +33,18 @@
    */
   function closeSnippet() {
     setOverlayOpen(false);
+  }
+
+  /**
+   * Shows the mobile sticky CTA after the hero is mostly out of view.
+   */
+  function updateStickyCta() {
+    if (!stickyCta) {
+      return;
+    }
+    const shouldShow = window.scrollY > window.innerHeight * 0.65;
+    stickyCta.classList.toggle("visible", shouldShow);
+    stickyCta.setAttribute("aria-hidden", shouldShow ? "false" : "true");
   }
 
   /**
@@ -147,4 +160,8 @@
       }
     });
   }
+
+  updateStickyCta();
+  window.addEventListener("scroll", updateStickyCta, { passive: true });
+  window.addEventListener("resize", updateStickyCta);
 })();
