@@ -105,6 +105,7 @@
 ===
 
 # Sprint 4
+
 - **Name:** Josh Victoria
 - **Date:** 05/26/2026
 - **Sprint #**: 4
@@ -114,7 +115,7 @@
 - **Description:** Used Gemini to generate a landing page based off of a wire frame then tweaked that inital page
 
 - **Name:** Hieu Le
-- **Date:** 5/26/27
+- **Date:** 05/26/26
 - **Sprint #:** 4
 - **Model:** What model and version of GenAI did you use (e.g. Codex 5.2 medium reasoning)
 - **LOC:** How many lines of code did it write
@@ -122,3 +123,12 @@
 - **Description:** Give a small description of what you asked GenAI to do and why it was it was needed.
 - **Prompt:** What prompt did you feed model
 
+
+- **Name:** Hemendra
+- **Date:** 05/27/26
+- **Sprint #:** Sprint 4
+- **Model:** OpenAI Codex
+- **LOC:** Approximately 2,000+ lines modified across Prototype 3 frontend/backend files
+- **Scale:** Modified src/prototype_3/app.js, src/prototype_3/index.html, src/prototype_3/style.css, src/prototype_3/server/server.js, and src/prototype_3/sdk/watchtower.js
+- **Description:** Asked GenAI to polish Prototype 3 and build out the Developer View for a PostHog-style analytics/observability platform. This was needed to make Developer View feel closer to DevTools/Datadog/Sentry/Segment debugger, with real event inspection, schema diagnostics, SDK health, query tools, feature flag debugging, identity resolution, performance/error monitoring, pipeline observability, governance panels, and CI fixes.
+- **Prompt:** Polish up the UI and features of prototype-3. Work on Prototype 3. Build a developer-focused analytics workspace that feels closer to Chrome DevTools, Datadog, Sentry, and Segment debugger than a traditional analytics dashboard. Prioritize observability, debugging, instrumentation trust, raw event inspection, schema validation, realtime diagnostics, and operational visibility. Implement live event stream, schema registry, session replay dev overlay, SDK diagnostics, query playground, feature flag debugger, identity resolution viewer, performance monitoring, error monitoring, pipeline observability, environment support, and data governance. Maintain existing code style and fix failing CI/lint issues.
