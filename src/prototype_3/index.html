@@ -235,7 +235,7 @@
                Three insight cards (errors/latency/traffic) each showing top-3 items.
                Clickable (bundle-clickable) to navigate to Issues or Analytics. -->
           <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
-            <div class="panel developer-insight-panel bundle-errors bundle-clickable" data-view="issues" data-scroll-target="issues-title" tabindex="0" aria-label="View issues">
+            <div class="panel developer-insight-panel bundle-errors bundle-clickable" data-view="issues" data-scroll-target="issues-title" tabindex="0" role="button" aria-label="View issues">
               <div class="bundle-summary-bar accent-errors">
                 <span class="bundle-icon-mark">&#9888;</span>
                 <div>
@@ -249,7 +249,7 @@
               </ol>
             </div>
 
-            <div class="panel developer-insight-panel bundle-latency bundle-clickable" data-view="analytics" data-scroll-target="latency-chart-title" tabindex="0" aria-label="View latency analytics">
+            <div class="panel developer-insight-panel bundle-latency bundle-clickable" data-view="analytics" data-scroll-target="latency-chart-title" tabindex="0" role="button" aria-label="View latency analytics">
               <div class="bundle-summary-bar accent-latency">
                 <span class="bundle-icon-mark">&#9201;</span>
                 <div>
@@ -263,7 +263,7 @@
               </ol>
             </div>
 
-            <div class="panel developer-insight-panel bundle-traffic bundle-clickable" data-view="analytics" data-scroll-target="user-chart-title" tabindex="0" aria-label="View traffic analytics">
+            <div class="panel developer-insight-panel bundle-traffic bundle-clickable" data-view="analytics" data-scroll-target="user-chart-title" tabindex="0" role="button" aria-label="View traffic analytics">
               <div class="bundle-summary-bar accent-traffic">
                 <span class="bundle-icon-mark">&#9652;</span>
                 <div>
@@ -283,7 +283,7 @@
                Right panel = Current Patch Notes showing deployed versions with error details. -->
           <div class="dev-home-bottom-row" data-dashboard-mode="developer" hidden>
             <div class="panel developer-status-bar">
-              <div class="dev-status-col dev-status-radar" data-view="health" data-scroll-target="health-title" tabindex="0" aria-label="View full health details">
+              <div class="dev-status-col dev-status-radar" data-view="health" data-scroll-target="health-title" tabindex="0" role="button" aria-label="View full health details">
                 <p class="eyebrow">System health</p>
                 <svg class="dev-mini-radar" id="dev-mini-radar" viewBox="0 0 200 200" role="img" aria-label="Health radar preview">
                   <g class="health-radar-grid" id="dev-mini-radar-grid"></g>
