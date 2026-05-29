@@ -281,6 +281,73 @@
     return new Intl.NumberFormat().format(Number(value) || 0);
   }
 
+  function getEventType(eventRecord) {
+    return String((eventRecord && eventRecord.type) || "").toLowerCase();
+  }
+
+  function getEventMessage(eventRecord, fallbackMessage) {
+    if (eventRecord && eventRecord.data && eventRecord.data.message) {
+      return String(eventRecord.data.message);
+    }
+    return fallbackMessage || "Unknown event";
+  }
+
+  function getEventDurationMs(eventRecord) {
+    if (!eventRecord || !eventRecord.data) return null;
+    let candidates = [
+      eventRecord.data.duration,
+      eventRecord.data.latency,
+      eventRecord.data.p95,
+      eventRecord.data.value
+    ];
+    for (let idx = 0; idx < candidates.length; idx += 1) {
+      let parsed = Number(candidates[idx]);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return null;
+  }
+
+  function isErrorLikeEvent(eventRecord) {
+    if (!eventRecord) return false;
+
+    let eventType = getEventType(eventRecord);
+    if (
+      eventType === "error" ||
+      eventType === "exception" ||
+      eventType === "fatal" ||
+      eventType.indexOf("error") !== -1
+    ) {
+      return true;
+    }
+
+    let severityText = String(
+      (eventRecord.data && (eventRecord.data.severity || eventRecord.data.level || eventRecord.data.status)) || ""
+    ).toLowerCase();
+    if (
+      severityText === "error" ||
+      severityText === "critical" ||
+      severityText === "fatal" ||
+      severityText === "warning"
+    ) {
+      return true;
+    }
+
+    let messageText = String((eventRecord.data && eventRecord.data.message) || "").toLowerCase();
+    return /(error|exception|failed|failure|timeout|reject|cannot|unhandled)/.test(messageText);
+  }
+
+  function deriveIssueEvents(stats, activityEvents) {
+    let recentErrors = Array.isArray(stats && stats.recentErrors) ? stats.recentErrors.slice() : [];
+    if (recentErrors.length > 0) {
+      return recentErrors.sort(function (leftEvent, rightEvent) {
+        return (getValidTimestamp(rightEvent && rightEvent.timestamp) || 0) - (getValidTimestamp(leftEvent && leftEvent.timestamp) || 0);
+      });
+    }
+    return (activityEvents || []).filter(isErrorLikeEvent).sort(function (leftEvent, rightEvent) {
+      return (getValidTimestamp(rightEvent && rightEvent.timestamp) || 0) - (getValidTimestamp(leftEvent && leftEvent.timestamp) || 0);
+    });
+  }
+
   function calculatePercentile(values, percentile) {
     if (!Array.isArray(values) || values.length === 0) return 0;
     let sortedValues = values.slice().sort(function (leftValue, rightValue) { return leftValue - rightValue; });
@@ -1556,8 +1623,10 @@
   }
 
   function getFilteredIssues() {
-    let stats = uiState.latestStats || {};
-    return (stats.recentErrors || []).filter(passesIssueFilters).sort(compareIssues);
+    let sourceIssues = Array.isArray(uiState.latestDerivedIssues) && uiState.latestDerivedIssues.length > 0
+      ? uiState.latestDerivedIssues
+      : ((uiState.latestStats && uiState.latestStats.recentErrors) || []);
+    return sourceIssues.filter(passesIssueFilters).sort(compareIssues);
   }
 
   function quoteCsvCell(value) {
@@ -1660,7 +1729,10 @@
   function deriveFeatureCounts(activityEvents) {
     let counts = {};
     (activityEvents || []).forEach(function (e) {
-      let fName = e.type === "click" ? (e.data && (e.data.text || e.data.target)) : (e.type === "custom" ? e.data.name : "");
+      let eventType = getEventType(e);
+      let fName = eventType === "click"
+        ? (e.data && (e.data.text || e.data.target))
+        : (eventType === "custom" ? (e.data && e.data.name) : "");
       if (fName) counts[fName] = (counts[fName] || 0) + 1;
     });
     return Object.keys(counts).map(function (k) { return { name: k, count: counts[k] }; }).sort((a, b) => b.count - a.count);
@@ -1706,33 +1778,107 @@
   }
 
   function renderDeveloperInsights(stats, activityEvents) {
+    let errors = deriveIssueEvents(stats, activityEvents).slice(0, 12);
+    let latencySummary = buildLatencySummaryFromEvents(activityEvents || [], uiState.selectedRange);
+    let routeNames = Object.keys(latencySummary).sort(function (leftRoute, rightRoute) {
+      return ((latencySummary[rightRoute] || {}).p95 || 0) - ((latencySummary[leftRoute] || {}).p95 || 0);
+    });
+
+    if (developerInsightIssues) {
+      let signatureCounts = {};
+      errors.forEach(function (eventRecord) {
+        let msg = getEventMessage(eventRecord, "Unknown error");
+        signatureCounts[msg] = (signatureCounts[msg] || 0) + 1;
+      });
+      let rankedSignatures = Object.keys(signatureCounts).sort(function (leftMsg, rightMsg) {
+        return signatureCounts[rightMsg] - signatureCounts[leftMsg];
+      }).slice(0, 3);
+
+      if (rankedSignatures.length === 0) {
+        let aggregateCount = Number(stats.__computedTotalErrors || stats.totalErrors || 0);
+        developerInsightIssues.innerHTML = aggregateCount > 0
+          ? '<li class="severity-high"><span class="rank">#1</span><span>Error signatures pending sync</span><strong>' + String(aggregateCount) + "</strong></li>"
+          : '<li class="severity-medium"><span class="rank">#1</span><span>Waiting for issues</span><strong>0</strong></li>';
+      } else {
+        developerInsightIssues.innerHTML = rankedSignatures.map(function (message, index) {
+          let severityClass = index === 0 ? "severity-high" : "severity-medium";
+          return '<li class="' + severityClass + '"><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(message) + "</span><strong>" + String(signatureCounts[message]) + "</strong></li>";
+        }).join("");
+      }
+    }
+
+    if (developerInsightLatency) {
+      if (routeNames.length === 0) {
+        developerInsightLatency.innerHTML = '<li><span class="rank">#1</span><span>Waiting for route telemetry</span><strong>0 ms</strong></li>';
+      } else {
+        developerInsightLatency.innerHTML = routeNames.slice(0, 3).map(function (routeName, index) {
+          let routeStats = latencySummary[routeName] || {};
+          let routeP95 = Number(routeStats.p95 || 0);
+          let severityClass = routeP95 >= 1000 ? "severity-high" : (routeP95 >= 450 ? "severity-medium" : "");
+          return '<li class="' + severityClass + '"><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(routeName) + "</span><strong>" + String(routeP95) + " ms</strong></li>";
+        }).join("");
+      }
+    }
+
+    if (developerInsightTraffic) {
+      let hourCounts = {};
+      (activityEvents || []).forEach(function (eventRecord) {
+        let ts = getValidTimestamp(eventRecord && eventRecord.timestamp);
+        if (!ts) return;
+        let hourKey = new Date(ts).toISOString().slice(0, 13);
+        hourCounts[hourKey] = (hourCounts[hourKey] || 0) + 1;
+      });
+      let topHours = Object.keys(hourCounts).sort(function (leftHour, rightHour) {
+        return hourCounts[rightHour] - hourCounts[leftHour];
+      }).slice(0, 3);
+
+      if (topHours.length === 0) {
+        let aggregateEvents = Number(stats.totalEvents || 0);
+        developerInsightTraffic.innerHTML = aggregateEvents > 0
+          ? '<li><span class="rank">#1</span><span>Event windows pending sync</span><strong>' + String(aggregateEvents) + " events</strong></li>"
+          : '<li><span class="rank">#1</span><span>Waiting for activity samples</span><strong>0/min</strong></li>';
+      } else {
+        developerInsightTraffic.innerHTML = topHours.map(function (hourKey, index) {
+          let localHour = new Date(hourKey + ":00:00Z").toLocaleTimeString([], { hour: "numeric" });
+          return '<li><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(localHour) + "</span><strong>" + String(hourCounts[hourKey]) + "/min</strong></li>";
+        }).join("");
+      }
+    }
+
     renderDeveloperHomeDiagnostics(stats);
   }
 
   function renderActivityFeed(activityEvents) {
     if (!activityFeedContainer) return;
     activityFeedContainer.innerHTML = (activityEvents || []).slice(0, 8).map(function (e) {
-      let msg = e.type === "error" ? e.data.message : (e.type === "pageload" ? e.route + " rendered" : e.type);
+      let eventType = getEventType(e);
+      let msg = eventType === "error"
+        ? getEventMessage(e, "Unknown error")
+        : (eventType === "pageload" ? (e.route || "/") + " rendered" : eventType);
       return "<li><span class=\"timeline-time\">" + formatClockTime(e.timestamp) + "</span><span class=\"timeline-copy\">" + escapeHtml(msg) + "</span></li>";
     }).join("");
   }
 
   function renderIssuesActivityFeed(stats, activityEvents) {
     if (!issuesActivityFeedContainer) return;
-    issuesActivityFeedContainer.innerHTML = (stats.recentErrors || []).slice(0, 6).map(function (e) {
-      return "<li><span class=\"timeline-time\">" + formatClockTime(e.timestamp) + "</span><span class=\"timeline-copy\">" + escapeHtml(e.data.message || "Error thrown") + "</span></li>";
+    let issueEvents = deriveIssueEvents(stats, activityEvents).slice(0, 6);
+    issuesActivityFeedContainer.innerHTML = issueEvents.map(function (e) {
+      return "<li><span class=\"timeline-time\">" + formatClockTime(e.timestamp) + "</span><span class=\"timeline-copy\">" + escapeHtml(getEventMessage(e, "Error thrown")) + "</span></li>";
     }).join("");
   }
 
   function renderBarChart(chartContainer, labels, values, highlightedIndex) {
     if (!chartContainer) return;
-    let max = Math.max.apply(null, values.concat([1]));
+    let baselineHeight = 10;
+    let perUnitGrowth = 10;
+    let maxBarHeight = 92;
     chartContainer.style.setProperty("--bar-count", String(Math.max(labels.length, 1)));
-    chartContainer.classList.toggle("is-empty", values.every(function (value) { return value === 0; }));
+    chartContainer.classList.toggle("is-empty", values.every(function (value) { return Number(value || 0) === 0; }));
     chartContainer.innerHTML = labels.map(function (l, idx) {
-      let pct = Math.round((values[idx] / max) * 100);
+      let value = Number(values[idx] || 0);
+      let pct = Math.min(maxBarHeight, baselineHeight + (Math.max(value, 0) * perUnitGrowth));
       let className = "bar" + (idx === highlightedIndex ? " highlight" : "") + (labels.length > 8 ? " dense" : "");
-      return '<div class="' + className + '" style="--bar-height: ' + Math.max(pct, 8) + '%" data-value="' + escapeHtml(values[idx]) + '">' +
+      return '<div class="' + className + '" style="--bar-height: ' + pct + '%" data-value="' + escapeHtml(String(value)) + '">' +
         '<i class="bar-fill" aria-hidden="true"></i><span>' + escapeHtml(l) + '</span></div>';
     }).join("");
   }
@@ -1758,7 +1904,7 @@
     let cutoff = getRangeCutoff();
     return (events || []).filter(function (eventRecord) {
       let ts = getValidTimestamp(eventRecord.timestamp);
-      return ts === null || ts >= cutoff;
+      return ts !== null && ts >= cutoff;
     });
   }
 
@@ -1780,6 +1926,30 @@
     });
 
     return { labels: labels, values: buckets };
+  }
+
+  function buildUniqueIdentitySeries(events, bucketCount, identityPicker) {
+    let bucketSets = Array.from({ length: bucketCount }, function () { return new Set(); });
+    let labels = Array.from({ length: bucketCount }, function (_value, idx) {
+      if (uiState.selectedRange === "24h") return idx === bucketCount - 1 ? "Now" : "-" + (bucketCount - idx - 1) * 3 + "h";
+      if (uiState.selectedRange === "7d") return idx === bucketCount - 1 ? "Today" : "-" + (bucketCount - idx - 1) + "d";
+      return idx === bucketCount - 1 ? "This wk" : "-" + (bucketCount - idx - 1) + "w";
+    });
+    let cutoff = getRangeCutoff();
+    let span = Math.max(Date.now() - cutoff, 1);
+
+    (events || []).forEach(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord.timestamp);
+      if (ts === null || ts < cutoff) return;
+      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+      let identity = identityPicker(eventRecord);
+      if (identity) bucketSets[bucketIndex].add(String(identity));
+    });
+
+    return {
+      labels: labels,
+      values: bucketSets.map(function (set) { return set.size; })
+    };
   }
 
   function getEventRating(eventRecord) {
@@ -1820,7 +1990,7 @@
     };
 
     (eventsInRange || []).forEach(function (eventRecord) {
-      let eventType = eventRecord && eventRecord.type ? String(eventRecord.type) : "";
+      let eventType = getEventType(eventRecord);
 
       if (eventType === "pageload" || eventType === "performance") {
         counts.performance += 1;
@@ -1841,13 +2011,15 @@
     let routeBuckets = {};
 
     filteredEvents.forEach(function (eventRecord) {
-      if (eventRecord.type !== "pageload") return;
-      if (!eventRecord.data || typeof eventRecord.data.duration !== "number") return;
+      let eventType = getEventType(eventRecord);
+      if (eventType !== "pageload" && eventType !== "performance" && eventType !== "custom") return;
+      let duration = getEventDurationMs(eventRecord);
+      if (duration === null) return;
 
       let routeName = eventRecord.route || "/";
       if (!routeBuckets[routeName]) routeBuckets[routeName] = [];
       routeBuckets[routeName].push({
-        duration: Number(eventRecord.data.duration) || 0,
+        duration: duration,
         timestamp: eventRecord.timestamp,
       });
     });
@@ -1867,17 +2039,18 @@
   function renderEventBreakdown(events) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
-      { key: "Performance", className: "teal", count: 0 },
-      { key: "Errors", className: "coral", count: 0 },
-      { key: "Feedback", className: "amber", count: 0 },
-      { key: "Clicks", className: "blue", count: 0 }
+      { key: "Performance", className: "teal", detail: "Pageload + web vitals", count: 0 },
+      { key: "Errors", className: "coral", detail: "Runtime + API failures", count: 0 },
+      { key: "Feedback", className: "amber", detail: "Ratings + comments", count: 0 },
+      { key: "Clicks", className: "blue", detail: "Click + custom actions", count: 0 }
     ];
 
     (events || []).forEach(function (eventRecord) {
-      if (eventRecord.type === "pageload" || eventRecord.type === "performance") groups[0].count += 1;
-      else if (eventRecord.type === "error") groups[1].count += 1;
-      else if (eventRecord.type === "feedback") groups[2].count += 1;
-      else if (eventRecord.type === "click" || eventRecord.type === "custom") groups[3].count += 1;
+      let eventType = getEventType(eventRecord);
+      if (eventType === "pageload" || eventType === "performance") groups[0].count += 1;
+      else if (isErrorLikeEvent(eventRecord)) groups[1].count += 1;
+      else if (eventType === "feedback") groups[2].count += 1;
+      else if (eventType === "click" || eventType === "custom") groups[3].count += 1;
     });
 
     let total = groups.reduce(function (sum, group) { return sum + group.count; }, 0) || 1;
@@ -1890,7 +2063,11 @@
     breakdownDonut.style.background = "conic-gradient(" + stops.join(", ") + ")";
     breakdownList.innerHTML = groups.map(function (group) {
       let pct = Math.round((group.count / total) * 100);
-      return '<li><span><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong></li>';
+      return '<li class="breakdown-item ' + group.className + '">' +
+        '<span class="breakdown-main"><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span>' +
+        '<strong>' + pct + '%</strong>' +
+        '<small class="breakdown-detail">' + group.detail + '</small>' +
+        '</li>';
     }).join("");
   }
 
@@ -1934,14 +2111,16 @@
     if (analyticsRangeUsers) {
       let usersSet = new Set();
       eventsInRange.forEach(function (eventRecord) {
-        if (eventRecord.sessionId) usersSet.add(eventRecord.sessionId);
+        let identity = eventRecord.userId || eventRecord.sessionId || (eventRecord.data && eventRecord.data.userId) || (eventRecord.data && eventRecord.data.sessionId);
+        if (identity) usersSet.add(identity);
       });
       analyticsRangeUsers.textContent = String(usersSet.size);
     }
 
     if (analyticsRangeActions) {
       let actions = eventsInRange.filter(function (eventRecord) {
-        return eventRecord.type === "click" || eventRecord.type === "custom" || eventRecord.type === "feedback";
+        let eventType = getEventType(eventRecord);
+        return eventType === "click" || eventType === "custom" || eventType === "feedback";
       }).length;
       analyticsRangeActions.textContent = String(actions);
     }
@@ -2030,7 +2209,9 @@
   function renderAnalyticsPanels(stats, events) {
     let rangeEvents = getRangeEvents(events);
     let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
-    let userSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.userId ? 1 : 0; });
+    let userSeries = buildUniqueIdentitySeries(rangeEvents, bucketCount, function (eventRecord) {
+      return eventRecord.userId || eventRecord.sessionId || null;
+    });
     let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
     let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
       return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
@@ -2050,17 +2231,38 @@
 
   function updateDashboardStats(stats, events) {
     let resolved = Array.isArray(events) && events.length > 0 ? events : (stats.recentActivity || []);
+    let derivedIssues = deriveIssueEvents(stats, resolved);
     uiState.latestStats = stats;
     uiState.latestEvents = resolved;
+    uiState.latestDerivedIssues = derivedIssues;
 
-    if (activeUsersValue) activeUsersValue.textContent = String(stats.activeUsers || 0);
-    if (totalEventsValue) totalEventsValue.textContent = String(stats.totalEvents || 0);
-    if (totalErrorsValue) totalErrorsValue.textContent = String(stats.totalErrors || 0);
+    let recentWindowStart = Date.now() - (5 * 60 * 1000);
+    let recentEvents = resolved.filter(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord && eventRecord.timestamp);
+      return ts !== null && ts >= recentWindowStart;
+    });
+    let recentSessions = new Set();
+    recentEvents.forEach(function (eventRecord) {
+      let sessionKey = eventRecord.sessionId || (eventRecord.data && eventRecord.data.sessionId) || (eventRecord.context && eventRecord.context.sessionId);
+      if (sessionKey) recentSessions.add(String(sessionKey));
+    });
+
+    let computedActiveUsers = recentSessions.size > 0 ? recentSessions.size : Number(stats.activeUsers || 0);
+    let computedTotalEvents = recentEvents.length > 0 ? recentEvents.length : Number(stats.totalEvents || 0);
+    let computedTotalErrors = recentEvents.filter(function (eventRecord) {
+      return isErrorLikeEvent(eventRecord);
+    }).length;
+    if (computedTotalErrors === 0) computedTotalErrors = Number(stats.totalErrors || 0);
+    stats.__computedTotalErrors = computedTotalErrors;
+
+    if (activeUsersValue) activeUsersValue.textContent = String(computedActiveUsers);
+    if (totalEventsValue) totalEventsValue.textContent = String(computedTotalEvents);
+    if (totalErrorsValue) totalErrorsValue.textContent = String(computedTotalErrors);
     if (versionCountValue) versionCountValue.textContent = String(Object.keys(stats.errorsByVersion || {}).length);
-    if (activeIssueCountLabel) activeIssueCountLabel.textContent = (stats.totalErrors || 0) + " active " + ((stats.totalErrors || 0) === 1 ? "issue" : "issues");
-    if (alertPillButton) alertPillButton.classList.toggle("quiet", (stats.totalErrors || 0) === 0);
+    if (activeIssueCountLabel) activeIssueCountLabel.textContent = computedTotalErrors + " active " + (computedTotalErrors === 1 ? "issue" : "issues");
+    if (alertPillButton) alertPillButton.classList.toggle("quiet", computedTotalErrors === 0);
 
-    renderIssueList(stats.recentErrors || []);
+    renderIssueList(derivedIssues);
     renderServiceStatus(stats);
     renderFeatureHotspots(resolved);
     renderManagerSummary(stats, resolved);

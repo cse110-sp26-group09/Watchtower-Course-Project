@@ -302,6 +302,7 @@ a {
 }
 
 .nav-button {
+  width: 100%;
   min-height: 76px;
   gap: 7px;
   padding: 10px 6px;
@@ -331,6 +332,10 @@ a {
 
 .nav-button.active {
   box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.nav-footer .nav-button {
+  min-height: 76px;
 }
 
 .kpi-overview {
@@ -642,6 +647,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   }
 
   .nav-footer {
+    display: grid;
     margin-top: auto;
     padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1945,14 +1951,63 @@ body.dashboard-mode-developer .summary-metrics {
 
 .breakdown-list li {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main percent"
+    "detail percent";
+  align-items: start;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-height: 34px;
+}
+
+.breakdown-item {
+  padding: 4px 0;
+}
+
+.breakdown-main {
+  grid-area: main;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
 }
 
 .breakdown-label {
   white-space: nowrap;
+  font-weight: 700;
+}
+
+.breakdown-detail {
+  grid-area: detail;
+  margin-left: 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.breakdown-list li > strong {
+  grid-area: percent;
+  align-self: center;
+}
+
+.breakdown-item.teal .breakdown-label,
+.breakdown-item.teal strong {
+  color: var(--teal);
+}
+
+.breakdown-item.coral .breakdown-label,
+.breakdown-item.coral strong {
+  color: var(--coral);
+}
+
+.breakdown-item.amber .breakdown-label,
+.breakdown-item.amber strong {
+  color: var(--amber);
+}
+
+.breakdown-item.blue .breakdown-label,
+.breakdown-item.blue strong {
+  color: var(--blue);
 }
 
 .settings-layout {

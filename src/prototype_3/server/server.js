@@ -917,10 +917,38 @@ const server = http.createServer(function (request, response) {
   let file = pathname === "/" ? "/index.html" : pathname;
   let fPath = path.join(root, file);
 
+  function streamStaticFile(targetPath) {
+    response.writeHead(200, { "Content-Type": MIME[path.extname(targetPath)] || "application/octet-stream" });
+    fs.createReadStream(targetPath).pipe(response);
+  }
+
   fs.stat(fPath, (err, stats) => {
-    if (err || !stats.isFile()) { response.writeHead(404); response.end("Not found"); return; }
-    response.writeHead(200, { "Content-Type": MIME[path.extname(fPath)] || "application/octet-stream" });
-    fs.createReadStream(fPath).pipe(response);
+    if (err) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      let indexPath = path.join(fPath, "index.html");
+      fs.stat(indexPath, (indexErr, indexStats) => {
+        if (indexErr || !indexStats.isFile()) {
+          response.writeHead(404);
+          response.end("Not found");
+          return;
+        }
+        streamStaticFile(indexPath);
+      });
+      return;
+    }
+
+    if (!stats.isFile()) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+
+    streamStaticFile(fPath);
   });
 });
 
