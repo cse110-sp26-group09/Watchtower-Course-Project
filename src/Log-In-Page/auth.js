@@ -99,6 +99,7 @@
   // Only runs if #login-form exists (login.html)
   // ═══════════════════════════════════════════════════════════
   const loginForm = document.getElementById('login-form');
+  const googleLoginButton = document.getElementById('google-login-btn');
 
   if (loginForm) {
     // Blur validators
@@ -141,6 +142,13 @@
 
       // TODO: Replace with fetch() to your auth endpoint
       showBanner('info', 'Backend not connected yet. Validation passed — ready for integration.');
+    });
+  }
+
+  if (googleLoginButton) {
+    googleLoginButton.addEventListener('click', () => {
+      hideBanner();
+      showBanner('info', 'Google sign-in is a prototype action for now.');
     });
   }
 
