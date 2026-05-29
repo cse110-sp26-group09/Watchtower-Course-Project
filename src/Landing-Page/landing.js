@@ -111,7 +111,7 @@
    * Redirects the user to the login page.
    */
   function goLogin() {
-    window.location.href = "../Log-In-Page/login.html";
+    window.location.href = "/login";
   }
 
   // Global Event Delegation

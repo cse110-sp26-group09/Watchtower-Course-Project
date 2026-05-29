@@ -34,7 +34,7 @@
       }
 
       window.setTimeout(function () {
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }, 450);
     });
   }
