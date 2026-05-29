@@ -277,6 +277,7 @@ a {
 }
 
 .nav-button {
+  width: 100%;
   min-height: 58px;
   gap: 4px;
   padding: 8px 4px;
@@ -308,6 +309,10 @@ a {
 
 .nav-button.active {
   box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.nav-footer .nav-button {
+  min-height: 76px;
 }
 
 .kpi-overview {
@@ -677,6 +682,15 @@ body.dark-mode .health-legend strong {
   color: #f2f7fd;
 }
 
+body.dark-mode .health-status-key {
+  background: #0f1923;
+  border-color: #2c3f52;
+}
+
+body.dark-mode .health-status-key p {
+  color: #ccdaea;
+}
+
 body.dark-mode .health-summary-head strong {
   color: #d5e4f3;
 }
@@ -748,6 +762,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   }
 
   .nav-footer {
+    display: grid;
     margin-top: auto;
     padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -907,12 +922,19 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 
 .health-radar-card {
   display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(360px, 1.3fr);
+  align-items: start;
   gap: 14px;
+}
+
+.health-score-column {
+  display: grid;
+  gap: 12px;
 }
 
 .health-radar {
   width: 100%;
-  min-height: 320px;
+  min-height: 300px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: linear-gradient(160deg, rgba(15, 139, 141, 0.07), transparent 55%), var(--surface-muted);
@@ -945,11 +967,12 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 
 .health-legend {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
+  align-content: start;
 }
 
 .health-legend li {
@@ -970,6 +993,50 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 .health-legend strong {
   color: var(--ink);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.health-status-key {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.health-status-key h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.health-status-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.health-status-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.status-token.critical {
+  background: rgba(212, 93, 76, 0.2);
+  color: #8f2f24;
+}
+
+.health-status-key p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.45;
 }
 
 .health-grid {
@@ -2492,18 +2559,23 @@ code {
 
 .donut-wrap {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(170px, 0.9fr) minmax(280px, 1.1fr);
+  gap: 20px;
   align-items: center;
+  justify-content: start;
+  width: 100%;
+  max-width: 760px;
+  margin: 26px auto 0;
 }
 
 .donut {
-  width: 150px;
-  height: 150px;
+  width: 170px;
+  height: 170px;
+  justify-self: center;
   border-radius: 50%;
   background: conic-gradient(var(--teal) 0 48%, var(--coral) 48% 67%, var(--amber) 67% 79%, var(--blue) 79% 100%);
-  -webkit-mask: radial-gradient(circle at center, transparent 0 45px, #000 46px);
-  mask: radial-gradient(circle at center, transparent 0 45px, #000 46px);
+  -webkit-mask: radial-gradient(circle at center, transparent 0 50px, #000 51px);
+  mask: radial-gradient(circle at center, transparent 0 50px, #000 51px);
 }
 
 .breakdown-list {
@@ -2514,10 +2586,69 @@ code {
   list-style: none;
   color: var(--ink-soft);
   font-size: 14px;
+  width: min(100%, 380px);
+  justify-self: center;
 }
 
 .breakdown-list li {
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main percent"
+    "detail percent";
+  align-items: start;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-height: 34px;
+}
+
+.breakdown-item {
+  padding: 4px 0;
+}
+
+.breakdown-main {
+  grid-area: main;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breakdown-label {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.breakdown-detail {
+  grid-area: detail;
+  margin-left: 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.breakdown-list li > strong {
+  grid-area: percent;
+  align-self: center;
+}
+
+.breakdown-item.teal .breakdown-label,
+.breakdown-item.teal strong {
+  color: var(--teal);
+}
+
+.breakdown-item.coral .breakdown-label,
+.breakdown-item.coral strong {
+  color: var(--coral);
+}
+
+.breakdown-item.amber .breakdown-label,
+.breakdown-item.amber strong {
+  color: var(--amber);
+}
+
+.breakdown-item.blue .breakdown-label,
+.breakdown-item.blue strong {
+  color: var(--blue);
 }
 
 .settings-layout {
@@ -2757,6 +2888,10 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .health-radar-card {
+    grid-template-columns: 1fr;
+  }
+
   .home-grid,
   .settings-layout,
   .health-grid,
@@ -2889,6 +3024,10 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .health-radar-card {
+    grid-template-columns: 1fr;
+  }
+
   .health-radar {
     min-height: 260px;
   }
@@ -2909,6 +3048,10 @@ code {
   .metadata-grid,
   .donut-wrap {
     grid-template-columns: 1fr;
+  }
+
+  .donut-wrap {
+    width: 100%;
   }
 
   .donut {
