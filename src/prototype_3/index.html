@@ -628,10 +628,26 @@
             <div class="donut-wrap" role="img" aria-label="Event breakdown chart">
               <div class="donut" id="breakdown-donut" aria-hidden="true"></div>
               <ul class="breakdown-list" id="breakdown-list">
-                <li><span class="legend-dot teal"></span>Performance <strong>0%</strong></li>
-                <li><span class="legend-dot coral"></span>Errors <strong>0%</strong></li>
-                <li><span class="legend-dot amber"></span>Feedback <strong>0%</strong></li>
-                <li><span class="legend-dot blue"></span>Clicks <strong>0%</strong></li>
+                <li class="breakdown-item teal">
+                  <span class="breakdown-main"><span class="legend-dot teal"></span><span class="breakdown-label">Performance</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Pageload + web vitals</small>
+                </li>
+                <li class="breakdown-item coral">
+                  <span class="breakdown-main"><span class="legend-dot coral"></span><span class="breakdown-label">Errors</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Runtime + API failures</small>
+                </li>
+                <li class="breakdown-item amber">
+                  <span class="breakdown-main"><span class="legend-dot amber"></span><span class="breakdown-label">Feedback</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Ratings + comments</small>
+                </li>
+                <li class="breakdown-item blue">
+                  <span class="breakdown-main"><span class="legend-dot blue"></span><span class="breakdown-label">Clicks</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Click + custom actions</small>
+                </li>
               </ul>
             </div>
           </section>
