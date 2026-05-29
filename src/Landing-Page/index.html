@@ -19,6 +19,12 @@
       </a>
     </div>
 
+    <nav class="landing-nav" aria-label="Landing navigation">
+      <a href="#how-it-works">How it works</a>
+      <a href="#capabilities">Features</a>
+      <a href="#team">Team</a>
+    </nav>
+
     <div class="topbar-actions landing-topbar-actions">
       <button class="primary-button landing-cta primary-cta" type="button" data-action="go-login">Get Started</button>
     </div>
@@ -28,81 +34,152 @@
     <section class="landing-section hero" aria-label="Hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1>One dashboard for errors, performance, and user feedback</h1>
+          <p class="eyebrow">Error tracking, performance, and feedback</p>
+          <h1>WatchTower</h1>
+          <p class="hero-subtitle">One dashboard for understanding what broke, who felt it, and what changed right before it happened.</p>
           <p class="lead">
-            WatchTower unifies exceptions, slowdowns, and real user reports so you can pinpoint issues faster and ship with confidence.
+            WatchTower connects browser errors, slowdowns, feedback, and release context so small teams can debug faster without stitching together four different tools.
           </p>
           <div class="hero-actions">
             <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
+            <a class="ghost-button dashboard-demo-link" href="../prototype_1/index.html">View dashboard demo</a>
             <button class="ghost-button tertiary-cta" type="button" data-action="open-snippet">View install snippet</button>
           </div>
-          <section class="panel team-screenshot" aria-label="Meet the team">
-            <h2 class="team-screenshot-title">Meet the team</h2>
-            <img class="team-screenshot-image" src="assets/team-screenshot.png" alt="WatchTower team" loading="lazy" decoding="async">
-          </section>
+          <div class="signal-strip" aria-label="WatchTower signal types">
+            <span>Errors</span>
+            <span>Latency</span>
+            <span>Feedback</span>
+            <span>Deploys</span>
+          </div>
         </div>
 
         <section class="hero-visual" aria-label="Dashboard preview">
-          <div class="panel hero-panel">
-            <div class="hero-panel-header">
-              <span class="eyebrow">Project</span>
-              <div class="project-selector" role="listbox" aria-label="Project selector">
-                <span class="project-dot" aria-hidden="true"></span>
-                <span>web-storefront</span>
-                <span class="project-chevron" aria-hidden="true">▾</span>
-              </div>
+          <div class="product-preview" aria-label="WatchTower dashboard mockup">
+            <div class="preview-sidebar" aria-hidden="true">
+              <span class="preview-logo-dot"></span>
+              <span class="preview-nav active"></span>
+              <span class="preview-nav"></span>
+              <span class="preview-nav"></span>
+              <span class="preview-nav"></span>
             </div>
 
-            <div class="stacked-panels" role="group" aria-label="Three stacked panels">
-              <section class="stack-card" aria-label="Error feed">
-                <header>
-                  <span class="stack-title">Error feed</span>
-                  <span class="stack-badge badge-coral">2 spikes</span>
-                </header>
-                <ol class="stack-list">
-                  <li><span class="pill pill-coral">TypeError</span><span class="stack-row">Cannot read properties of undefined</span></li>
-                  <li><span class="pill pill-amber">Network</span><span class="stack-row">POST /checkout 502</span></li>
-                  <li><span class="pill pill-muted">Info</span><span class="stack-row">Errors grouped by signature</span></li>
-                </ol>
-              </section>
-
-              <section class="stack-card" aria-label="Performance timeline">
-                <header>
-                  <span class="stack-title">Performance timeline</span>
-                  <span class="stack-badge badge-teal">p95 ↑</span>
-                </header>
-                <div class="mini-timeline" aria-hidden="true">
-                  <span style="height: 40%"></span>
-                  <span style="height: 55%"></span>
-                  <span style="height: 72%"></span>
-                  <span style="height: 60%"></span>
-                  <span style="height: 84%"></span>
-                  <span style="height: 58%"></span>
-                  <span style="height: 66%"></span>
-                  <span style="height: 48%"></span>
+            <div class="preview-main">
+              <div class="preview-topbar">
+                <div>
+                  <span class="eyebrow">Realtime operations</span>
+                  <h2>Dashboard</h2>
                 </div>
-                <p class="stack-hint">Correlate slowdowns with routes, resources, and releases.</p>
-              </section>
+                <span class="live-pill-preview"><span></span>Live</span>
+              </div>
 
-              <section class="stack-card" aria-label="Feedback inbox">
-                <header>
-                  <span class="stack-title">Feedback inbox</span>
-                  <span class="stack-badge badge-blue">3 new</span>
-                </header>
-                <ul class="stack-list compact">
-                  <li><span class="pill pill-blue">Checkout</span><span class="stack-row">“Payment button froze”</span></li>
-                  <li><span class="pill pill-blue">Search</span><span class="stack-row">“Results take forever”</span></li>
-                  <li><span class="pill pill-muted">Session</span><span class="stack-row">Context auto-attached</span></li>
-                </ul>
-              </section>
-            </div>
+              <div class="preview-metrics" aria-label="Dashboard metrics">
+                <div>
+                  <span>Active users</span>
+                  <strong>128</strong>
+                  <small>Current sessions</small>
+                </div>
+                <div>
+                  <span>Events ingested</span>
+                  <strong>2.4k</strong>
+                  <small>Stable intake</small>
+                </div>
+                <div class="warning">
+                  <span>Open errors</span>
+                  <strong>7</strong>
+                  <small>Needs review</small>
+                </div>
+                <div>
+                  <span>Deploys</span>
+                  <strong>4</strong>
+                  <small>Versions seen</small>
+                </div>
+              </div>
 
-            <div class="correlation-highlight" role="region" aria-label="Correlation highlight">
-              <span class="highlight-chip"><span class="highlight-dot" aria-hidden="true"></span>Deploy 1.8.4 → error spike + p95 regression</span>
-              <span class="highlight-chip muted">Click any row to see full session context</span>
+              <div class="preview-grid">
+                <section class="preview-panel issue-feed" aria-label="Errors needing triage">
+                  <header>
+                    <div>
+                      <span class="eyebrow">Issues</span>
+                      <h3>Errors needing triage</h3>
+                    </div>
+                    <span class="stack-badge badge-coral">2 spikes</span>
+                  </header>
+                  <ol class="preview-list">
+                    <li>
+                      <span class="severity critical">Critical</span>
+                      <span>Checkout TypeError</span>
+                      <small>36 users affected</small>
+                    </li>
+                    <li>
+                      <span class="severity warning">Warn</span>
+                      <span>POST /checkout 502</span>
+                      <small>p95 up 18%</small>
+                    </li>
+                    <li>
+                      <span class="severity info">Info</span>
+                      <span>Feedback: button froze</span>
+                      <small>Session attached</small>
+                    </li>
+                  </ol>
+                </section>
+
+                <section class="preview-panel health-feed" aria-label="Production health">
+                  <header>
+                    <div>
+                      <span class="eyebrow">Health</span>
+                      <h3>Production profile</h3>
+                    </div>
+                    <span class="stack-badge badge-teal">Healthy</span>
+                  </header>
+                  <div class="health-bars" aria-hidden="true">
+                    <span style="--bar: 82%"></span>
+                    <span style="--bar: 68%"></span>
+                    <span style="--bar: 74%"></span>
+                    <span style="--bar: 58%"></span>
+                    <span style="--bar: 90%"></span>
+                  </div>
+                  <p>Availability, latency, errors, signal quality, and user feedback in one view.</p>
+                </section>
+              </div>
+
+              <div class="preview-activity" aria-label="Recent user signal">
+                <span class="highlight-dot" aria-hidden="true"></span>
+                <strong>Deploy 1.8.4</strong>
+                <span>correlated with checkout errors and a p95 latency regression.</span>
+              </div>
             </div>
           </div>
         </section>
+      </div>
+    </section>
+
+    <section class="landing-section team-section" id="team" aria-label="Meet the team">
+      <div class="team-card">
+        <div class="team-card-header">
+          <div>
+            <p class="eyebrow">Built by Group 09</p>
+            <h2>Meet the WatchTower team</h2>
+          </div>
+          <span class="team-count">11 members</span>
+        </div>
+        <ul class="team-grid" aria-label="WatchTower team members">
+          <li class="team-member backend"><span class="member-avatar">D</span><span class="member-name">Daniel</span><span class="role-pill">Backend</span></li>
+          <li class="team-member backend"><span class="member-avatar">A</span><span class="member-name">Aditya</span><span class="role-pill">Backend</span></li>
+          <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Waleed</span><span class="role-pill">Backend</span></li>
+          <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hemendra</span><span class="role-pill">Frontend</span></li>
+          <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Woosik</span><span class="role-pill">Backend</span></li>
+          <li class="team-member frontend"><span class="member-avatar">A</span><span class="member-name">Alex</span><span class="role-pill">Frontend</span></li>
+          <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">Josh</span><span class="role-pill">Frontend</span></li>
+          <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">James</span><span class="role-pill">Frontend</span></li>
+          <li class="team-member backend"><span class="member-avatar">J</span><span class="member-name">Jason</span><span class="role-pill">Backend</span></li>
+          <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hieu</span><span class="role-pill">Frontend</span></li>
+          <li class="team-member frontend"><span class="member-avatar">F</span><span class="member-name">Fahad</span><span class="role-pill">Frontend</span></li>
+        </ul>
+        <div class="team-focus" aria-label="Team color key">
+          <span class="team-focus-label">Color key</span>
+          <span class="frontend">Frontend</span>
+          <span class="backend">Backend</span>
+        </div>
       </div>
     </section>
 
@@ -119,7 +196,7 @@
         </article>
         <article class="panel step-card">
           <h3>Investigate and fix</h3>
-          <p>Open the unified dashboard to see root causes, slow endpoints, and user context—then prioritize and resolve.</p>
+          <p>Open the unified dashboard to see root causes, slow endpoints, and user context, then prioritize and resolve.</p>
         </article>
       </div>
     </section>
@@ -158,8 +235,8 @@
       </ul>
     </section>
 
-    <section class="landing-section" id="who-its-for" aria-label="Who it’s for">
-      <h2>Who it’s for</h2>
+    <section class="landing-section" id="who-its-for" aria-label="Who it is for">
+      <h2>Who it is for</h2>
       <div class="personas-grid">
         <article class="panel persona-card">
           <h3>Developers</h3>
@@ -181,10 +258,11 @@
         <div>
           <h2>15 minutes to full visibility</h2>
           <p class="lead">One script tag, automatic capture, immediate insights.</p>
-          <p class="trust-note">Runs client-side; uses local storage; no backend required for MVP.</p>
+          <p class="trust-note">Prototype-ready setup with event capture, local demo data, and dashboard visibility.</p>
         </div>
         <div class="cta-actions">
           <button class="primary-button primary-cta" type="button" data-action="go-login">Get started free</button>
+          <a class="ghost-button dashboard-demo-link" href="../prototype_1/index.html">View dashboard demo</a>
         </div>
       </div>
     </section>
