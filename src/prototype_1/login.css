@@ -75,6 +75,33 @@ a:hover {
   padding: 32px;
 }
 
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 34px;
+  border-radius: 7px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.back-link:hover {
+  color: var(--teal);
+  text-decoration: none;
+}
+
+.back-link svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
 .brand-lockup {
   display: inline-flex;
   align-items: center;
