@@ -53,6 +53,15 @@ const MIME = {
   ".svg": "image/svg+xml"
 };
 
+function streamAbsoluteFile(res, targetPath) {
+  responseWithMime(res, targetPath);
+  fs.createReadStream(targetPath).pipe(res);
+}
+
+function responseWithMime(res, targetPath) {
+  res.writeHead(200, { "Content-Type": MIME[path.extname(targetPath)] || "application/octet-stream" });
+}
+
 function isFiniteNumber(v) { return typeof v === "number" && Number.isFinite(v); }
 function isValidEvent(ev) { return Boolean(ev && typeof ev === "object" && typeof ev.type === "string"); }
 
@@ -871,6 +880,9 @@ function evaluateFeatureFlagsForIdentity(identity) {
 const server = http.createServer(function (request, response) {
   let parsedUrl = new URL(request.url, "http://localhost");
   let pathname = parsedUrl.pathname;
+  let repoSrcRoot = path.join(__dirname, "..", "..");
+  let landingRoot = path.join(repoSrcRoot, "Landing-Page");
+  let loginRoot = path.join(repoSrcRoot, "Log-In-Page");
 
   if (request.method === "OPTIONS") {
     applyCors(response); response.writeHead(204); response.end(); return;
@@ -912,14 +924,72 @@ const server = http.createServer(function (request, response) {
     request.on("close", () => sseClients.delete(response)); return;
   }
 
+  if (request.method === "GET" && (pathname === "/landing" || pathname === "/landing/")) {
+    streamAbsoluteFile(response, path.join(landingRoot, "index.html"));
+    return;
+  }
+
+  if (request.method === "GET" && pathname.indexOf("/landing/") === 0) {
+    let requestedLanding = pathname.slice("/landing/".length);
+    let landingPath = path.normalize(path.join(landingRoot, requestedLanding));
+    if (landingPath.indexOf(landingRoot) !== 0) {
+      response.writeHead(403);
+      response.end("Forbidden");
+      return;
+    }
+    fs.stat(landingPath, function (landingErr, landingStats) {
+      if (landingErr || !landingStats.isFile()) {
+        response.writeHead(404);
+        response.end("Not found");
+        return;
+      }
+      streamAbsoluteFile(response, landingPath);
+    });
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/login") {
+    response.writeHead(302, { Location: "/login/" });
+    response.end();
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/login/") {
+    streamAbsoluteFile(response, path.join(loginRoot, "login.html"));
+    return;
+  }
+
+  if (request.method === "GET" && pathname.indexOf("/login/") === 0) {
+    let requestedLogin = pathname.slice("/login/".length);
+    let loginPath = path.normalize(path.join(loginRoot, requestedLogin));
+    if (loginPath.indexOf(loginRoot) !== 0) {
+      response.writeHead(403);
+      response.end("Forbidden");
+      return;
+    }
+    fs.stat(loginPath, function (loginErr, loginStats) {
+      if (loginErr || !loginStats.isFile()) {
+        response.writeHead(404);
+        response.end("Not found");
+        return;
+      }
+      streamAbsoluteFile(response, loginPath);
+    });
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/dashboard") {
+    streamAbsoluteFile(response, path.join(__dirname, "..", "index.html"));
+    return;
+  }
+
   // Fallback static routing
   let root = path.join(__dirname, "..");
   let file = pathname === "/" ? "/index.html" : pathname;
   let fPath = path.join(root, file);
 
   function streamStaticFile(targetPath) {
-    response.writeHead(200, { "Content-Type": MIME[path.extname(targetPath)] || "application/octet-stream" });
-    fs.createReadStream(targetPath).pipe(response);
+    streamAbsoluteFile(response, targetPath);
   }
 
   fs.stat(fPath, (err, stats) => {
