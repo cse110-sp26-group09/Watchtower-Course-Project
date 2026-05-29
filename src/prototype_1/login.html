@@ -10,6 +10,13 @@
 <body>
   <main class="login-shell">
     <section class="login-card" aria-labelledby="login-title">
+      <a class="back-link" href="/" aria-label="Back to WatchTower landing page">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 18 9 12l6-6"></path>
+        </svg>
+        Back to landing
+      </a>
+
       <a class="brand-lockup" href="/" aria-label="Return to WatchTower dashboard">
         <img src="assets/watchtower-transparent.png" alt="" width="76" height="76">
         <span>WatchTower</span>
@@ -26,7 +33,7 @@
       <form class="login-form" id="login-form">
         <label>
           <span>Email</span>
-          <input id="email" type="email" name="email" autocomplete="email" placeholder="fahad@watchtower.dev" required>
+          <input id="email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required>
         </label>
         <div class="field-group">
           <label for="password">Password</label>
