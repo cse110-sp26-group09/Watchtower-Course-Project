@@ -6,11 +6,12 @@
   let viewToggleElements = document.querySelectorAll("[data-view]");
   let timeRangeButtons = document.querySelectorAll(".segmented-control button");
   let settingsAccordionButtons = document.querySelectorAll(".settings-trigger");
-  let highContrastToggle = document.getElementById("contrast-toggle");
-  let textSizeSlider = document.getElementById("text-size");
   let darkModeToggle = document.getElementById("dark-mode-toggle");
-  let dashboardModeSelect = document.getElementById("dashboard-mode-select");
   let dashboardModePill = document.getElementById("dashboard-mode-pill");
+  let timezoneSelect = document.getElementById("timezone-select");
+  let refreshRateSelect = document.getElementById("refresh-rate-select");
+  let notificationEnabledToggle = document.getElementById("notification-enabled-toggle");
+  let notificationVolumeSlider = document.getElementById("notification-volume");
   let refreshDashboardButton = document.getElementById("refresh-dashboard");
   let notificationModeSelect = document.getElementById("notification-mode");
   let notificationStartInput = document.getElementById("notification-start");
@@ -29,8 +30,8 @@
   let issueExportCsvButton = document.getElementById("issue-export-csv");
   let toastStack = document.getElementById("toast-stack");
   let lastUpdatedLabel = document.getElementById("last-updated");
-  let liveStatusPill = document.getElementById("live-status-pill");
-  let liveStatusText = document.getElementById("live-status-text");
+  let liveStatusPill = null;
+  let liveStatusText = null;
   let activeIssueCountLabel = document.getElementById("active-issues-count");
   let alertPillButton = document.querySelector(".alert-pill");
   let activeUsersValue = document.getElementById("active-users");
@@ -80,12 +81,33 @@
   let managerSummaryList = document.getElementById("manager-summary-list");
   let developerRouteTable = document.getElementById("developer-route-table");
   let developerVersionTable = document.getElementById("developer-version-table");
-  let developerEventMix = document.getElementById("developer-event-mix");
-  let developerRoutePressure = document.getElementById("developer-route-pressure");
+  let devErrorChartContainer = document.getElementById("dev-error-chart");
+  let devLatencyCanvas = document.getElementById("dev-latency-canvas");
+  let devLatencyThresholdInput = document.getElementById("dev-latency-threshold");
   let developerTopIssues = document.getElementById("developer-top-issues");
   let developerLatencyWindows = document.getElementById("developer-latency-windows");
   let developerTrafficPeaks = document.getElementById("developer-traffic-peaks");
   let developerLatencyPeakValue = document.getElementById("developer-latency-peak");
+  let devActiveUsers = document.getElementById("dev-active-users");
+  let devMaxUsers = document.getElementById("dev-max-users");
+  let devActiveIssues = document.getElementById("dev-active-issues");
+  let devAvgLatency = document.getElementById("dev-avg-latency");
+  let devPeakTraffic = document.getElementById("dev-peak-traffic");
+  let devPatchDeployed = document.getElementById("dev-patch-deployed");
+  let devActiveUsersTrend = document.getElementById("dev-active-users-trend");
+  let devMaxUsersTrend = document.getElementById("dev-max-users-trend");
+  let devActiveIssuesTrend = document.getElementById("dev-active-issues-trend");
+  let devAvgLatencyTrend = document.getElementById("dev-avg-latency-trend");
+  let devPeakTrafficTrend = document.getElementById("dev-peak-traffic-trend");
+  let devPatchDeployedTrend = document.getElementById("dev-patch-deployed-trend");
+  let developerPatchList = document.getElementById("developer-patch-list");
+  let devMiniRadarGrid = document.getElementById("dev-mini-radar-grid");
+  let devMiniRadarAxis = document.getElementById("dev-mini-radar-axis");
+  let devMiniRadarShape = document.getElementById("dev-mini-radar-shape");
+  let devHealthToken = document.getElementById("dev-health-token");
+  let devOverallScore = document.getElementById("dev-overall-score");
+  let devOverallLabel = document.getElementById("dev-overall-label");
+  let devScoreBreakdown = document.getElementById("dev-score-breakdown");
   let developerInsightIssues = document.getElementById("developer-insight-issues");
   let developerInsightLatency = document.getElementById("developer-insight-latency");
   let developerInsightTraffic = document.getElementById("developer-insight-traffic");
@@ -181,6 +203,10 @@
   let DASHBOARD_MODE_STORAGE_KEY = "watchtower_dashboard_mode";
   let ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
   let DEV_QUERY_SAVED_STORAGE_KEY = "watchtower_dev_saved_queries";
+  let TIMEZONE_STORAGE_KEY = "watchtower_timezone";
+  let REFRESH_RATE_STORAGE_KEY = "watchtower_refresh_rate";
+  let NOTIFICATION_ENABLED_STORAGE_KEY = "watchtower_notification_enabled";
+  let NOTIFICATION_VOLUME_STORAGE_KEY = "watchtower_notification_volume";
   let LIGHT_LOGO_PATH = "assets/watchtower-transparent.png";
   let DARK_LOGO_PATH = "assets/watchtower-transparent.png";
 
@@ -209,7 +235,8 @@
     selectedSessionId: "",
     selectedFlagUserId: "",
     savedQueries: [],
-    queryHistory: []
+    queryHistory: [],
+    maxUsers24h: 0
   };
   let developerShortcutPrimedAt = 0;
 
@@ -281,6 +308,73 @@
     return new Intl.NumberFormat().format(Number(value) || 0);
   }
 
+  function getEventType(eventRecord) {
+    return String((eventRecord && eventRecord.type) || "").toLowerCase();
+  }
+
+  function getEventMessage(eventRecord, fallbackMessage) {
+    if (eventRecord && eventRecord.data && eventRecord.data.message) {
+      return String(eventRecord.data.message);
+    }
+    return fallbackMessage || "Unknown event";
+  }
+
+  function getEventDurationMs(eventRecord) {
+    if (!eventRecord || !eventRecord.data) return null;
+    let candidates = [
+      eventRecord.data.duration,
+      eventRecord.data.latency,
+      eventRecord.data.p95,
+      eventRecord.data.value
+    ];
+    for (let idx = 0; idx < candidates.length; idx += 1) {
+      let parsed = Number(candidates[idx]);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return null;
+  }
+
+  function isErrorLikeEvent(eventRecord) {
+    if (!eventRecord) return false;
+
+    let eventType = getEventType(eventRecord);
+    if (
+      eventType === "error" ||
+      eventType === "exception" ||
+      eventType === "fatal" ||
+      eventType.indexOf("error") !== -1
+    ) {
+      return true;
+    }
+
+    let severityText = String(
+      (eventRecord.data && (eventRecord.data.severity || eventRecord.data.level || eventRecord.data.status)) || ""
+    ).toLowerCase();
+    if (
+      severityText === "error" ||
+      severityText === "critical" ||
+      severityText === "fatal" ||
+      severityText === "warning"
+    ) {
+      return true;
+    }
+
+    let messageText = String((eventRecord.data && eventRecord.data.message) || "").toLowerCase();
+    return /(error|exception|failed|failure|timeout|reject|cannot|unhandled)/.test(messageText);
+  }
+
+  function deriveIssueEvents(stats, activityEvents) {
+    let recentErrors = Array.isArray(stats && stats.recentErrors) ? stats.recentErrors.slice() : [];
+    if (recentErrors.length > 0) {
+      return recentErrors.sort(function (leftEvent, rightEvent) {
+        return (getValidTimestamp(rightEvent && rightEvent.timestamp) || 0) - (getValidTimestamp(leftEvent && leftEvent.timestamp) || 0);
+      });
+    }
+    return (activityEvents || []).filter(isErrorLikeEvent).sort(function (leftEvent, rightEvent) {
+      return (getValidTimestamp(rightEvent && rightEvent.timestamp) || 0) - (getValidTimestamp(leftEvent && leftEvent.timestamp) || 0);
+    });
+  }
+
   function calculatePercentile(values, percentile) {
     if (!Array.isArray(values) || values.length === 0) return 0;
     let sortedValues = values.slice().sort(function (leftValue, rightValue) { return leftValue - rightValue; });
@@ -291,6 +385,20 @@
 
   function formatNotificationTime(dateValue) {
     return dateValue.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+
+  function populateTimeSelect(selectElement, defaultValue) {
+    if (!selectElement) return;
+    for (var h = 0; h < 24; h++) {
+      var option = document.createElement("option");
+      var hh = String(h).padStart(2, "0");
+      option.value = hh + ":00";
+      var hour12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+      var suffix = h < 12 ? "AM" : "PM";
+      option.textContent = hour12 + ":00 " + suffix;
+      if (option.value === defaultValue) option.selected = true;
+      selectElement.appendChild(option);
+    }
   }
 
   function saveUiPreference(key, value) {
@@ -311,8 +419,8 @@
     if (notificationMutedUntil && notificationMutedUntil > Date.now()) {
       return "Muted until " + formatNotificationTime(new Date(notificationMutedUntil)) + ".";
     }
-    if (notificationModeSelect && notificationModeSelect.value === "Muted") {
-      return "Muted until you resume notifications.";
+    if (notificationEnabledToggle && !notificationEnabledToggle.checked) {
+      return "Notifications are disabled.";
     }
     return "Notifications are active.";
   }
@@ -383,7 +491,6 @@
     document.body.classList.toggle("dashboard-mode-developer", resolvedMode === "developer");
     document.body.classList.toggle("dashboard-mode-manager", resolvedMode === "manager");
 
-    if (dashboardModeSelect) dashboardModeSelect.value = resolvedMode;
     if (dashboardModePill) dashboardModePill.textContent = resolvedMode === "developer" ? "Developer view" : "Manager view";
 
     document.querySelectorAll("[data-dashboard-mode]").forEach(function (modePanel) {
@@ -396,10 +503,12 @@
     let savedMode = loadUiPreference(DASHBOARD_MODE_STORAGE_KEY);
     applyDashboardMode(savedMode || "manager");
 
-    if (!dashboardModeSelect) return;
+    if (!dashboardModePill) return;
 
-    dashboardModeSelect.addEventListener("change", function () {
-      applyDashboardMode(dashboardModeSelect.value);
+    dashboardModePill.addEventListener("click", function (event) {
+      event.stopPropagation();
+      let nextMode = uiState.dashboardMode === "manager" ? "developer" : "manager";
+      applyDashboardMode(nextMode);
       saveUiPreference(DASHBOARD_MODE_STORAGE_KEY, uiState.dashboardMode);
       if (uiState.dashboardMode === "developer") {
         fetchDeveloperStream(false);
@@ -514,6 +623,16 @@
         developerMuteStatusLine.textContent = uiState.developerAlertsMuted ? "Alerts are muted in this developer session." : "Live alerts are active.";
       });
     }
+
+    if (devLatencyThresholdInput) {
+      devLatencyThresholdInput.addEventListener("input", function () {
+        drawDevLatencyChart();
+      });
+    }
+
+    window.addEventListener("resize", function () {
+      drawDevLatencyChart();
+    });
 
     if (issueFilterClearButton) {
       issueFilterClearButton.addEventListener("click", function () {
@@ -1195,31 +1314,6 @@
     renderGovernance(insights);
   }
 
-  function renderDeveloperHomeDiagnostics(stats) {
-    let routeNames = Object.keys(stats.latencyByRoute || {}).sort(function (leftRoute, rightRoute) {
-      return ((stats.latencyByRoute[rightRoute] || {}).p95 || 0) - ((stats.latencyByRoute[leftRoute] || {}).p95 || 0);
-    });
-
-    if (developerLatencyPeakValue) {
-      if (routeNames.length === 0) {
-        developerLatencyPeakValue.textContent = "0 ms";
-      } else {
-        let peakRouteStats = stats.latencyByRoute[routeNames[0]] || {};
-        developerLatencyPeakValue.textContent = String(peakRouteStats.p95 || 0) + " ms";
-      }
-    }
-
-    if (developerRouteTable) {
-      if (routeNames.length === 0) {
-        developerRouteTable.innerHTML = '<li><span>/</span><strong>Waiting for samples</strong></li>';
-      } else {
-        developerRouteTable.innerHTML = routeNames.slice(0, 6).map(function (routeName) {
-          let routeStats = stats.latencyByRoute[routeName] || {};
-          return '<li><span>' + escapeHtml(routeName) + '</span><strong>' + String(routeStats.p95 || 0) + ' ms</strong></li>';
-        }).join('');
-      }
-    }
-  }
 
   function initializeDeveloperWorkbench() {
     if (developerTabButtons.length === 0) return;
@@ -1393,19 +1487,61 @@
     });
   }
 
-  function initializeContrastToggle() {
-    if (!highContrastToggle) return;
-    highContrastToggle.addEventListener("change", function () {
-      document.body.classList.toggle("high-contrast", highContrastToggle.checked);
+  function initializeTimezoneControl() {
+    if (!timezoneSelect) return;
+    let savedTz = loadUiPreference(TIMEZONE_STORAGE_KEY);
+    if (savedTz) timezoneSelect.value = savedTz;
+
+    timezoneSelect.addEventListener("change", function () {
+      saveUiPreference(TIMEZONE_STORAGE_KEY, timezoneSelect.value);
+      showToast("Time zone set to " + timezoneSelect.options[timezoneSelect.selectedIndex].text + ".");
     });
   }
 
-  function initializeTextSizeSlider() {
-    if (!textSizeSlider) return;
-    textSizeSlider.addEventListener("input", function () {
-      document.body.classList.remove("text-compact", "text-large");
-      if (textSizeSlider.value === "0") document.body.classList.add("text-compact");
-      if (textSizeSlider.value === "2") document.body.classList.add("text-large");
+  function initializeRefreshRateControl() {
+    if (!refreshRateSelect) return;
+    let savedRate = loadUiPreference(REFRESH_RATE_STORAGE_KEY);
+    if (savedRate) refreshRateSelect.value = savedRate;
+
+    refreshRateSelect.addEventListener("change", function () {
+      let newRate = Number(refreshRateSelect.value) || 3000;
+      POLL_INTERVAL = newRate;
+      saveUiPreference(REFRESH_RATE_STORAGE_KEY, String(newRate));
+      clearInterval(pollIntervalId);
+      pollIntervalId = setInterval(fetchDashboardStats, POLL_INTERVAL);
+      showToast("Refresh rate set to " + refreshRateSelect.options[refreshRateSelect.selectedIndex].text + ".");
+    });
+  }
+
+  function initializeNotificationToggle() {
+    if (!notificationEnabledToggle) return;
+    let savedEnabled = loadUiPreference(NOTIFICATION_ENABLED_STORAGE_KEY);
+    if (savedEnabled === "false") notificationEnabledToggle.checked = false;
+
+    function applyNotificationEnabled() {
+      let enabled = notificationEnabledToggle.checked;
+      saveUiPreference(NOTIFICATION_ENABLED_STORAGE_KEY, String(enabled));
+      var controls = notificationEnabledToggle.closest(".settings-content");
+      if (controls) {
+        var children = controls.querySelectorAll(".field-row, .range-row, .time-grid, .snooze-actions, .inline-status");
+        children.forEach(function (el) { el.style.opacity = enabled ? "" : "0.4"; el.style.pointerEvents = enabled ? "" : "none"; });
+      }
+      if (notificationStatusLine) {
+        notificationStatusLine.textContent = enabled ? getActiveMuteMessage() : "Notifications are disabled.";
+      }
+    }
+
+    notificationEnabledToggle.addEventListener("change", applyNotificationEnabled);
+    applyNotificationEnabled();
+  }
+
+  function initializeNotificationVolume() {
+    if (!notificationVolumeSlider) return;
+    let savedVol = loadUiPreference(NOTIFICATION_VOLUME_STORAGE_KEY);
+    if (savedVol) notificationVolumeSlider.value = savedVol;
+
+    notificationVolumeSlider.addEventListener("input", function () {
+      saveUiPreference(NOTIFICATION_VOLUME_STORAGE_KEY, notificationVolumeSlider.value);
     });
   }
 
@@ -1416,11 +1552,30 @@
   }
 
   function initializeNotificationControls() {
+    let scheduleSelect = document.getElementById("notification-schedule");
+    let customHoursGrid = document.getElementById("custom-hours-grid");
+
+    populateTimeSelect(notificationStartInput, "08:00");
+    populateTimeSelect(notificationEndInput, "18:00");
     if (!notificationModeSelect || !notificationStartInput || !notificationEndInput) return;
+
+    function applyScheduleVisibility() {
+      if (!scheduleSelect || !customHoursGrid) return;
+      customHoursGrid.hidden = scheduleSelect.value !== "custom";
+    }
+
+    if (scheduleSelect) {
+      scheduleSelect.addEventListener("change", function () {
+        applyScheduleVisibility();
+        updateNotificationStatusLine();
+        updateNotificationPreview();
+      });
+      applyScheduleVisibility();
+    }
 
     [notificationModeSelect, notificationStartInput, notificationEndInput].forEach(function (control) {
       control.addEventListener("change", function () {
-        if (control === notificationModeSelect && notificationModeSelect.value !== "Muted") {
+        if (control === notificationModeSelect) {
           notificationMutedUntil = 0;
         }
         updateNotificationStatusLine();
@@ -1437,7 +1592,7 @@
           notificationModeSelect.value = "Critical only";
         } else {
           notificationMutedUntil = Date.now() + mins * 60 * 1000;
-          notificationModeSelect.value = "Muted";
+          if (notificationEnabledToggle) notificationEnabledToggle.checked = false;
         }
         updateNotificationStatusLine();
         updateNotificationPreview();
@@ -1556,8 +1711,10 @@
   }
 
   function getFilteredIssues() {
-    let stats = uiState.latestStats || {};
-    return (stats.recentErrors || []).filter(passesIssueFilters).sort(compareIssues);
+    let sourceIssues = Array.isArray(uiState.latestDerivedIssues) && uiState.latestDerivedIssues.length > 0
+      ? uiState.latestDerivedIssues
+      : ((uiState.latestStats && uiState.latestStats.recentErrors) || []);
+    return sourceIssues.filter(passesIssueFilters).sort(compareIssues);
   }
 
   function quoteCsvCell(value) {
@@ -1598,6 +1755,184 @@
     showToast("Exported " + rows.length + " issues.");
   }
 
+  // 24h latency chart data — generated once, redrawn on each stats update and threshold change
+  let devLatencyData = [];
+
+  // Generate 24 hourly latency points with simulated spikes, scaled by actual route p95
+  function generateDevLatencyData(stats) {
+    var latencyByRoute = stats.latencyByRoute || {};
+    var routes = Object.keys(latencyByRoute);
+    devLatencyData = [];
+    for (var i = 0; i < 24; i++) {
+      var base = 100 + Math.sin(i * 0.4) * 30;
+      var spike = (i >= 9 && i <= 11) || (i >= 14 && i <= 16);
+      var val = spike ? base + Math.random() * 150 + 80 : base + Math.random() * 60;
+      if (routes.length > 0) {
+        var avgP95 = routes.reduce(function (s, r) { return s + (latencyByRoute[r].p95 || 0); }, 0) / routes.length;
+        val = val * (avgP95 / 200);
+      }
+      devLatencyData.push(Math.min(Math.round(val), 450));
+    }
+  }
+
+  // Canvas line chart: grid, axes, area fill, line, data points, threshold line. Adapts to light/dark.
+  function drawDevLatencyChart() {
+    if (!devLatencyCanvas) return;
+    var container = devLatencyCanvas.parentElement;
+    var rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    var dpr = window.devicePixelRatio || 1;
+
+    devLatencyCanvas.width = rect.width * dpr;
+    devLatencyCanvas.height = rect.height * dpr;
+    devLatencyCanvas.style.width = rect.width + "px";
+    devLatencyCanvas.style.height = rect.height + "px";
+
+    var ctx = devLatencyCanvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    var w = rect.width;
+    var h = rect.height;
+    var padLeft = 44;
+    var padRight = 16;
+    var padTop = 12;
+    var padBottom = 28;
+    var chartW = w - padLeft - padRight;
+    var chartH = h - padTop - padBottom;
+
+    var maxVal = 450;
+    var ySteps = [0, 150, 300, 450];
+    var isDark = document.body.classList.contains("dark-mode");
+    var palette = isDark
+      ? { grid: "rgba(95,126,169,0.2)", label: "#8EA4C5",
+          areaStart: "rgba(15,139,141,0.3)", areaEnd: "rgba(15,139,141,0.02)",
+          line: "var(--teal)", lineRaw: "#0f8b8d",
+          pointHot: "#d45d4c", pointCool: "#5C7495",
+          threshold: "rgba(212,93,76,0.56)", thresholdText: "rgba(212,93,76,0.85)" }
+      : { grid: "rgba(76,110,156,0.2)", label: "#5A7193",
+          areaStart: "rgba(15,139,141,0.24)", areaEnd: "rgba(15,139,141,0.03)",
+          line: "#0f8b8d", lineRaw: "#0f8b8d",
+          pointHot: "#d45d4c", pointCool: "#7A94B7",
+          threshold: "rgba(212,93,76,0.6)", thresholdText: "rgba(173,65,65,0.85)" };
+
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = palette.grid;
+    ctx.lineWidth = 1;
+    ySteps.forEach(function (val) {
+      var y = padTop + chartH - (val / maxVal) * chartH;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(padLeft + chartW, y);
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = palette.label;
+    ctx.font = "10px monospace";
+    ctx.textAlign = "right";
+    ySteps.forEach(function (val) {
+      var y = padTop + chartH - (val / maxVal) * chartH;
+      ctx.fillText(val + "ms", padLeft - 8, y + 4);
+    });
+
+    ctx.textAlign = "center";
+    for (var xi = 0; xi < 24; xi += 4) {
+      var xPos = padLeft + (xi / 23) * chartW;
+      ctx.fillText(String(xi).padStart(2, "0") + ":00", xPos, h - 6);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(padLeft, padTop + chartH);
+    devLatencyData.forEach(function (val, i) {
+      var x = padLeft + (i / (devLatencyData.length - 1)) * chartW;
+      var y = padTop + chartH - (val / maxVal) * chartH;
+      ctx.lineTo(x, y);
+    });
+    ctx.lineTo(padLeft + chartW, padTop + chartH);
+    ctx.closePath();
+    var grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
+    grad.addColorStop(0, palette.areaStart);
+    grad.addColorStop(1, palette.areaEnd);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.strokeStyle = palette.lineRaw;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    devLatencyData.forEach(function (val, i) {
+      var x = padLeft + (i / (devLatencyData.length - 1)) * chartW;
+      var y = padTop + chartH - (val / maxVal) * chartH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    var thresholdVal = parseInt(devLatencyThresholdInput ? devLatencyThresholdInput.value : "250", 10) || 250;
+
+    devLatencyData.forEach(function (val, i) {
+      var x = padLeft + (i / (devLatencyData.length - 1)) * chartW;
+      var y = padTop + chartH - (val / maxVal) * chartH;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = val > thresholdVal ? palette.pointHot : palette.pointCool;
+      ctx.fill();
+    });
+
+    var threshY = padTop + chartH - (thresholdVal / maxVal) * chartH;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = palette.threshold;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, threshY);
+    ctx.lineTo(padLeft + chartW, threshY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = palette.thresholdText;
+    ctx.font = "10px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("threshold: " + thresholdVal + "ms", padLeft + 4, threshY - 6);
+  }
+
+  // Build the expandable detail panel HTML for an issue row (severity, metadata, stack trace)
+  function buildIssueExpandPanel(eventRecord) {
+    let sevLabel = toIssueSeverity(eventRecord) === "warning" ? "Warning" : "Critical";
+    let items = [
+      { key: "Severity", value: sevLabel },
+      { key: "Timestamp", value: eventRecord.timestamp ? new Date(eventRecord.timestamp).toLocaleString() : "—" },
+      { key: "Route", value: eventRecord.route || "/" },
+      { key: "Version", value: eventRecord.deployVersion || "unknown" },
+      { key: "App", value: eventRecord.appName || "shopdemo" },
+      { key: "Session ID", value: eventRecord.sessionId || "—" }
+    ];
+
+    if (eventRecord.data) {
+      Object.keys(eventRecord.data).forEach(function (k) {
+        if (k === "message" || k === "stack") return;
+        items.push({ key: k, value: String(eventRecord.data[k]) });
+      });
+    }
+
+    let gridHtml = items.map(function (item) {
+      return '<div class="issue-expand-item"><span class="issue-expand-key">' +
+        escapeHtml(item.key) + '</span><span class="issue-expand-value">' +
+        escapeHtml(item.value) + '</span></div>';
+    }).join("");
+
+    let stackHtml = "";
+    if (eventRecord.data && eventRecord.data.stack) {
+      stackHtml = '<div class="issue-expand-stack"><span class="issue-expand-key">Stack trace</span>' +
+        '<pre>' + escapeHtml(eventRecord.data.stack) + '</pre></div>';
+    }
+
+    return '<div class="issue-expand">' +
+      '<div class="issue-expand-title">Error details</div>' +
+      '<div class="issue-expand-grid">' + gridHtml + stackHtml + '</div></div>';
+  }
+
+  // Render issue rows with color-coded severity, expand panels, and click-to-expand handlers
   function renderIssueList(recentErrors) {
     if (!issueListContainer) return;
     let prepped = getFilteredIssues();
@@ -1609,8 +1944,12 @@
     }
 
     let visible = uiState.issuesExpanded ? prepped.length : Math.min(3, prepped.length);
-    issueListContainer.innerHTML = prepped.slice(0, visible).map(function (eventRecord, idx) {
+    let slice = prepped.slice(0, visible);
+
+    issueListContainer.innerHTML = slice.map(function (eventRecord, idx) {
       let sev = toIssueSeverity(eventRecord);
+      let sevClass = sev === "warning" ? "severity-warning" : sev === "info" ? "severity-info" : "severity-critical";
+      let sevLabel = sev === "warning" ? "Warning" : sev === "info" ? "Info" : "Critical";
       let issueId = getIssueIdentifier(eventRecord, idx);
       let assignedName = uiState.issueAssignments[issueId] || "";
 
@@ -1621,9 +1960,9 @@
         })).join("");
 
       return (
-        '<article class="issue-row ' + (sev === "warning" ? "severity-warning" : "severity-critical") + '">' +
+        '<article class="issue-row ' + sevClass + '">' +
         '<div class="issue-main">' +
-        '<span class="severity-pill">' + (sev === "warning" ? "Warning" : "Critical") + "</span>" +
+        '<span class="severity-pill">' + sevLabel + "</span>" +
         "<h3>" + escapeHtml(eventRecord.data.message || "Runtime core error") + "</h3>" +
         "<p>" + escapeHtml(eventRecord.route || "/") + " thrown unhandled.</p>" +
         '<div class="issue-meta">' +
@@ -1633,9 +1972,17 @@
         "</div>" +
         "</div>" +
         '<label class="assign-control"><span>Assign</span><select data-issue-id="' + escapeHtml(issueId) + '">' + options + "</select></label>" +
+        buildIssueExpandPanel(eventRecord) +
         "</article>"
       );
     }).join("");
+
+    issueListContainer.querySelectorAll(".issue-row").forEach(function (row) {
+      row.addEventListener("click", function (e) {
+        if (e.target.closest("select") || e.target.closest("label")) return;
+        row.classList.toggle("expanded");
+      });
+    });
 
     if (issueExpandToggleButton) {
       issueExpandToggleButton.hidden = prepped.length <= 3;
@@ -1660,7 +2007,10 @@
   function deriveFeatureCounts(activityEvents) {
     let counts = {};
     (activityEvents || []).forEach(function (e) {
-      let fName = e.type === "click" ? (e.data && (e.data.text || e.data.target)) : (e.type === "custom" ? e.data.name : "");
+      let eventType = getEventType(e);
+      let fName = eventType === "click"
+        ? (e.data && (e.data.text || e.data.target))
+        : (eventType === "custom" ? (e.data && e.data.name) : "");
       if (fName) counts[fName] = (counts[fName] || 0) + 1;
     });
     return Object.keys(counts).map(function (k) { return { name: k, count: counts[k] }; }).sort((a, b) => b.count - a.count);
@@ -1696,43 +2046,330 @@
     }).join("");
   }
 
+  // Populate developer home diagnostics: latency peak, route table, and top-3 insight lists
   function renderDeveloperHomeDiagnostics(stats) {
+    if (developerLatencyPeakValue) {
+      let peakRoutes = Object.keys(stats.latencyByRoute || {}).sort(function (a, b) {
+        return ((stats.latencyByRoute[b] || {}).p95 || 0) - ((stats.latencyByRoute[a] || {}).p95 || 0);
+      });
+      if (peakRoutes.length === 0) {
+        developerLatencyPeakValue.textContent = "0 ms";
+      } else {
+        developerLatencyPeakValue.textContent = String((stats.latencyByRoute[peakRoutes[0]] || {}).p95 || 0) + " ms";
+      }
+    }
+
     if (developerRouteTable) {
       let rNames = Object.keys(stats.latencyByRoute || {}).sort((a, b) => (stats.latencyByRoute[b].p95 || 0) - (stats.latencyByRoute[a].p95 || 0));
       developerRouteTable.innerHTML = rNames.length === 0 ? '<li><span>/</span><strong>Telemetry quiet</strong></li>' : rNames.slice(0, 4).map(function (n) {
         return '<li><span>' + escapeHtml(n) + '</span><strong>' + stats.latencyByRoute[n].p95 + ' ms</strong></li>';
       }).join('');
     }
+
+    if (developerInsightIssues) {
+      let errors = (stats.recentErrors || []).slice(0, 3);
+      if (errors.length === 0) {
+        developerInsightIssues.innerHTML = '<li class="severity-high"><span class="rank">#1</span><span>No errors detected</span><strong>0</strong></li>';
+      } else {
+        developerInsightIssues.innerHTML = errors.map(function (err, idx) {
+          let sev = (err.severity === "critical") ? "severity-high" : "severity-medium";
+          return '<li class="' + sev + '"><span class="rank">#' + (idx + 1) + '</span><span>' + escapeHtml(err.data.message || "Runtime error") + '</span><strong>' + escapeHtml(err.route || "unknown") + '</strong></li>';
+        }).join('');
+      }
+    }
+
+    if (developerInsightLatency) {
+      let routeNames = Object.keys(stats.latencyByRoute || {}).sort(function (a, b) {
+        return ((stats.latencyByRoute[b] || {}).p95 || 0) - ((stats.latencyByRoute[a] || {}).p95 || 0);
+      });
+      let topLatency = routeNames.slice(0, 3);
+      if (topLatency.length === 0) {
+        developerInsightLatency.innerHTML = '<li class="severity-medium"><span class="rank">#1</span><span>No route telemetry</span><strong>0 ms</strong></li>';
+      } else {
+        developerInsightLatency.innerHTML = topLatency.map(function (route, idx) {
+          let p95 = (stats.latencyByRoute[route] || {}).p95 || 0;
+          let sev = p95 > 1800 ? "severity-high" : "severity-medium";
+          return '<li class="' + sev + '"><span class="rank">#' + (idx + 1) + '</span><span>' + escapeHtml(route) + '</span><strong>' + p95 + ' ms</strong></li>';
+        }).join('');
+      }
+    }
+
+    if (developerInsightTraffic) {
+      let byMinute = {};
+      (stats.recentActivity || []).forEach(function (evt) {
+        let key = formatClockTime(evt.timestamp).replace(/:\d{2}$/, "");
+        byMinute[key] = (byMinute[key] || 0) + 1;
+      });
+      let minuteKeys = Object.keys(byMinute).sort(function (a, b) {
+        return byMinute[b] - byMinute[a];
+      });
+      let topTraffic = minuteKeys.slice(0, 3);
+      if (topTraffic.length === 0) {
+        developerInsightTraffic.innerHTML = '<li><span class="rank">#1</span><span>No traffic samples</span><strong>0/min</strong></li>';
+      } else {
+        developerInsightTraffic.innerHTML = topTraffic.map(function (minute, idx) {
+          return '<li><span class="rank">#' + (idx + 1) + '</span><span>' + escapeHtml(minute) + '</span><strong>' + byMinute[minute] + '/min</strong></li>';
+        }).join('');
+      }
+    }
   }
 
+  // Orchestrator: calls diagnostics, stat cards, patch notes, and mini radar
   function renderDeveloperInsights(stats, activityEvents) {
+    let errors = deriveIssueEvents(stats, activityEvents).slice(0, 12);
+    let latencySummary = buildLatencySummaryFromEvents(activityEvents || [], uiState.selectedRange);
+    let routeNames = Object.keys(latencySummary).sort(function (leftRoute, rightRoute) {
+      return ((latencySummary[rightRoute] || {}).p95 || 0) - ((latencySummary[leftRoute] || {}).p95 || 0);
+    });
+
+    if (developerInsightIssues) {
+      let signatureCounts = {};
+      errors.forEach(function (eventRecord) {
+        let msg = getEventMessage(eventRecord, "Unknown error");
+        signatureCounts[msg] = (signatureCounts[msg] || 0) + 1;
+      });
+      let rankedSignatures = Object.keys(signatureCounts).sort(function (leftMsg, rightMsg) {
+        return signatureCounts[rightMsg] - signatureCounts[leftMsg];
+      }).slice(0, 3);
+
+      if (rankedSignatures.length === 0) {
+        let aggregateCount = Number(stats.__computedTotalErrors || stats.totalErrors || 0);
+        developerInsightIssues.innerHTML = aggregateCount > 0
+          ? '<li class="severity-high"><span class="rank">#1</span><span>Error signatures pending sync</span><strong>' + String(aggregateCount) + "</strong></li>"
+          : '<li class="severity-medium"><span class="rank">#1</span><span>Waiting for issues</span><strong>0</strong></li>';
+      } else {
+        developerInsightIssues.innerHTML = rankedSignatures.map(function (message, index) {
+          let severityClass = index === 0 ? "severity-high" : "severity-medium";
+          return '<li class="' + severityClass + '"><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(message) + "</span><strong>" + String(signatureCounts[message]) + "</strong></li>";
+        }).join("");
+      }
+    }
+
+    if (developerInsightLatency) {
+      if (routeNames.length === 0) {
+        developerInsightLatency.innerHTML = '<li><span class="rank">#1</span><span>Waiting for route telemetry</span><strong>0 ms</strong></li>';
+      } else {
+        developerInsightLatency.innerHTML = routeNames.slice(0, 3).map(function (routeName, index) {
+          let routeStats = latencySummary[routeName] || {};
+          let routeP95 = Number(routeStats.p95 || 0);
+          let severityClass = routeP95 >= 1000 ? "severity-high" : (routeP95 >= 450 ? "severity-medium" : "");
+          return '<li class="' + severityClass + '"><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(routeName) + "</span><strong>" + String(routeP95) + " ms</strong></li>";
+        }).join("");
+      }
+    }
+
+    if (developerInsightTraffic) {
+      let hourCounts = {};
+      (activityEvents || []).forEach(function (eventRecord) {
+        let ts = getValidTimestamp(eventRecord && eventRecord.timestamp);
+        if (!ts) return;
+        let hourKey = new Date(ts).toISOString().slice(0, 13);
+        hourCounts[hourKey] = (hourCounts[hourKey] || 0) + 1;
+      });
+      let topHours = Object.keys(hourCounts).sort(function (leftHour, rightHour) {
+        return hourCounts[rightHour] - hourCounts[leftHour];
+      }).slice(0, 3);
+
+      if (topHours.length === 0) {
+        let aggregateEvents = Number(stats.totalEvents || 0);
+        developerInsightTraffic.innerHTML = aggregateEvents > 0
+          ? '<li><span class="rank">#1</span><span>Event windows pending sync</span><strong>' + String(aggregateEvents) + " events</strong></li>"
+          : '<li><span class="rank">#1</span><span>Waiting for activity samples</span><strong>0/min</strong></li>';
+      } else {
+        developerInsightTraffic.innerHTML = topHours.map(function (hourKey, index) {
+          let localHour = new Date(hourKey + ":00:00Z").toLocaleTimeString([], { hour: "numeric" });
+          return '<li><span class="rank">#' + (index + 1) + '</span><span>' + escapeHtml(localHour) + "</span><strong>" + String(hourCounts[hourKey]) + "/min</strong></li>";
+        }).join("");
+      }
+    }
+
     renderDeveloperHomeDiagnostics(stats);
+  }
+
+  // Populate the 6 developer stat cards: users, max users, issues, latency, traffic, deploys
+  function renderDeveloperStatCards(stats, activityEvents) {
+    let currentUsers = stats.activeUsers || 0;
+    if (currentUsers > uiState.maxUsers24h) uiState.maxUsers24h = currentUsers;
+
+    let errorCount = stats.totalErrors || 0;
+    let versionCount = Object.keys(stats.errorsByVersion || {}).length;
+
+    let routes = Object.keys(stats.latencyByRoute || {});
+    let avgLatency = 0;
+    if (routes.length > 0) {
+      let sum = routes.reduce(function (total, r) { return total + ((stats.latencyByRoute[r] || {}).avg || 0); }, 0);
+      avgLatency = Math.round(sum / routes.length);
+    }
+
+    var byMinute = {};
+    (activityEvents || []).forEach(function (evt) {
+      var key = formatClockTime(evt.timestamp).replace(/:\d{2}$/, "");
+      byMinute[key] = (byMinute[key] || 0) + 1;
+    });
+    var peakTraffic = 0;
+    Object.keys(byMinute).forEach(function (k) {
+      if (byMinute[k] > peakTraffic) peakTraffic = byMinute[k];
+    });
+
+    if (devActiveUsers) devActiveUsers.textContent = String(currentUsers);
+    if (devMaxUsers) devMaxUsers.textContent = String(uiState.maxUsers24h);
+    if (devActiveIssues) devActiveIssues.textContent = String(errorCount);
+    if (devAvgLatency) devAvgLatency.textContent = avgLatency + " ms";
+    if (devPeakTraffic) devPeakTraffic.textContent = peakTraffic + "/min";
+    if (devPatchDeployed) devPatchDeployed.textContent = String(versionCount);
+
+    if (devActiveUsersTrend) devActiveUsersTrend.textContent = "Current sessions";
+    if (devMaxUsersTrend) devMaxUsersTrend.textContent = "Peak in last 24h";
+    if (devActiveIssuesTrend) {
+      devActiveIssuesTrend.textContent = errorCount > 0 ? errorCount + " need review" : "No open issues";
+      devActiveIssuesTrend.className = "dev-stat-trend " + (errorCount > 0 ? "down" : "up");
+    }
+    if (devAvgLatencyTrend) {
+      devAvgLatencyTrend.textContent = routes.length + " routes monitored";
+      devAvgLatencyTrend.className = "dev-stat-trend " + (avgLatency > 1500 ? "down" : "");
+    }
+    if (devPeakTrafficTrend) devPeakTrafficTrend.textContent = peakTraffic > 0 ? "Peak requests/min" : "Waiting for samples";
+    if (devPatchDeployedTrend) devPatchDeployedTrend.textContent = versionCount + " versions seen";
+  }
+
+  // Build patch version list with error counts and color-coded borders (coral/green)
+  function renderDeveloperPatchNotes(stats, activityEvents) {
+    if (!developerPatchList) return;
+
+    var versionMap = {};
+    var errorsByVersion = stats.errorsByVersion || {};
+    var errorMessages = {};
+
+    Object.keys(errorsByVersion).forEach(function (ver) {
+      versionMap[ver] = { errors: errorsByVersion[ver], events: 0 };
+    });
+
+    (stats.recentErrors || []).forEach(function (err) {
+      var ver = err.deployVersion || "unknown";
+      if (!errorMessages[ver]) errorMessages[ver] = [];
+      if (errorMessages[ver].length < 2) {
+        errorMessages[ver].push(err.data.message || "Runtime error on " + (err.route || "/"));
+      }
+    });
+
+    (activityEvents || []).forEach(function (evt) {
+      var ver = evt.deployVersion || "unknown";
+      if (!versionMap[ver]) versionMap[ver] = { errors: 0, events: 0 };
+      versionMap[ver].events += 1;
+    });
+
+    var versions = Object.keys(versionMap).sort(function (a, b) {
+      return (versionMap[b].events + versionMap[b].errors) - (versionMap[a].events + versionMap[a].errors);
+    });
+
+    if (versions.length === 0) {
+      developerPatchList.innerHTML = '<li class="patch-version-item"><div><span class="patch-version-name">No deploy versions detected</span></div><span class="patch-version-count">0 errors</span></li>';
+      return;
+    }
+
+    developerPatchList.innerHTML = versions.map(function (ver) {
+      var info = versionMap[ver];
+      var statusClass = info.errors > 0 ? "has-errors" : "clean";
+      var countLabel = info.errors > 0 ? info.errors + " error" + (info.errors !== 1 ? "s" : "") : "Clean";
+      var detail = "";
+      if (info.errors > 0 && errorMessages[ver] && errorMessages[ver].length > 0) {
+        detail = '<p class="patch-version-detail">' + errorMessages[ver].map(function (m) { return escapeHtml(m); }).join("; ") + '</p>';
+      } else if (info.errors === 0) {
+        detail = '<p class="patch-version-detail">No regressions — ' + info.events + ' events tracked</p>';
+      }
+      return '<li class="patch-version-item ' + statusClass + '">' +
+        '<div><span class="patch-version-name">' + escapeHtml(ver) + '</span>' + detail + '</div>' +
+        '<span class="patch-version-count">' + countLabel + '</span>' +
+        '</li>';
+    }).join('');
+  }
+
+  // Render the mini health pentagon + overall score + 5-dimension breakdown on the home page
+  function renderDevMiniRadar(stats, events) {
+    var errorPressure = Math.min(100, (stats.totalErrors || 0) * 12);
+    var routeEntries = Object.keys(stats.latencyByRoute || {}).map(function (route) { return stats.latencyByRoute[route]; });
+    var peakLatency = routeEntries.reduce(function (max, entry) { return Math.max(max, Number(entry.p95) || 0); }, 0);
+    var feedbackRatings = (events || []).map(getEventRating).filter(function (r) { return r !== null; });
+    var avgRating = feedbackRatings.length ? feedbackRatings.reduce(function (s, r) { return s + r; }, 0) / feedbackRatings.length : 4;
+    var dimensions = [
+      { label: "Avail", value: Math.max(55, 100 - errorPressure) },
+      { label: "Errors", value: Math.max(20, 100 - errorPressure) },
+      { label: "Latency", value: Math.max(20, 100 - Math.min(80, peakLatency / 45)) },
+      { label: "Signal", value: Math.min(100, 45 + Math.min(55, (stats.totalEvents || 0) * 3)) },
+      { label: "Rating", value: Math.round((avgRating / 5) * 100) }
+    ];
+    var average = Math.round(dimensions.reduce(function (s, d) { return s + d.value; }, 0) / dimensions.length);
+    var statusClass = average >= 82 ? "good" : (average >= 62 ? "warning" : "danger");
+    var statusText = average >= 82 ? "Healthy" : (average >= 62 ? "Watch" : "Action needed");
+
+    if (devHealthToken) {
+      devHealthToken.className = "status-token " + statusClass;
+      devHealthToken.textContent = statusText;
+    }
+    if (devOverallScore) devOverallScore.textContent = average + "%";
+    if (devOverallLabel) devOverallLabel.textContent = statusText + " — Reliability";
+    if (devScoreBreakdown) {
+      devScoreBreakdown.innerHTML = dimensions.map(function (d) {
+        return '<li><span>' + escapeHtml(d.label) + '</span><strong>' + Math.round(d.value) + '%</strong></li>';
+      }).join("");
+    }
+    if (devMiniRadarGrid && devMiniRadarAxis && devMiniRadarShape) {
+      var cx = 100, cy = 100, maxR = 60;
+      var step = (Math.PI * 2) / dimensions.length;
+      var pt = function (i, r) {
+        var a = -Math.PI / 2 + i * step;
+        return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+      };
+      devMiniRadarGrid.innerHTML = [0.33, 0.66, 1].map(function (s) {
+        return '<polygon points="' + dimensions.map(function (_, i) {
+          var p = pt(i, maxR * s);
+          return p[0].toFixed(1) + "," + p[1].toFixed(1);
+        }).join(" ") + '"></polygon>';
+      }).join("");
+      devMiniRadarAxis.innerHTML = dimensions.map(function (d, i) {
+        var end = pt(i, maxR);
+        var lbl = pt(i, maxR + 18);
+        return '<line x1="' + cx + '" y1="' + cy + '" x2="' + end[0].toFixed(1) + '" y2="' + end[1].toFixed(1) + '"></line>' +
+          '<text x="' + lbl[0].toFixed(1) + '" y="' + lbl[1].toFixed(1) + '">' + escapeHtml(d.label) + '</text>';
+      }).join("");
+      devMiniRadarShape.setAttribute("points", dimensions.map(function (d, i) {
+        var p = pt(i, maxR * (d.value / 100));
+        return p[0].toFixed(1) + "," + p[1].toFixed(1);
+      }).join(" "));
+    }
   }
 
   function renderActivityFeed(activityEvents) {
     if (!activityFeedContainer) return;
     activityFeedContainer.innerHTML = (activityEvents || []).slice(0, 8).map(function (e) {
-      let msg = e.type === "error" ? e.data.message : (e.type === "pageload" ? e.route + " rendered" : e.type);
+      let eventType = getEventType(e);
+      let msg = eventType === "error"
+        ? getEventMessage(e, "Unknown error")
+        : (eventType === "pageload" ? (e.route || "/") + " rendered" : eventType);
       return "<li><span class=\"timeline-time\">" + formatClockTime(e.timestamp) + "</span><span class=\"timeline-copy\">" + escapeHtml(msg) + "</span></li>";
     }).join("");
   }
 
   function renderIssuesActivityFeed(stats, activityEvents) {
     if (!issuesActivityFeedContainer) return;
-    issuesActivityFeedContainer.innerHTML = (stats.recentErrors || []).slice(0, 6).map(function (e) {
-      return "<li><span class=\"timeline-time\">" + formatClockTime(e.timestamp) + "</span><span class=\"timeline-copy\">" + escapeHtml(e.data.message || "Error thrown") + "</span></li>";
+    let issueEvents = deriveIssueEvents(stats, activityEvents).slice(0, 6);
+    issuesActivityFeedContainer.innerHTML = issueEvents.map(function (e) {
+      return "<li><span class=\"timeline-time\">" + formatClockTime(e.timestamp) + "</span><span class=\"timeline-copy\">" + escapeHtml(getEventMessage(e, "Error thrown")) + "</span></li>";
     }).join("");
   }
 
   function renderBarChart(chartContainer, labels, values, highlightedIndex) {
     if (!chartContainer) return;
-    let max = Math.max.apply(null, values.concat([1]));
+    let baselineHeight = 10;
+    let perUnitGrowth = 10;
+    let maxBarHeight = 92;
     chartContainer.style.setProperty("--bar-count", String(Math.max(labels.length, 1)));
-    chartContainer.classList.toggle("is-empty", values.every(function (value) { return value === 0; }));
+    chartContainer.classList.toggle("is-empty", values.every(function (value) { return Number(value || 0) === 0; }));
     chartContainer.innerHTML = labels.map(function (l, idx) {
-      let pct = Math.round((values[idx] / max) * 100);
+      let value = Number(values[idx] || 0);
+      let pct = Math.min(maxBarHeight, baselineHeight + (Math.max(value, 0) * perUnitGrowth));
       let className = "bar" + (idx === highlightedIndex ? " highlight" : "") + (labels.length > 8 ? " dense" : "");
-      return '<div class="' + className + '" style="--bar-height: ' + Math.max(pct, 8) + '%" data-value="' + escapeHtml(values[idx]) + '">' +
+      return '<div class="' + className + '" style="--bar-height: ' + pct + '%" data-value="' + escapeHtml(String(value)) + '">' +
         '<i class="bar-fill" aria-hidden="true"></i><span>' + escapeHtml(l) + '</span></div>';
     }).join("");
   }
@@ -1758,7 +2395,7 @@
     let cutoff = getRangeCutoff();
     return (events || []).filter(function (eventRecord) {
       let ts = getValidTimestamp(eventRecord.timestamp);
-      return ts === null || ts >= cutoff;
+      return ts !== null && ts >= cutoff;
     });
   }
 
@@ -1780,6 +2417,30 @@
     });
 
     return { labels: labels, values: buckets };
+  }
+
+  function buildUniqueIdentitySeries(events, bucketCount, identityPicker) {
+    let bucketSets = Array.from({ length: bucketCount }, function () { return new Set(); });
+    let labels = Array.from({ length: bucketCount }, function (_value, idx) {
+      if (uiState.selectedRange === "24h") return idx === bucketCount - 1 ? "Now" : "-" + (bucketCount - idx - 1) * 3 + "h";
+      if (uiState.selectedRange === "7d") return idx === bucketCount - 1 ? "Today" : "-" + (bucketCount - idx - 1) + "d";
+      return idx === bucketCount - 1 ? "This wk" : "-" + (bucketCount - idx - 1) + "w";
+    });
+    let cutoff = getRangeCutoff();
+    let span = Math.max(Date.now() - cutoff, 1);
+
+    (events || []).forEach(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord.timestamp);
+      if (ts === null || ts < cutoff) return;
+      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+      let identity = identityPicker(eventRecord);
+      if (identity) bucketSets[bucketIndex].add(String(identity));
+    });
+
+    return {
+      labels: labels,
+      values: bucketSets.map(function (set) { return set.size; })
+    };
   }
 
   function getEventRating(eventRecord) {
@@ -1820,7 +2481,7 @@
     };
 
     (eventsInRange || []).forEach(function (eventRecord) {
-      let eventType = eventRecord && eventRecord.type ? String(eventRecord.type) : "";
+      let eventType = getEventType(eventRecord);
 
       if (eventType === "pageload" || eventType === "performance") {
         counts.performance += 1;
@@ -1841,13 +2502,15 @@
     let routeBuckets = {};
 
     filteredEvents.forEach(function (eventRecord) {
-      if (eventRecord.type !== "pageload") return;
-      if (!eventRecord.data || typeof eventRecord.data.duration !== "number") return;
+      let eventType = getEventType(eventRecord);
+      if (eventType !== "pageload" && eventType !== "performance" && eventType !== "custom") return;
+      let duration = getEventDurationMs(eventRecord);
+      if (duration === null) return;
 
       let routeName = eventRecord.route || "/";
       if (!routeBuckets[routeName]) routeBuckets[routeName] = [];
       routeBuckets[routeName].push({
-        duration: Number(eventRecord.data.duration) || 0,
+        duration: duration,
         timestamp: eventRecord.timestamp,
       });
     });
@@ -1867,17 +2530,18 @@
   function renderEventBreakdown(events) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
-      { key: "Performance", className: "teal", count: 0 },
-      { key: "Errors", className: "coral", count: 0 },
-      { key: "Feedback", className: "amber", count: 0 },
-      { key: "Clicks", className: "blue", count: 0 }
+      { key: "Performance", className: "teal", detail: "Pageload + web vitals", count: 0 },
+      { key: "Errors", className: "coral", detail: "Runtime + API failures", count: 0 },
+      { key: "Feedback", className: "amber", detail: "Ratings + comments", count: 0 },
+      { key: "Clicks", className: "blue", detail: "Click + custom actions", count: 0 }
     ];
 
     (events || []).forEach(function (eventRecord) {
-      if (eventRecord.type === "pageload" || eventRecord.type === "performance") groups[0].count += 1;
-      else if (eventRecord.type === "error") groups[1].count += 1;
-      else if (eventRecord.type === "feedback") groups[2].count += 1;
-      else if (eventRecord.type === "click" || eventRecord.type === "custom") groups[3].count += 1;
+      let eventType = getEventType(eventRecord);
+      if (eventType === "pageload" || eventType === "performance") groups[0].count += 1;
+      else if (isErrorLikeEvent(eventRecord)) groups[1].count += 1;
+      else if (eventType === "feedback") groups[2].count += 1;
+      else if (eventType === "click" || eventType === "custom") groups[3].count += 1;
     });
 
     let total = groups.reduce(function (sum, group) { return sum + group.count; }, 0) || 1;
@@ -1890,7 +2554,11 @@
     breakdownDonut.style.background = "conic-gradient(" + stops.join(", ") + ")";
     breakdownList.innerHTML = groups.map(function (group) {
       let pct = Math.round((group.count / total) * 100);
-      return '<li><span><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong></li>';
+      return '<li class="breakdown-item ' + group.className + '">' +
+        '<span class="breakdown-main"><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span>' +
+        '<strong>' + pct + '%</strong>' +
+        '<small class="breakdown-detail">' + group.detail + '</small>' +
+        '</li>';
     }).join("");
   }
 
@@ -1934,25 +2602,46 @@
     if (analyticsRangeUsers) {
       let usersSet = new Set();
       eventsInRange.forEach(function (eventRecord) {
-        if (eventRecord.sessionId) usersSet.add(eventRecord.sessionId);
+        let identity = eventRecord.userId || eventRecord.sessionId || (eventRecord.data && eventRecord.data.userId) || (eventRecord.data && eventRecord.data.sessionId);
+        if (identity) usersSet.add(identity);
       });
       analyticsRangeUsers.textContent = String(usersSet.size);
     }
 
     if (analyticsRangeActions) {
       let actions = eventsInRange.filter(function (eventRecord) {
-        return eventRecord.type === "click" || eventRecord.type === "custom" || eventRecord.type === "feedback";
+        let eventType = getEventType(eventRecord);
+        return eventType === "click" || eventType === "custom" || eventType === "feedback";
       }).length;
       analyticsRangeActions.textContent = String(actions);
     }
+  // Render all analytics charts: user count, activity, errors over time, latency, ratings, breakdown
+  function renderAnalyticsPanels(stats, events) {
+    let rangeEvents = getRangeEvents(events);
+    let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
+    let userSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.userId ? 1 : 0; });
+    let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
+    let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
+      return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
+    }, 0);
+
+    let errorSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "error" ? 1 : 0; });
+    var errorPeakIdx = errorSeries.values.reduce(function (best, val, idx, arr) { return val > arr[best] ? idx : best; }, 0);
+
+    renderBarChart(userChartContainer, userSeries.labels, userSeries.values, userSeries.values.length - 1);
+    renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1);
+    renderBarChart(devErrorChartContainer, errorSeries.labels, errorSeries.values, errorPeakIdx);
+    renderLatencyChart(stats);
+    renderRatingSummary(rangeEvents);
+    renderEventBreakdown(rangeEvents);
 
     if (analyticsRangeLatency) {
-      let routeNames = Object.keys(latencySummary || {});
+      let routeNames = Object.keys(stats.latencyByRoute || {});
       if (routeNames.length === 0) {
         analyticsRangeLatency.textContent = "0 ms";
       } else {
         let peakP95 = routeNames.reduce(function (runningPeak, routeName) {
-          let currentRoute = latencySummary[routeName] || {};
+          let currentRoute = stats.latencyByRoute[routeName] || {};
           return Math.max(runningPeak, Number(currentRoute.p95) || 0);
         }, 0);
         analyticsRangeLatency.textContent = peakP95 + " ms";
@@ -2030,7 +2719,9 @@
   function renderAnalyticsPanels(stats, events) {
     let rangeEvents = getRangeEvents(events);
     let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
-    let userSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.userId ? 1 : 0; });
+    let userSeries = buildUniqueIdentitySeries(rangeEvents, bucketCount, function (eventRecord) {
+      return eventRecord.userId || eventRecord.sessionId || null;
+    });
     let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
     let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
       return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
@@ -2048,28 +2739,55 @@
     if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
   }
 
+  // Main render entry point — called on each poll. Dispatches to all view renderers.
   function updateDashboardStats(stats, events) {
     let resolved = Array.isArray(events) && events.length > 0 ? events : (stats.recentActivity || []);
+    let derivedIssues = deriveIssueEvents(stats, resolved);
     uiState.latestStats = stats;
     uiState.latestEvents = resolved;
+    uiState.latestDerivedIssues = derivedIssues;
 
-    if (activeUsersValue) activeUsersValue.textContent = String(stats.activeUsers || 0);
-    if (totalEventsValue) totalEventsValue.textContent = String(stats.totalEvents || 0);
-    if (totalErrorsValue) totalErrorsValue.textContent = String(stats.totalErrors || 0);
+    let recentWindowStart = Date.now() - (5 * 60 * 1000);
+    let recentEvents = resolved.filter(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord && eventRecord.timestamp);
+      return ts !== null && ts >= recentWindowStart;
+    });
+    let recentSessions = new Set();
+    recentEvents.forEach(function (eventRecord) {
+      let sessionKey = eventRecord.sessionId || (eventRecord.data && eventRecord.data.sessionId) || (eventRecord.context && eventRecord.context.sessionId);
+      if (sessionKey) recentSessions.add(String(sessionKey));
+    });
+
+    let computedActiveUsers = recentSessions.size > 0 ? recentSessions.size : Number(stats.activeUsers || 0);
+    let computedTotalEvents = recentEvents.length > 0 ? recentEvents.length : Number(stats.totalEvents || 0);
+    let computedTotalErrors = recentEvents.filter(function (eventRecord) {
+      return isErrorLikeEvent(eventRecord);
+    }).length;
+    if (computedTotalErrors === 0) computedTotalErrors = Number(stats.totalErrors || 0);
+    stats.__computedTotalErrors = computedTotalErrors;
+
+    if (activeUsersValue) activeUsersValue.textContent = String(computedActiveUsers);
+    if (totalEventsValue) totalEventsValue.textContent = String(computedTotalEvents);
+    if (totalErrorsValue) totalErrorsValue.textContent = String(computedTotalErrors);
     if (versionCountValue) versionCountValue.textContent = String(Object.keys(stats.errorsByVersion || {}).length);
-    if (activeIssueCountLabel) activeIssueCountLabel.textContent = (stats.totalErrors || 0) + " active " + ((stats.totalErrors || 0) === 1 ? "issue" : "issues");
-    if (alertPillButton) alertPillButton.classList.toggle("quiet", (stats.totalErrors || 0) === 0);
+    if (activeIssueCountLabel) activeIssueCountLabel.textContent = computedTotalErrors + " active " + (computedTotalErrors === 1 ? "issue" : "issues");
+    if (alertPillButton) alertPillButton.classList.toggle("quiet", computedTotalErrors === 0);
 
-    renderIssueList(stats.recentErrors || []);
+    renderIssueList(derivedIssues);
     renderServiceStatus(stats);
     renderFeatureHotspots(resolved);
     renderManagerSummary(stats, resolved);
     renderDeveloperInsights(stats, resolved);
+    renderDeveloperStatCards(stats, resolved);
+    renderDeveloperPatchNotes(stats, resolved);
+    renderDevMiniRadar(stats, resolved);
     renderActivityFeed(resolved);
     renderIssuesActivityFeed(stats, resolved);
     renderAnalyticsPanels(stats, resolved);
     renderHealthSummary(stats, resolved);
     renderHealthIncidentFeed(stats);
+    if (devLatencyData.length === 0) generateDevLatencyData(stats);
+    drawDevLatencyChart();
     setLastUpdated(new Date().toISOString());
   }
 
@@ -2104,8 +2822,13 @@
     if (refreshDashboardButton) refreshDashboardButton.addEventListener("click", fetchDashboardStats);
   }
 
+  let pollIntervalId;
+
   function initializeWatchTowerFrontend() {
     let hash = window.location.hash.replace("#", "");
+    let savedRate = loadUiPreference(REFRESH_RATE_STORAGE_KEY);
+    if (savedRate) POLL_INTERVAL = Number(savedRate) || 3000;
+
     initializeViewNavigation();
     initializeTimeRangeButtons();
     initializeSettingsAccordions();
@@ -2114,15 +2837,17 @@
     initializeDashboardModeControl();
     initializeDeveloperWorkbench();
     initializeDarkModeToggle();
-    initializeContrastToggle();
-    initializeTextSizeSlider();
+    initializeTimezoneControl();
+    initializeRefreshRateControl();
+    initializeNotificationToggle();
+    initializeNotificationVolume();
     initializeNotificationControls();
     initializeProfileControls();
     initializeManualRefresh();
     initializeLiveEventStream();
     activateView(availableViewNames.indexOf(hash) === -1 ? "home" : hash);
     fetchDashboardStats();
-    setInterval(fetchDashboardStats, POLL_INTERVAL);
+    pollIntervalId = setInterval(fetchDashboardStats, POLL_INTERVAL);
   }
 
   initializeWatchTowerFrontend();
