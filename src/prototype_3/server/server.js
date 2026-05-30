@@ -880,9 +880,9 @@ function evaluateFeatureFlagsForIdentity(identity) {
 const server = http.createServer(function (request, response) {
   let parsedUrl = new URL(request.url, "http://localhost");
   let pathname = parsedUrl.pathname;
-  let repoSrcRoot = path.join(__dirname, "..", "..");
-  let landingRoot = path.join(repoSrcRoot, "Landing-Page");
-  let loginRoot = path.join(repoSrcRoot, "Log-In-Page");
+  let prototypeRoot = path.join(__dirname, "..");
+  let landingRoot = path.join(prototypeRoot, "Landing-Page");
+  let loginRoot = path.join(prototypeRoot, "Log-In-Page");
 
   if (request.method === "OPTIONS") {
     applyCors(response); response.writeHead(204); response.end(); return;
@@ -922,6 +922,12 @@ const server = http.createServer(function (request, response) {
     response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
     response.write(":\n\n"); sseClients.add(response);
     request.on("close", () => sseClients.delete(response)); return;
+  }
+
+  if (request.method === "GET" && pathname === "/") {
+    response.writeHead(302, { Location: "/landing/" });
+    response.end();
+    return;
   }
 
   if (request.method === "GET" && (pathname === "/landing" || pathname === "/landing/")) {
@@ -978,7 +984,7 @@ const server = http.createServer(function (request, response) {
     return;
   }
 
-  if (request.method === "GET" && pathname === "/dashboard") {
+  if (request.method === "GET" && (pathname === "/dashboard" || pathname === "/product" || pathname === "/product/")) {
     streamAbsoluteFile(response, path.join(__dirname, "..", "index.html"));
     return;
   }

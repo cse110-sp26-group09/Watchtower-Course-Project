@@ -76,6 +76,23 @@
     banner.textContent = '';
   }
 
+  /** Resolve the product dashboard for both server routes and direct file opens. */
+  function getProductUrl() {
+    const currentPath = window.location.pathname.replace(/\\/g, '/');
+    const directFileUrl = window.location.protocol === 'file:' || currentPath.indexOf('/Log-In-Page/') !== -1;
+    return directFileUrl ? '../index.html' : '/dashboard';
+  }
+
+  /** Persist demo sign-in state and open the product dashboard. */
+  function goProduct() {
+    try {
+      localStorage.setItem('watchtower_login_demo', 'signed-in');
+    } catch (error) {
+      // Local storage can be unavailable in hardened browser modes.
+    }
+    window.location.href = getProductUrl();
+  }
+
   // ─── INLINE BLUR VALIDATION ──────────────────────────────
   // Validates a field when the user tabs/clicks away from it.
   // Shows error or valid state in real time (before submit).
@@ -186,15 +203,14 @@
         return;
       }
 
-      // TODO: Replace with fetch() to your auth endpoint
-      showBanner('info', 'Backend not connected yet. Validation passed — ready for integration.');
+      goProduct();
     });
   }
 
   if (googleLoginButton) {
     googleLoginButton.addEventListener('click', () => {
       hideBanner();
-      showBanner('info', 'Google sign-in is a prototype action for now.');
+      goProduct();
     });
   }
 
