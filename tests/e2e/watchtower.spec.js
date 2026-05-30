@@ -98,6 +98,20 @@ test.describe("WatchTower hosted ShopDemo (/demo)", () => {
 });
 
 test.describe("WatchTower prototype 1 static navigation", () => {
+  // The Prototype 1 dashboard is now protected by a client-side Clerk guard
+  // (auth-guard.js). Stub a signed-in Clerk session before the page loads so
+  // the guard reveals the dashboard instead of redirecting to the login page.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      window.Clerk = {
+        user: { primaryEmailAddress: { emailAddress: "e2e@watchtower.test" } },
+        load: () => Promise.resolve(),
+        addListener: () => {},
+        signOut: () => Promise.resolve(),
+      };
+    });
+  });
+
   test("sidebar route state stays in sync with Back and Home", async ({ page }) => {
     await page.goto(PROTOTYPE_1_URL);
 
