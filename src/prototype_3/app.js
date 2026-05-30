@@ -396,28 +396,16 @@
     let savedMode = loadUiPreference(DASHBOARD_MODE_STORAGE_KEY);
     applyDashboardMode(savedMode || "manager");
 
-    if (dashboardModeSelect) {
-      dashboardModeSelect.addEventListener("change", function () {
-        applyDashboardMode(dashboardModeSelect.value);
-        saveUiPreference(DASHBOARD_MODE_STORAGE_KEY, uiState.dashboardMode);
-        if (uiState.dashboardMode === "developer") {
-          fetchDeveloperStream(false);
-        }
-        rerenderIfReady();
-      });
-    }
+    if (!dashboardModeSelect) return;
 
-    if (dashboardModePill) {
-      dashboardModePill.addEventListener("click", function () {
-        let nextMode = uiState.dashboardMode === "developer" ? "manager" : "developer";
-        applyDashboardMode(nextMode);
-        saveUiPreference(DASHBOARD_MODE_STORAGE_KEY, uiState.dashboardMode);
-        if (uiState.dashboardMode === "developer") {
-          fetchDeveloperStream(false);
-        }
-        rerenderIfReady();
-      });
-    }
+    dashboardModeSelect.addEventListener("change", function () {
+      applyDashboardMode(dashboardModeSelect.value);
+      saveUiPreference(DASHBOARD_MODE_STORAGE_KEY, uiState.dashboardMode);
+      if (uiState.dashboardMode === "developer") {
+        fetchDeveloperStream(false);
+      }
+      rerenderIfReady();
+    });
   }
 
   function rerenderIfReady() {
@@ -1879,10 +1867,10 @@
   function renderEventBreakdown(events) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
-      { key: "Performance", detail: "Pageload + web vitals", className: "teal", count: 0 },
-      { key: "Errors", detail: "Runtime + API failures", className: "coral", count: 0 },
-      { key: "Feedback", detail: "Ratings + comments", className: "amber", count: 0 },
-      { key: "Clicks", detail: "Click + custom actions", className: "blue", count: 0 }
+      { key: "Performance", className: "teal", count: 0 },
+      { key: "Errors", className: "coral", count: 0 },
+      { key: "Feedback", className: "amber", count: 0 },
+      { key: "Clicks", className: "blue", count: 0 }
     ];
 
     (events || []).forEach(function (eventRecord) {
@@ -1902,23 +1890,7 @@
     breakdownDonut.style.background = "conic-gradient(" + stops.join(", ") + ")";
     breakdownList.innerHTML = groups.map(function (group) {
       let pct = Math.round((group.count / total) * 100);
-      return [
-        '<li class="breakdown-item ',
-        group.className,
-        '">',
-        '<span class="breakdown-main"><i class="legend-dot ',
-        group.className,
-        '"></i><span class="breakdown-label">',
-        group.key,
-        '</span></span>',
-        '<strong>',
-        String(pct),
-        '%</strong>',
-        '<small class="breakdown-detail">',
-        group.detail,
-        "</small>",
-        "</li>"
-      ].join("");
+      return '<li><span><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong></li>';
     }).join("");
   }
 
