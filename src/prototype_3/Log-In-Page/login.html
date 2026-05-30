@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log In — WatchTower</title>
   <link rel="icon" type="image/png" href="assets/watchtower-transparent.png">
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("watchtower_auth_theme") !== "light") {
+          document.documentElement.dataset.theme = "dark";
+        }
+      } catch (error) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,14 +26,33 @@
       <img src="assets/watchtower-transparent.png" alt="" class="header-logo">
       <span>WatchTower</span>
     </a>
-    <a href="../Landing-Page/index.html" class="back-link">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
-      Back to landing
-    </a>
+    <div class="header-actions">
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 14.4A8.2 8.2 0 0 1 9.6 3 8.5 8.5 0 1 0 21 14.4Z"></path>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.9 4.9 1.4 1.4"></path>
+          <path d="m17.7 17.7 1.4 1.4"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.3 17.7-1.4 1.4"></path>
+          <path d="m19.1 4.9-1.4 1.4"></path>
+        </svg>
+      </button>
+      <a href="../Landing-Page/index.html" class="back-link" aria-label="Back to landing">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
+        Back to landing
+      </a>
+    </div>
   </header>
 
   <main class="auth-page">
-    <div class="auth-card">
+    <div class="auth-shell">
+      <div class="auth-card">
 
       <h1>Welcome back</h1>
       <p class="auth-subtitle">Sign in to your WatchTower dashboard.</p>
@@ -92,8 +122,40 @@
         Don't have an account? <a href="signup.html">Create one</a>
       </p>
 
+      </div>
+
+      <footer class="login-footer">
+        <span>&copy; 2026 WatchTower Team Akatsuki</span>
+        <nav aria-label="Login page links">
+          <button type="button" data-dialog-target="privacy-dialog">Privacy Policy</button>
+        </nav>
+      </footer>
     </div>
   </main>
+
+  <dialog class="info-dialog" id="privacy-dialog" aria-labelledby="privacy-title">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <div class="dialog-title">
+          <p>WatchTower prototype</p>
+          <h2 id="privacy-title">Privacy Policy</h2>
+        </div>
+        <button class="dialog-close" type="button" data-dialog-close>Close</button>
+      </div>
+      <div class="dialog-body">
+        <p>
+          WatchTower is a student project prototype for monitoring web app errors, performance, and user feedback.
+          This login screen is for demonstration only and should not be used with real passwords.
+        </p>
+        <ul class="privacy-list">
+          <li>Demo sign-in state is stored locally in the browser for prototype navigation.</li>
+          <li>Google sign-in is a visual prototype action and does not connect to a real Google account.</li>
+          <li>Any event data used by WatchTower should be limited to development, testing, or demo content.</li>
+          <li>The team should review privacy, authentication, and data-handling needs before any production release.</li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
 
   <script src="auth.js"></script>
 </body>
