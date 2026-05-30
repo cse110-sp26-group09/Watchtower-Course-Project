@@ -87,7 +87,7 @@
   function goProduct() {
     try {
       localStorage.setItem('watchtower_login_demo', 'signed-in');
-    } catch (error) {
+    } catch {
       // Local storage can be unavailable in hardened browser modes.
     }
     window.location.href = getProductUrl();
