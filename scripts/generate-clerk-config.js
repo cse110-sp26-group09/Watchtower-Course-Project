@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Generate src/Log-In-Page/clerk-config.js from CLERK_PUBLISHABLE_KEY.
+ * Generate src/prototype_3/Log-In-Page/clerk-config.js from CLERK_PUBLISHABLE_KEY.
  *
  * Reads the key from process.env (Render, CI, shell) or from a local .env file.
  * The generated file is gitignored — only this script and .env.example are committed.
@@ -11,7 +11,7 @@ const fs = require("fs");
 const path = require("path");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
-const OUTPUT_PATH = path.join(REPO_ROOT, "src", "Log-In-Page", "clerk-config.js");
+const OUTPUT_PATH = path.join(REPO_ROOT, "src", "prototype_3", "Log-In-Page", "clerk-config.js");
 
 /**
  * Load KEY=VALUE pairs from a .env file without overwriting existing env vars.
@@ -78,5 +78,5 @@ if (!/^pk_(test|live)_/.test(publishableKey)) {
       "or add CLERK_PUBLISHABLE_KEY in Render environment settings."
   );
 } else {
-  console.log("[config:clerk] Wrote src/Log-In-Page/clerk-config.js");
+  console.log("[config:clerk] Wrote src/prototype_3/Log-In-Page/clerk-config.js");
 }

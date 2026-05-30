@@ -1,21 +1,21 @@
 /**
- * WatchTower Prototype 1 — Client-side Clerk route guard.
+ * WatchTower Prototype 3 - Client-side Clerk route guard.
  *
  * Responsibilities:
  *   - Read the frontend-safe publishable key from `window.CLERK_PUBLISHABLE_KEY`
- *     (set in ../Log-In-Page/clerk-config.js, loaded before this file).
+ *     (set in ./Log-In-Page/clerk-config.js, loaded before this file).
  *   - Lazily load Clerk's browser SDK and wait for it to finish loading.
  *   - Redirect anonymous visitors to the login page (fail closed).
  *   - For signed-in users: reveal the dashboard, surface basic user info, and
  *     wire the logout controls to Clerk's signOut().
  *
- * IMPORTANT — prototype limitation:
+ * IMPORTANT - prototype limitation:
  *   This is *client-side* protection only. It hides the UI from anonymous users
- *   but does NOT secure the backend. The Prototype 1 SQLite event API
- *   (/api/events, /api/stats, ...) remains open and is intentionally untouched
- *   here. A production build MUST verify Clerk session tokens on the server for
- *   every protected route. SDK event ingestion is a separate concern and should
- *   authenticate with an app/project key, not a dashboard user login.
+ *   but does NOT secure the backend. The Prototype 3 event API (/api/events,
+ *   /api/stats, /api/developer/*, ...) remains open and is intentionally
+ *   untouched here. A production build MUST verify Clerk session tokens on the
+ *   server for every protected route. SDK event ingestion is a separate concern
+ *   and should authenticate with an app/project key, not a dashboard user login.
  *
  * Security notes:
  *   - Only the PUBLISHABLE key is used here. Never reference a Clerk secret key.
@@ -24,8 +24,8 @@
 (() => {
   "use strict";
 
-  const LOGIN_URL = new URL("../Log-In-Page/login.html", window.location.href).href;
-  const LANDING_URL = new URL("../Landing-Page/index.html", window.location.href).href;
+  const LOGIN_URL = new URL("./Log-In-Page/login.html", window.location.href).href;
+  const LANDING_URL = new URL("./Landing-Page/index.html", window.location.href).href;
 
   // Hide the protected shell immediately so signed-out users never see content
   // flash before the redirect resolves. Removed once the session is verified.
@@ -151,7 +151,7 @@
           .catch((error) => console.error("[auth-guard] Sign out failed:", error));
       };
 
-      // New topbar control plus the existing Settings "Sign out" button.
+      // Topbar logout control plus the existing Settings "Sign out" button.
       const logoutButton = document.getElementById("logout-button");
       if (logoutButton) {
         logoutButton.addEventListener("click", signOut);
@@ -163,7 +163,7 @@
     });
   }
 
-  // ─── Validate config ──────────────────────────────────────────────────────
+  // Validate config.
   const publishableKey = window.CLERK_PUBLISHABLE_KEY;
   if (
     !publishableKey ||
@@ -172,13 +172,13 @@
   ) {
     console.warn(
       "[auth-guard] Missing Clerk publishable key. Redirecting to login. " +
-        "Ensure ../Log-In-Page/clerk-config.js is served before auth-guard.js."
+        "Ensure ./Log-In-Page/clerk-config.js is served before auth-guard.js."
     );
     redirectToLogin();
     return;
   }
 
-  // ─── Enforce the session ──────────────────────────────────────────────────
+  // Enforce the session.
   loadClerk(publishableKey)
     .then((clerk) => {
       if (!clerk.user) {

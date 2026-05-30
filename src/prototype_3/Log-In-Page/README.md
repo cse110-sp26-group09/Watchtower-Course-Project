@@ -12,7 +12,7 @@ gitignored) from the `CLERK_PUBLISHABLE_KEY` environment variable. A Clerk
 
 ```bash
 cp .env.example .env          # set CLERK_PUBLISHABLE_KEY=pk_test_...
-npm run config:clerk          # writes src/Log-In-Page/clerk-config.js
+npm run config:clerk          # writes src/prototype_3/Log-In-Page/clerk-config.js
 ```
 
 On **Render**, add `CLERK_PUBLISHABLE_KEY` under Environment. Start scripts run
@@ -28,8 +28,8 @@ and [`docs/adr/ADR-0006-use-clerk-for-dashboard-auth.md`](../../docs/adr/ADR-000
 - `auth.js` derives the Clerk CDN from the key, loads the browser SDK, and:
   - mounts the Sign In component into `#clerk-sign-in` (login.html),
   - mounts the Sign Up component into `#clerk-sign-up` (signup.html),
-  - redirects to `../prototype_1/index.html` after auth (and immediately if a
-    session already exists).
+  - redirects to `../index.html` (the Prototype 3 dashboard) after auth (and
+    immediately if a session already exists).
 - The earlier fake password forms were removed; they never authenticated anyone
   and never sent passwords anywhere.
 - `forgot-password.html` now directs users to Clerk's built-in "Forgot
