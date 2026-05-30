@@ -100,6 +100,16 @@
   // ═══════════════════════════════════════════════════════════
   const loginForm = document.getElementById('login-form');
   const googleLoginButton = document.getElementById('google-login-btn');
+  const dialogButtons = document.querySelectorAll('[data-dialog-target]');
+  const dialogCloseButtons = document.querySelectorAll('[data-dialog-close]');
+
+  function closeDialog(dialog) {
+    if (!dialog) {
+      return;
+    }
+
+    dialog.close();
+  }
 
   if (loginForm) {
     // Blur validators
@@ -151,6 +161,27 @@
       showBanner('info', 'Google sign-in is a prototype action for now.');
     });
   }
+
+  dialogButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const dialog = document.getElementById(button.dataset.dialogTarget);
+      if (dialog) {
+        dialog.showModal();
+      }
+    });
+  });
+
+  dialogCloseButtons.forEach(button => {
+    button.addEventListener('click', () => closeDialog(button.closest('dialog')));
+  });
+
+  document.querySelectorAll('.info-dialog').forEach(dialog => {
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) {
+        closeDialog(dialog);
+      }
+    });
+  });
 
 
   // ═══════════════════════════════════════════════════════════
