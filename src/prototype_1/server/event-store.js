@@ -27,14 +27,11 @@
  * @module prototype_1/server/event-store
  */
 
-import path from "path";
-import { fileURLToPath } from "url";
+const path = require("path");
+const { randomUUID } = require("crypto");
+const { config: loadEnv } = require("dotenv");
+const { createClient } = require("@supabase/supabase-js");
 
-import { config as loadEnv } from "dotenv";
-import { createClient } from "@supabase/supabase-js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 
 loadEnv({ quiet: true });
@@ -80,8 +77,8 @@ const KNOWN_EVENT_TYPES = Object.freeze([
 ]);
 
 function generateEventId() {
-  if (typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+  if (typeof randomUUID === "function") {
+    return randomUUID();
   }
   return (
     Date.now().toString(36) +
@@ -173,7 +170,7 @@ function parseMetadata(metadataValue) {
     try {
       const parsed = JSON.parse(metadataValue);
       return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-    } catch (_error) {
+    } catch {
       return {};
     }
   }
@@ -584,7 +581,7 @@ function computeAnalytics(rows) {
   };
 }
 
-export {
+module.exports = {
   EVENTS_TABLE_SCHEMA_SQL,
   KNOWN_EVENT_TYPES,
   generateEventId,
