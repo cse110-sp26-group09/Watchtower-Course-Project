@@ -35,6 +35,34 @@
   --shadow-card:  0 4px 6px rgba(23, 32, 29, 0.04),
                   0 16px 40px rgba(23, 32, 29, 0.08);
   --transition:   160ms ease;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg:           #101713;
+  --surface:      #17211d;
+  --surface-alt:  #22312b;
+  --ink:          #f2f7f3;
+  --ink-soft:     #cad7cf;
+  --muted:        #94a49a;
+  --line:         #304039;
+  --rail:         #09110f;
+  --rail-soft:    #13211d;
+  --teal:         #4fc4bf;
+  --teal-hover:   #71d6d1;
+  --teal-soft:    #13312f;
+  --teal-glow:    rgba(79, 196, 191, 0.22);
+  --coral:        #ff8b7a;
+  --coral-soft:   #3d211d;
+  --coral-glow:   rgba(255, 139, 122, 0.18);
+  --amber:        #e6b451;
+  --amber-soft:   #352a14;
+  --green:        #67d89f;
+  --green-soft:   #153629;
+  --green-glow:   rgba(103, 216, 159, 0.18);
+  --shadow-card:  0 4px 6px rgba(0, 0, 0, 0.18),
+                  0 18px 42px rgba(0, 0, 0, 0.34);
+  color-scheme: dark;
 }
 
 html { background: var(--bg); }
@@ -90,6 +118,59 @@ a:hover { text-decoration: underline; }
   height: 46px;
   object-fit: contain;
   flex: 0 0 auto;
+}
+
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.theme-toggle {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-sm);
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.theme-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--teal-glow);
+  outline-offset: 3px;
+}
+
+.theme-toggle svg {
+  grid-area: 1 / 1;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.theme-toggle .icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  display: block;
 }
 
 .back-link {
@@ -661,6 +742,18 @@ a:hover { text-decoration: underline; }
 
 @media (max-width: 480px) {
   .auth-header { padding: 0 16px; }
+
+  .header-actions { gap: 8px; }
+
+  .back-link {
+    gap: 0;
+    font-size: 0;
+  }
+
+  .back-link svg {
+    width: 20px;
+    height: 20px;
+  }
 
   .auth-page { padding: 28px 16px 48px; }
 

@@ -100,8 +100,10 @@
   // ═══════════════════════════════════════════════════════════
   const loginForm = document.getElementById('login-form');
   const googleLoginButton = document.getElementById('google-login-btn');
+  const themeToggle = document.getElementById('theme-toggle');
   const dialogButtons = document.querySelectorAll('[data-dialog-target]');
   const dialogCloseButtons = document.querySelectorAll('[data-dialog-close]');
+  const themeStorageKey = 'watchtower_auth_theme';
 
   function closeDialog(dialog) {
     if (!dialog) {
@@ -109,6 +111,40 @@
     }
 
     dialog.close();
+  }
+
+  function storeTheme(theme) {
+    try {
+      localStorage.setItem(themeStorageKey, theme);
+    } catch (error) {
+      void error;
+    }
+  }
+
+  function applyTheme(theme) {
+    const isDark = theme === 'dark';
+
+    if (isDark) {
+      document.documentElement.dataset.theme = 'dark';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+
+    if (themeToggle) {
+      themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+      themeToggle.setAttribute('aria-pressed', String(isDark));
+      themeToggle.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+  }
+
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      storeTheme(nextTheme);
+    });
   }
 
   if (loginForm) {
