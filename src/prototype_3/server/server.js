@@ -925,6 +925,12 @@ const server = http.createServer(function (request, response) {
     request.on("close", () => sseClients.delete(response)); return;
   }
 
+  if (request.method === "GET" && pathname === "/") {
+    response.writeHead(302, { Location: "/landing/" });
+    response.end();
+    return;
+  }
+
   if (request.method === "GET" && (pathname === "/landing" || pathname === "/landing/")) {
     streamAbsoluteFile(response, path.join(landingRoot, "index.html"));
     return;
@@ -979,7 +985,7 @@ const server = http.createServer(function (request, response) {
     return;
   }
 
-  if (request.method === "GET" && pathname === "/dashboard") {
+  if (request.method === "GET" && (pathname === "/dashboard" || pathname === "/product" || pathname === "/product/")) {
     streamAbsoluteFile(response, path.join(__dirname, "..", "index.html"));
     return;
   }

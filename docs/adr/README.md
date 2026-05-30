@@ -46,37 +46,59 @@ What other options did we evaluate and why were they not chosen?
 
 ## Current ADRs
 
-### ADR 0001: Initial WatchTower Architecture
+### ADR-0001: Initial WatchTower Architecture
 - **Status:** Accepted
 - **Date:** *(Sprint 1)*
-- **Summary:** Lightweight static prototype using vanilla JavaScript, HTML, CSS, and Node.js backend
+- **Summary:** Lightweight static prototype using vanilla JavaScript, HTML, CSS, and Node.js backend.
 - **Link:** [ADR-0001.md](./ADR-0001.md) or see content below
 
 ### ADR-0002: Use Node.js for WatchTower Backend
 - **Status:** Accepted
 - **Date:** *(Sprint 3)*
-- **Summary:** Usage of Node.js as backend due to its simply front-backend integration, live event handling capacity, and native JSON handling. 
+- **Summary:** Use Node.js as the backend runtime due to its event-driven architecture, native JSON support, and suitability for telemetry ingestion.
 - **Link:** [ADR-0002.md](./ADR-0002.md) or see content below
 
-
 ### ADR-0003: Use SQLite for WatchTower Event Storage
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** *(Sprint 4)*
-- **Summary:** Usage of SQLite as the primary database due to its lightweight setup and easy integration with the Node.js backend architecture.
+- **Summary:** Initial database choice for MVP development. Superseded by ADR-0007.
 - **Link:** [ADR-0003.md](./ADR-0003.md) or see content below
 
 ### ADR-0004: Use Navigation Timing API for Frontend Performance Telemetry
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** *(Sprint 4)*
-- **Summary:** Usage of the browser-native Navigation Timing API for frontend performance and Real User Monitoring (RUM) metrics.
+- **Summary:** Use the browser-native Navigation Timing API to collect frontend performance metrics and Real User Monitoring (RUM) data.
 - **Link:** [ADR-0004.md](./ADR-0004.md) or see content below
 
 ### ADR-0005: Use Beacon API for Reliable Telemetry Delivery
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** *(Sprint 4)*
-- **Summary:** Usage of the browser-native Beacon API for frontend telemetry delivery and session finalization events.
+- **Summary:** Use the browser-native Beacon API to reliably deliver frontend telemetry and session finalization events.
 - **Link:** [ADR-0005.md](./ADR-0005.md) or see content below
 
+### ADR-0006: Use Clerk for WatchTower Authentication
+- **Status:** Accepted
+- **Date:** *(Sprint 4)*
+- **Summary:** Use Clerk as the managed authentication provider for user authentication, session management, and route protection.
+- **Link:** [ADR-0006.md](./ADR-0006.md) or see content below
+
+### ADR-0007: Migrate WatchTower Event Storage from SQLite to PostgreSQL
+- **Status:** Accepted
+- **Date:** *(Sprint 4)*
+- **Summary:** Replace SQLite with PostgreSQL to better support hosted deployment architecture and production database requirements.
+- **Link:** [ADR-0007.md](./ADR-0007.md) or see content below
+
+### ADR-0008: Use Supabase for Managed PostgreSQL Hosting
+- **Status:** Accepted
+- **Date:** *(Sprint 4)*
+- **Summary:** Use Supabase as the managed PostgreSQL provider to simplify database hosting, maintenance, and administration.
+- **Link:** [ADR-0008.md](./ADR-0008.md) or see content below
+
+### ADR-0009: Use Render for WatchTower Application Hosting
+- **Status:** Accepted
+- **Date:** *(Sprint 4)*
+- **Summary:** Use Render as the primary hosting platform for WatchTower's frontend and backend services.
+- **Link:** [ADR-0009.md](./ADR-0009.md) or see content below
 
 ## Writing ADRs
 
@@ -149,7 +171,7 @@ ADR-0002: Use JavaScript (now using TypeScript instead)
 *This ADR is embedded below for reference. Consider moving to a separate file (ADR-0001.md) for clarity.*
 
 ### Status
-Proposed
+Accepted
 
 ### Context
 WatchTower is a lightweight observability system for tracking frontend errors, performance signals, user feedback, and deployment/build-related signals.
@@ -256,7 +278,7 @@ Node.js was selected due to it being able to efficiently handle asynchronous tel
 
 ## ADR-0003: Use SQLite for WatchTower Event Storage
 
-- **Status:** Accepted  
+- **Status:** Superseded  
 - **Date:** 2026-05-26  
 
 ### Context
@@ -327,7 +349,7 @@ SQLite was selected because it provides a lightweight and low-maintenance framew
 ## ADR-0004: Use Navigation Timing API for Frontend Performance Metrics
 
 ### Status
-Proposed
+Accepted
 
 ### Date
 2026-05-26
@@ -413,7 +435,7 @@ The Navigation Timing API was selected because it provides lightweight, standard
 ## ADR-0005: Use Beacon API for Telemetry Delivery
 
 ### Status
-Proposed
+Accepted
 
 ### Date
 2026-05-26
@@ -500,3 +522,373 @@ Rejected because bidirectional connections arenot needed for a monitoring app.
 ### Conclusion
 
 The Beacon API was selected because it provides a lightweight and unload-safe mechanism for transmitting critical frontend telemetry data, improving the reliability and completeness of WatchTower observability signals.
+
+---
+
+## ADR-0006: Use Clerk for WatchTower Authentication
+
+### Status
+Accepted
+
+### Date
+2026-05-30
+
+---
+
+### Context
+
+WatchTower requires user authentication to support:
+- protected dashboard access
+- user-specific data
+- secure project ownership
+- team/member-based access control
+- future role-based permissions and UI
+
+Building authentication from scratch would require implementing:
+- secure password storage
+- session management
+- login and signup flows
+- password reset flows
+- token validation
+- account security protections
+
+This would add security risk and development overhead that is outside the core scope of WatchTower.
+
+---
+
+### Decision
+
+Use **Clerk** as the authentication provider for WatchTower.
+
+Clerk will handle:
+- user signup and login
+- session management
+- authentication UI components
+- OAuth/social login support
+- frontend/backend authentication integration
+
+---
+
+### Rationale
+
+- Clerk provides managed authentication with minimal setup
+- Reduces security risk compared to custom authentication
+- Speeds up development by providing prebuilt auth flows and UI components
+- Integrates well with modern JavaScript and Node.js applications
+- Supports protected frontend routes and backend request validation
+- Allows WatchTower to focus on observability features instead of authentication infrastructure
+- Provides a path for future user/team management and role-based access control
+
+---
+
+### Alternatives Considered
+
+#### Custom Authentication
+
+Rejected because it would require implementing and maintaining sensitive security functionality, including password hashing, session handling, password resets, and account protection.
+
+#### Auth0
+
+Rejected because it adds more configuration and platform complexity than needed for the current WatchTower scope.
+
+#### Firebase Authentication
+
+Rejected because it would couple authentication more closely with the Firebase ecosystem, while WatchTower is currently built around a Node.js and SQLite architecture.
+
+---
+
+### Consequences
+
+#### Positive
+- Faster authentication implementation
+- Reduced security burden
+- Built-in login, signup, and session management
+- Easier route protection
+- Supports future team and organization features
+- Allows the team to focus on WatchTower telemetry and dashboard functionality
+
+#### Negative
+- Adds dependency on an external authentication provider
+- Introduces vendor lock-in risk (marrying decision)
+- Authentication behavior depends on Clerk service availability
+- Some customization may be limited by Clerk’s platform features
+- Pricing or plan limits may matter if WatchTower scales
+
+---
+
+### Conclusion
+
+Clerk was selected because it provides a secure, developer-friendly authentication layer that aligns with WatchTower’s lightweight MVP goals while supporting future expansion into protected dashboards, user-owned projects, and team-based access control.
+
+---
+
+## ADR-0007: Migrate WatchTower Event Storage from SQLite to PostgreSQL
+
+### Status
+Accepted
+
+### Date
+2026-05-30
+
+---
+
+### Context
+
+ADR-0003 selected SQLite as the primary database for WatchTower due to its lightweight setup and suitability for rapid MVP development.
+
+As WatchTower has evolved, the project has moved toward a fully hosted architecture consisting of:
+- a deployed frontend
+- a deployed Node.js backend
+- cloud-hosted infrastructure
+
+While SQLite was appropriate during local development, its file-based architecture introduces challenges in hosted environments:
+- database files must be managed alongside application deployments
+- persistence becomes dependent on server filesystem storage
+- database access is tied to a single application instance
+
+WatchTower requires a database solution that is designed for hosted and production environments.
+
+---
+
+### Decision
+
+Replace SQLite with PostgreSQL as the primary database for WatchTower.
+
+PostgreSQL will be used for:
+- telemetry event storage
+- user and project metadata
+- performance metrics
+- error logs
+- feedback submissions
+
+This decision supersedes ADR-0003.
+
+---
+
+### Rationale
+
+- PostgreSQL is designed for hosted and production deployments
+- Separates application infrastructure from data storage
+- Allows the backend and database to be deployed independently
+- Supported by major cloud providers and hosting platforms
+- Simplifies long-term deployment and maintenance
+- Provides a clear path for future scalability without requiring another database migration
+- Integrates well with the existing Node.js backend architecture
+
+---
+
+### Alternatives Considered
+
+#### Continue Using SQLite
+
+Rejected because SQLite is primarily intended for local and embedded use cases. Its file-based storage model creates deployment and infrastructure limitations for a hosted observability platform.
+
+#### MongoDB
+
+Rejected because WatchTower's DB accesses are configured for relational queries and migrating would incur a big overhead.
+
+---
+
+### Consequences
+
+#### Positive
+- Better alignment with hosted deployment architecture
+- Clear separation between application and database infrastructure
+- Easier cloud deployment and management
+- Improved maintainability
+- Supports future growth without another database migration
+
+#### Negative
+- Increased deployment complexity
+- Requires management of a dedicated database service
+- Higher operational overhead compared to SQLite
+- Existing SQLite data may require migration
+
+---
+
+### Supersedes
+
+ADR-0003: Use SQLite for WatchTower Event Storage
+
+---
+
+### Conclusion
+
+PostgreSQL was selected because it better aligns with WatchTower's transition from a local prototype to a hosted observability platform. While SQLite was effective for MVP development, PostgreSQL provides a more suitable foundation for deployment, maintenance, and future expansion.
+
+---
+
+## ADR-0008: Use Supabase for Managed PostgreSQL Hosting
+
+### Status
+Accepted
+
+### Date
+2026-05-30
+
+---
+
+### Context
+
+ADR-0007 selected PostgreSQL as the primary database for WatchTower to support the project's transition from a local prototype to a hosted application.
+
+While PostgreSQL provides a suitable production database solution, self-hosting PostgreSQL would require:
+- database provisioning
+- infrastructure management
+- backups and recovery configuration
+- monitoring and maintenance
+- security configuration
+
+WatchTower's primary focus is observability and telemetry functionality rather than database administration.
+
+The project requires a managed PostgreSQL solution that simplifies deployment while remaining compatible with the existing Node.js backend architecture.
+
+---
+
+### Decision
+
+Use Supabase as the managed PostgreSQL provider for WatchTower.
+
+Supabase will provide:
+- managed PostgreSQL hosting
+- database administration tools
+- automated backups
+- secure database access
+- cloud-hosted infrastructure
+
+WatchTower will continue to interact directly with PostgreSQL through the backend application.
+
+---
+
+### Rationale
+
+- Supabase provides fully managed PostgreSQL infrastructure
+- Reduces operational overhead associated with database administration
+- Simplifies deployment and maintenance
+- Includes useful database management and monitoring tools
+- Supports secure remote access from the hosted backend
+- Allows the development team to focus on application functionality rather than infrastructure management
+- Provides a free tier suitable for academic and MVP development
+
+---
+
+### Alternatives Considered
+
+#### Self-Hosted PostgreSQL
+
+Rejected because managing database infrastructure would introduce additional operational complexity that is outside the project's primary scope.
+
+#### Railway PostgreSQL
+
+Rejected because Supabase provides a more mature PostgreSQL management experience and additional tooling useful during development.
+
+#### Neon
+
+Rejected because while Neon provides hosted PostgreSQL, Supabase offers a broader ecosystem of management tools and developer features that simplify database administration.
+---
+
+### Consequences
+
+#### Positive
+- Reduced infrastructure management burden
+- Managed backups and maintenance
+- Simplified deployment process
+- Production-ready PostgreSQL hosting
+- Easy integration with existing backend architecture
+- Suitable for MVP and future project growth
+
+#### Negative
+- Introduces dependency on a third-party hosting provider
+- Potential vendor lock-in
+- Service availability depends on Supabase infrastructure
+- Future pricing may impact long-term deployment decisions
+
+---
+
+### Conclusion
+
+Supabase was selected because it provides a managed PostgreSQL platform that aligns with WatchTower’s hosted deployment architecture while minimizing operational complexity. This allows the team to focus on observability functionality rather than database administration.
+
+## ADR-0009: Use Render for WatchTower Application Hosting
+
+### Status
+Accepted
+
+### Date
+2026-05-30
+
+---
+
+### Context
+
+WatchTower requires a hosting solution for its deployed application components, including:
+- frontend dashboard
+- Node.js backend API
+- telemetry ingestion endpoints
+
+The hosting platform must:
+- support full-stack deployment
+- support long-running backend services
+- integrate easily with GitHub
+- provide a straightforward deployment workflow
+- align with the project's hosted architecture goals
+
+As WatchTower transitions from a local prototype to a hosted observability platform, a deployment solution is needed that can host both the frontend and backend components in a single ecosystem.
+
+---
+
+### Decision
+
+Use Render as the primary hosting platform for WatchTower.
+
+Render will host:
+- the frontend application
+- the Node.js backend service
+- deployment infrastructure required for telemetry ingestion and dashboard functionality
+
+---
+
+### Rationale
+
+- Render provides managed hosting for both static sites and backend services
+- Supports Node.js applications without requiring significant infrastructure configuration
+- Integrates directly with GitHub for automated deployments
+- Simplifies deployment and maintenance workflows
+- Provides a centralized platform for hosting WatchTower services
+- Reduces operational complexity compared to self-managed infrastructure
+- Suitable for MVP
+
+---
+
+### Alternatives Considered
+
+#### GitHub Pages
+
+Rejected because GitHub Pages only supports static site hosting and cannot host the WatchTower Node.js backend or telemetry ingestion endpoints.
+
+#### Vercel
+
+Rejected because while Vercel provides excellent frontend hosting, its architecture is more heavily optimized for frontend and serverless workloads. Render provides a more straightforward environment for hosting a persistent Node.js backend service alongside the frontend application.
+
+---
+
+### Consequences
+
+#### Positive
+- Simple deployment workflow
+- Native support for Node.js backend services
+- GitHub integration with automatic deployments
+- Centralized hosting platform for frontend and backend components
+- Reduced infrastructure management burden
+
+#### Negative
+- Dependency on a third-party hosting provider
+- Service availability depends on Render infrastructure
+- Potential future pricing considerations
+- Some platform-specific deployment configurations may create migration effort if another hosting provider is adopted later
+
+---
+
+### Conclusion
+
+Render was selected because it provides a straightforward hosting platform that supports both WatchTower's frontend and backend requirements while minimizing deployment complexity. Its support for persistent Node.js services and GitHub-based deployment workflows makes it a strong fit for WatchTower's hosted architecture.
