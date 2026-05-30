@@ -1,19 +1,19 @@
 "use strict";
 
 /**
- * Prototype 1 SQLite-backed WatchTower server.
+ * Prototype 1 PostgreSQL-backed WatchTower server.
  *
  * Serves the prototype 1 dashboard, the monitored ShopDemo app, and the
  * browser SDK as static files; persists ingested events to a single
- * SQLite database using `better-sqlite3` via {@link module:prototype_1/server/event-store};
+ * PostgreSQL database using Supabase via {@link module:prototype_1/server/event-store};
  * exposes a small JSON API (`/api/health`, `/api/events`, `/api/stats`,
  * `/api/events/stream`) used both by the dashboard and the local
  * verification workflow described in `docs/architecture/event-storage.md`.
  *
- * Database file location:
- *   `<repo-root>/data/prototype_1/watchtower.sqlite`
+ * Database connection:
+ *   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_ANON_KEY`
  *
- * Override with the `WATCHTOWER_P1_DB` environment variable.
+ * Override the events table with the `SUPABASE_EVENTS_TABLE` environment variable.
  *
  * @module prototype_1/server
  */
@@ -29,11 +29,7 @@ const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
   ? parseInt(process.env.MAX_EVENTS, 10)
   : 10000;
 const ACTIVE_USER_WINDOW_MS = 5 * 60 * 1000;
-const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
-const DEFAULT_DB_PATH = path.join(REPO_ROOT, "data", "prototype_1", "watchtower.sqlite");
-const DATABASE_PATH = process.env.WATCHTOWER_P1_DB
-  ? path.resolve(process.env.WATCHTOWER_P1_DB)
-  : DEFAULT_DB_PATH;
+const EVENTS_TABLE = process.env.SUPABASE_EVENTS_TABLE || "events";
 
 const sseClients = new Set();
 
@@ -46,7 +42,7 @@ const MIME = {
   ".svg": "image/svg+xml",
 };
 
-const database = eventStoreModule.openDatabase(DATABASE_PATH);
+const database = eventStoreModule.openDatabase();
 const store = eventStoreModule.createEventStore(database);
 
 /**
@@ -204,8 +200,8 @@ async function handleIngestEvents(request, response) {
   let storedEvents = [];
   if (validEvents.length > 0) {
     try {
-      storedEvents = store.insertEventBatch(validEvents);
-      store.pruneOldest(MAX_EVENTS);
+      storedEvents = await store.insertEventBatch(validEvents);
+      await store.pruneOldest(MAX_EVENTS);
     } catch (error) {
       console.error("[prototype_1] Failed to insert events:", error);
       sendJson(response, 500, { error: "Failed to store events" });
@@ -229,20 +225,27 @@ async function handleIngestEvents(request, response) {
  *
  * @param {http.ServerResponse} response - HTTP response.
  * @param {URL} parsedUrl - Parsed request URL.
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function handleListEvents(response, parsedUrl) {
+async function handleListEvents(response, parsedUrl) {
   const typeFilter = parsedUrl.searchParams.get("type");
   const versionFilter = parsedUrl.searchParams.get("version");
   const rawLimit = parsedUrl.searchParams.get("limit");
   const parsedLimit = rawLimit ? parseInt(rawLimit, 10) : 100;
   const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 100;
 
-  const events = store.getEvents({
-    type: typeFilter || undefined,
-    version: versionFilter || undefined,
-    limit,
-  });
+  let events;
+  try {
+    events = await store.getEvents({
+      type: typeFilter || undefined,
+      version: versionFilter || undefined,
+      limit,
+    });
+  } catch (error) {
+    console.error("[prototype_1] Failed to fetch events:", error);
+    sendJson(response, 500, { error: "Failed to fetch events" });
+    return;
+  }
 
   sendJson(response, 200, { events });
 }
@@ -251,10 +254,17 @@ function handleListEvents(response, parsedUrl) {
  * Handle `GET /api/stats`.
  *
  * @param {http.ServerResponse} response - HTTP response.
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function handleStats(response) {
-  const stats = store.getStats(ACTIVE_USER_WINDOW_MS);
+async function handleStats(response) {
+  let stats;
+  try {
+    stats = await store.getStats(ACTIVE_USER_WINDOW_MS);
+  } catch (error) {
+    console.error("[prototype_1] Failed to fetch stats:", error);
+    sendJson(response, 500, { error: "Failed to fetch stats" });
+    return;
+  }
   sendJson(response, 200, stats);
 }
 
@@ -262,14 +272,29 @@ function handleStats(response) {
  * Handle `GET /api/health`.
  *
  * @param {http.ServerResponse} response - HTTP response.
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function handleHealth(response) {
+async function handleHealth(response) {
+  let eventCount = 0;
+  try {
+    eventCount = await store.countEvents();
+  } catch (error) {
+    console.error("[prototype_1] Failed to count events:", error);
+    sendJson(response, 500, {
+      status: "error",
+      storage: "postgresql",
+      table: EVENTS_TABLE,
+      error: "Failed to count events",
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
   sendJson(response, 200, {
     status: "ok",
-    storage: "sqlite",
-    databasePath: DATABASE_PATH,
-    eventCount: store.countEvents(),
+    storage: "postgresql",
+    table: EVENTS_TABLE,
+    eventCount,
     knownEventTypes: eventStoreModule.KNOWN_EVENT_TYPES,
     timestamp: new Date().toISOString(),
   });
@@ -309,7 +334,7 @@ const server = http.createServer(async function (request, response) {
   }
 
   if (request.method === "GET" && pathname === "/api/health") {
-    handleHealth(response);
+    await handleHealth(response);
     return;
   }
 
@@ -319,12 +344,12 @@ const server = http.createServer(async function (request, response) {
   }
 
   if (request.method === "GET" && pathname === "/api/events") {
-    handleListEvents(response, parsedUrl);
+    await handleListEvents(response, parsedUrl);
     return;
   }
 
   if (request.method === "GET" && pathname === "/api/stats") {
-    handleStats(response);
+    await handleStats(response);
     return;
   }
 
@@ -338,12 +363,12 @@ const server = http.createServer(async function (request, response) {
 
 if (require.main === module) {
   server.listen(PORT, function () {
-    console.log("Prototype 1 (SQLite) WatchTower running at http://localhost:" + PORT);
+    console.log("Prototype 1 (PostgreSQL) WatchTower running at http://localhost:" + PORT);
     console.log("  Dashboard : http://localhost:" + PORT + "/");
     console.log("  Demo app  : http://localhost:" + PORT + "/demo");
     console.log("  SDK       : http://localhost:" + PORT + "/sdk/watchtower.js");
     console.log("  Health    : http://localhost:" + PORT + "/api/health");
-    console.log("  Database  : " + DATABASE_PATH);
+    console.log("  Table     : " + EVENTS_TABLE);
   });
 }
 
@@ -351,5 +376,5 @@ module.exports = {
   server,
   store,
   database,
-  DATABASE_PATH,
+  EVENTS_TABLE,
 };
