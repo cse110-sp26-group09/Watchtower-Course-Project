@@ -11,6 +11,7 @@
   let darkModeToggle = document.getElementById("dark-mode-toggle");
   let dashboardModeSelect = document.getElementById("dashboard-mode-select");
   let dashboardModePill = document.getElementById("dashboard-mode-pill");
+  let modeCurrentViewLabel = document.getElementById("mode-current-view");
   let refreshDashboardButton = document.getElementById("refresh-dashboard");
   let notificationModeSelect = document.getElementById("notification-mode");
   let notificationStartInput = document.getElementById("notification-start");
@@ -49,6 +50,9 @@
   let issuesActivityFeedContainer = document.getElementById("issues-activity-feed");
   let userChartContainer = document.getElementById("user-chart");
   let purchaseChartContainer = document.getElementById("purchase-chart");
+  let developerErrorChartContainer = document.getElementById("dev-error-chart");
+  let developerLatencyCanvas = document.getElementById("dev-latency-canvas");
+  let developerLatencyThresholdInput = document.getElementById("dev-latency-threshold");
   let userDeltaBadge = document.getElementById("user-delta");
   let purchaseDeltaBadge = document.getElementById("purchase-delta");
   let latencyLine = document.getElementById("latency-line");
@@ -89,6 +93,29 @@
   let developerInsightIssues = document.getElementById("developer-insight-issues");
   let developerInsightLatency = document.getElementById("developer-insight-latency");
   let developerInsightTraffic = document.getElementById("developer-insight-traffic");
+  let developerPatchList = document.getElementById("developer-patch-list");
+  let devActiveUsersValue = document.getElementById("dev-active-users");
+  let devActiveUsersTrend = document.getElementById("dev-active-users-trend");
+  let devMaxUsersValue = document.getElementById("dev-max-users");
+  let devMaxUsersTrend = document.getElementById("dev-max-users-trend");
+  let devActiveIssuesValue = document.getElementById("dev-active-issues");
+  let devActiveIssuesTrend = document.getElementById("dev-active-issues-trend");
+  let devAverageLatencyValue = document.getElementById("dev-avg-latency");
+  let devAverageLatencyTrend = document.getElementById("dev-avg-latency-trend");
+  let devPeakTrafficValue = document.getElementById("dev-peak-traffic");
+  let devPeakTrafficTrend = document.getElementById("dev-peak-traffic-trend");
+  let devPatchDeployedValue = document.getElementById("dev-patch-deployed");
+  let devPatchDeployedTrend = document.getElementById("dev-patch-deployed-trend");
+  let devMiniRadarGrid = document.getElementById("dev-mini-radar-grid");
+  let devMiniRadarAxis = document.getElementById("dev-mini-radar-axis");
+  let devMiniRadarShape = document.getElementById("dev-mini-radar-shape");
+  let devHealthToken = document.getElementById("dev-health-token");
+  let devOverallScore = document.getElementById("dev-overall-score");
+  let devOverallLabel = document.getElementById("dev-overall-label");
+  let devScoreBreakdown = document.getElementById("dev-score-breakdown");
+  let devHomeSummaryCopy = document.getElementById("dev-home-summary-copy");
+  let devHomeSummaryList = document.getElementById("dev-home-summary-list");
+  let devHomeSummaryErrors = document.getElementById("dev-home-summary-errors");
   let developerIssueSearchInput = document.getElementById("developer-issue-search");
   let developerMuteToggleButton = document.getElementById("developer-mute-toggle");
   let developerMuteStatusLine = document.getElementById("developer-mute-status");
@@ -384,7 +411,15 @@
     document.body.classList.toggle("dashboard-mode-manager", resolvedMode === "manager");
 
     if (dashboardModeSelect) dashboardModeSelect.value = resolvedMode;
-    if (dashboardModePill) dashboardModePill.textContent = resolvedMode === "developer" ? "Developer view" : "Manager view";
+    if (dashboardModePill) {
+      let nextModeLabel = resolvedMode === "developer" ? "Manager view" : "Developer view";
+      dashboardModePill.textContent = nextModeLabel;
+      dashboardModePill.setAttribute("aria-label", "Switch to " + nextModeLabel);
+      dashboardModePill.setAttribute("title", "Switch to " + nextModeLabel);
+    }
+    if (modeCurrentViewLabel) {
+      modeCurrentViewLabel.textContent = "Currently on: " + (resolvedMode === "developer" ? "Developer view" : "Manager view");
+    }
 
     document.querySelectorAll("[data-dashboard-mode]").forEach(function (modePanel) {
       let panelMode = getDashboardModeValue(modePanel.getAttribute("data-dashboard-mode"));
@@ -396,16 +431,27 @@
     let savedMode = loadUiPreference(DASHBOARD_MODE_STORAGE_KEY);
     applyDashboardMode(savedMode || "manager");
 
-    if (!dashboardModeSelect) return;
-
-    dashboardModeSelect.addEventListener("change", function () {
-      applyDashboardMode(dashboardModeSelect.value);
+    let syncMode = function (nextMode) {
+      applyDashboardMode(nextMode);
       saveUiPreference(DASHBOARD_MODE_STORAGE_KEY, uiState.dashboardMode);
       if (uiState.dashboardMode === "developer") {
         fetchDeveloperStream(false);
       }
       rerenderIfReady();
-    });
+    };
+
+    if (dashboardModeSelect) {
+      dashboardModeSelect.addEventListener("change", function () {
+        syncMode(dashboardModeSelect.value);
+      });
+    }
+
+    if (dashboardModePill) {
+      dashboardModePill.addEventListener("click", function () {
+        let nextMode = uiState.dashboardMode === "developer" ? "manager" : "developer";
+        syncMode(nextMode);
+      });
+    }
   }
 
   function rerenderIfReady() {
@@ -1195,32 +1241,6 @@
     renderGovernance(insights);
   }
 
-  function renderDeveloperHomeDiagnostics(stats) {
-    let routeNames = Object.keys(stats.latencyByRoute || {}).sort(function (leftRoute, rightRoute) {
-      return ((stats.latencyByRoute[rightRoute] || {}).p95 || 0) - ((stats.latencyByRoute[leftRoute] || {}).p95 || 0);
-    });
-
-    if (developerLatencyPeakValue) {
-      if (routeNames.length === 0) {
-        developerLatencyPeakValue.textContent = "0 ms";
-      } else {
-        let peakRouteStats = stats.latencyByRoute[routeNames[0]] || {};
-        developerLatencyPeakValue.textContent = String(peakRouteStats.p95 || 0) + " ms";
-      }
-    }
-
-    if (developerRouteTable) {
-      if (routeNames.length === 0) {
-        developerRouteTable.innerHTML = '<li><span>/</span><strong>Waiting for samples</strong></li>';
-      } else {
-        developerRouteTable.innerHTML = routeNames.slice(0, 6).map(function (routeName) {
-          let routeStats = stats.latencyByRoute[routeName] || {};
-          return '<li><span>' + escapeHtml(routeName) + '</span><strong>' + String(routeStats.p95 || 0) + ' ms</strong></li>';
-        }).join('');
-      }
-    }
-  }
-
   function initializeDeveloperWorkbench() {
     if (developerTabButtons.length === 0) return;
 
@@ -1696,17 +1716,254 @@
     }).join("");
   }
 
+  function buildHealthModel(stats, events) {
+    let rangeEvents = getRangeEvents(events || []);
+    let routeEntries = Object.keys(stats.latencyByRoute || {}).map(function (route) { return stats.latencyByRoute[route]; });
+    let peakLatency = routeEntries.reduce(function (max, entry) { return Math.max(max, Number(entry.p95) || 0); }, 0);
+    let errorCount = rangeEvents.filter(function (eventRecord) { return eventRecord.type === "error"; }).length;
+    let totalSignals = rangeEvents.length;
+    let errorRate = totalSignals > 0 ? (errorCount / totalSignals) : 0;
+    let feedbackRatings = rangeEvents.map(getEventRating).filter(function (rating) { return rating !== null; });
+    let avgRating = feedbackRatings.length ? feedbackRatings.reduce(function (sum, rating) { return sum + rating; }, 0) / feedbackRatings.length : 0;
+    let distinctRoutes = new Set(rangeEvents.map(function (eventRecord) { return eventRecord.route || "/"; })).size;
+    let distinctTypes = new Set(rangeEvents.map(function (eventRecord) { return eventRecord.type || "custom"; })).size;
+    let availabilityScore = totalSignals === 0 ? 35 : Math.max(0, Math.round(100 - (errorRate * 220)));
+    let errorScore = totalSignals === 0 ? 35 : Math.max(0, Math.round(100 - (errorRate * 260)));
+    let latencyScore = peakLatency === 0 ? 35 : Math.max(0, Math.round(100 - (peakLatency / 22)));
+    let signalScore = Math.min(100, Math.round((distinctTypes * 15) + (distinctRoutes * 10) + Math.min(45, totalSignals * 0.8)));
+    let feedbackScore = feedbackRatings.length === 0 ? 20 : Math.round((avgRating / 5) * 100);
+    let dimensions = [
+      { label: "Availability", value: availabilityScore, shortLabel: "Avail" },
+      { label: "Errors", value: errorScore, shortLabel: "Err" },
+      { label: "Latency", value: latencyScore, shortLabel: "Lat" },
+      { label: "Signal", value: signalScore, shortLabel: "Signal" },
+      { label: "Feedback", value: feedbackScore, shortLabel: "Fb" }
+    ];
+    let average = Math.round(dimensions.reduce(function (sum, item) { return sum + item.value; }, 0) / dimensions.length);
+    let statusClass = average >= 82 ? "good" : (average >= 62 ? "warning" : "danger");
+    let statusText = average >= 82 ? "Healthy" : (average >= 62 ? "Watch" : "Action needed");
+    return {
+      dimensions: dimensions,
+      average: average,
+      statusClass: statusClass,
+      statusText: statusText,
+      peakLatency: peakLatency,
+      routeCount: routeEntries.length
+    };
+  }
+
+  function renderDeveloperHeroStats(stats, activityEvents) {
+    let rangeEvents = getRangeEvents(activityEvents);
+    let uniqueUsers = new Set();
+    rangeEvents.forEach(function (eventRecord) {
+      let userKey = eventRecord.userId || eventRecord.sessionId;
+      if (userKey) uniqueUsers.add(String(userKey));
+    });
+    let maxUsers = Math.max(uniqueUsers.size, stats.activeUsers || 0);
+    let routeNames = Object.keys(stats.latencyByRoute || {});
+    let averageLatency = 0;
+
+    if (routeNames.length > 0) {
+      averageLatency = Math.round(routeNames.reduce(function (sum, routeName) {
+        let routeStats = stats.latencyByRoute[routeName] || {};
+        return sum + (Number(routeStats.p95) || 0);
+      }, 0) / routeNames.length);
+    }
+
+    let oneMinuteAgo = Date.now() - (60 * 1000);
+    let trafficEvents = (activityEvents || []).filter(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord.timestamp);
+      if (ts === null || ts < oneMinuteAgo) return false;
+      return eventRecord.type === "click" || eventRecord.type === "custom" || eventRecord.type === "pageload" || eventRecord.type === "performance";
+    }).length;
+
+    let versionsSeen = Object.keys(stats.errorsByVersion || {}).length;
+
+    if (devActiveUsersValue) devActiveUsersValue.textContent = String(stats.activeUsers || 0);
+    if (devActiveUsersTrend) devActiveUsersTrend.textContent = "Current sessions";
+    if (devMaxUsersValue) devMaxUsersValue.textContent = String(maxUsers || 0);
+    if (devMaxUsersTrend) devMaxUsersTrend.textContent = "Peak in last 24h";
+    if (devActiveIssuesValue) devActiveIssuesValue.textContent = String(stats.totalErrors || 0);
+    if (devActiveIssuesTrend) devActiveIssuesTrend.textContent = (stats.totalErrors || 0) > 0 ? "Needs review" : "No blockers";
+    if (devAverageLatencyValue) devAverageLatencyValue.textContent = String(averageLatency || 0) + " ms";
+    if (devAverageLatencyTrend) devAverageLatencyTrend.textContent = routeNames.length > 0 ? "Across " + routeNames.length + " routes" : "Across all routes";
+    if (devPeakTrafficValue) devPeakTrafficValue.textContent = String(trafficEvents) + "/min";
+    if (devPeakTrafficTrend) devPeakTrafficTrend.textContent = "Requests per minute";
+    if (devPatchDeployedValue) devPatchDeployedValue.textContent = String(versionsSeen || 0);
+    if (devPatchDeployedTrend) devPatchDeployedTrend.textContent = versionsSeen > 0 ? "Versions seen" : "Waiting for versions";
+  }
+
   function renderDeveloperHomeDiagnostics(stats) {
+    let routeNames = Object.keys(stats.latencyByRoute || {}).sort(function (leftRoute, rightRoute) {
+      return ((stats.latencyByRoute[rightRoute] || {}).p95 || 0) - ((stats.latencyByRoute[leftRoute] || {}).p95 || 0);
+    });
+
+    if (developerLatencyPeakValue) {
+      if (routeNames.length === 0) {
+        developerLatencyPeakValue.textContent = "0 ms";
+      } else {
+        let peakRouteStats = stats.latencyByRoute[routeNames[0]] || {};
+        developerLatencyPeakValue.textContent = String(peakRouteStats.p95 || 0) + " ms";
+      }
+    }
+
     if (developerRouteTable) {
-      let rNames = Object.keys(stats.latencyByRoute || {}).sort((a, b) => (stats.latencyByRoute[b].p95 || 0) - (stats.latencyByRoute[a].p95 || 0));
-      developerRouteTable.innerHTML = rNames.length === 0 ? '<li><span>/</span><strong>Telemetry quiet</strong></li>' : rNames.slice(0, 4).map(function (n) {
-        return '<li><span>' + escapeHtml(n) + '</span><strong>' + stats.latencyByRoute[n].p95 + ' ms</strong></li>';
-      }).join('');
+      if (routeNames.length === 0) {
+        developerRouteTable.innerHTML = '<li><span>/</span><strong>Waiting for samples</strong></li>';
+      } else {
+        developerRouteTable.innerHTML = routeNames.slice(0, 6).map(function (routeName) {
+          let routeStats = stats.latencyByRoute[routeName] || {};
+          return '<li><span>' + escapeHtml(routeName) + '</span><strong>' + String(routeStats.p95 || 0) + ' ms</strong></li>';
+        }).join("");
+      }
+    }
+  }
+
+  function renderDeveloperInsightLists(stats, activityEvents) {
+    if (developerInsightIssues) {
+      let topErrors = (stats.recentErrors || []).slice(0, 3);
+      if (topErrors.length === 0) {
+        topErrors = (activityEvents || []).filter(function (eventRecord) {
+          return eventRecord.type === "error";
+        }).slice(0, 3);
+      }
+
+      if (topErrors.length === 0) {
+        developerInsightIssues.innerHTML = '<li class="severity-medium"><span class="rank">-</span><span>Waiting for issues</span><strong>0</strong></li>';
+      } else {
+        developerInsightIssues.innerHTML = topErrors.map(function (eventRecord, idx) {
+          let rawMessage = eventRecord && eventRecord.data ? eventRecord.data.message : "";
+          let errorMessage = String(rawMessage || "").split("\n")[0].trim() || "Runtime error";
+          return '<li class="severity-high"><span class="rank">' + (idx + 1) + '</span><span>' + escapeHtml(errorMessage) + '</span><strong>' + escapeHtml(formatClockTime(eventRecord.timestamp)) + '</strong></li>';
+        }).join("");
+      }
+    }
+
+    if (developerInsightLatency) {
+      let routes = Object.keys(stats.latencyByRoute || {}).map(function (routeName) {
+        return { route: routeName, p95: Number((stats.latencyByRoute[routeName] || {}).p95) || 0 };
+      }).sort(function (leftRoute, rightRoute) { return rightRoute.p95 - leftRoute.p95; }).slice(0, 3);
+      if (routes.length === 0) {
+        developerInsightLatency.innerHTML = '<li class="severity-medium"><span class="rank">-</span><span>Waiting for route telemetry</span><strong>0 ms</strong></li>';
+      } else {
+        developerInsightLatency.innerHTML = routes.map(function (entry, idx) {
+          return '<li class="severity-medium"><span class="rank">' + (idx + 1) + '</span><span>' + escapeHtml(entry.route) + "</span><strong>" + entry.p95 + " ms</strong></li>";
+        }).join("");
+      }
+    }
+
+    if (developerInsightTraffic) {
+      let topActions = deriveFeatureCounts(activityEvents).slice(0, 3);
+      if (topActions.length === 0) {
+        developerInsightTraffic.innerHTML = '<li><span class="rank">-</span><span>Waiting for activity samples</span><strong>0/min</strong></li>';
+      } else {
+        developerInsightTraffic.innerHTML = topActions.map(function (action, idx) {
+          return '<li><span class="rank">' + (idx + 1) + '</span><span>' + escapeHtml(action.name) + "</span><strong>" + action.count + "/min</strong></li>";
+        }).join("");
+      }
+    }
+  }
+
+  function renderDeveloperPatchNotes(stats) {
+    if (!developerPatchList) return;
+    let versionRows = Object.keys(stats.errorsByVersion || {}).map(function (versionName) {
+      return {
+        version: versionName,
+        errors: Number(stats.errorsByVersion[versionName]) || 0
+      };
+    }).sort(function (leftVersion, rightVersion) { return rightVersion.errors - leftVersion.errors; });
+
+    if (versionRows.length === 0) {
+      developerPatchList.innerHTML = '<li class="patch-version-item"><span class="patch-version-name">Waiting for deploy data</span><span class="patch-version-count">0 errors</span></li>';
+      return;
+    }
+
+    developerPatchList.innerHTML = versionRows.slice(0, 4).map(function (entry) {
+      let latestError = (uiState.latestStats && Array.isArray(uiState.latestStats.recentErrors))
+        ? uiState.latestStats.recentErrors.find(function (eventRecord) { return eventRecord.deployVersion === entry.version; })
+        : null;
+      let detail = latestError ? ((latestError.route || "/") + " • " + formatClockTime(latestError.timestamp)) : "No recent error sample";
+      return '<li class="patch-version-item ' + (entry.errors > 0 ? "has-errors" : "clean") + '"><span class="patch-version-name">' + escapeHtml(entry.version) + '</span><span class="patch-version-count">' + entry.errors + ' errors</span><p class="patch-version-detail">' + escapeHtml(detail) + "</p></li>";
+    }).join("");
+  }
+
+  function renderDeveloperHealthMini(stats, activityEvents) {
+    let healthModel = buildHealthModel(stats, activityEvents);
+    let topAction = deriveFeatureCounts(activityEvents || [])[0];
+    let errorCount = (stats.totalErrors || 0);
+    let alertSummary = errorCount > 0
+      ? (errorCount + " open issue" + (errorCount === 1 ? "" : "s") + " need attention.")
+      : "No open errors right now.";
+    let trafficSummary = topAction
+      ? ("Top activity: " + topAction.name + " (" + topAction.count + " events).")
+      : "Waiting for click and custom activity samples.";
+    let latencySummary = healthModel.peakLatency > 0
+      ? ("Highest p95 route latency is " + Math.round(healthModel.peakLatency) + " ms.")
+      : "No pageload latency samples yet.";
+
+    if (devOverallScore) devOverallScore.textContent = healthModel.average + "%";
+    if (devOverallLabel) devOverallLabel.textContent = healthModel.statusText;
+    if (devHomeSummaryErrors) devHomeSummaryErrors.textContent = String(errorCount);
+    if (devHealthToken) {
+      devHealthToken.className = "status-token " + healthModel.statusClass;
+      devHealthToken.textContent = healthModel.statusText;
+    }
+    if (devHomeSummaryCopy) {
+      devHomeSummaryCopy.textContent = "System state is calculated from live telemetry, error pressure, route latency, and behavioral signals.";
+    }
+    if (devHomeSummaryList) {
+      devHomeSummaryList.innerHTML = [
+        alertSummary,
+        latencySummary,
+        trafficSummary
+      ].map(function (item) {
+        return '<li><span aria-hidden="true">!</span> ' + escapeHtml(item) + "</li>";
+      }).join("");
+    }
+
+    if (devScoreBreakdown) {
+      devScoreBreakdown.innerHTML = healthModel.dimensions.map(function (item) {
+        return '<li><span>' + escapeHtml(item.label) + '</span><strong>' + Math.round(item.value) + "%</strong></li>";
+      }).join("");
+    }
+
+    if (devMiniRadarGrid && devMiniRadarAxis && devMiniRadarShape) {
+      let centerX = 106;
+      let centerY = 100;
+      let maxRadius = 56;
+      let angleStep = (Math.PI * 2) / healthModel.dimensions.length;
+      let pointFor = function (idx, radius) {
+        let angle = -Math.PI / 2 + idx * angleStep;
+        return [centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius];
+      };
+
+      devMiniRadarGrid.innerHTML = [0.33, 0.66, 1].map(function (scale) {
+        return '<polygon points="' + healthModel.dimensions.map(function (_item, idx) {
+          let point = pointFor(idx, maxRadius * scale);
+          return point[0].toFixed(1) + "," + point[1].toFixed(1);
+        }).join(" ") + '"></polygon>';
+      }).join("");
+
+      devMiniRadarAxis.innerHTML = healthModel.dimensions.map(function (item, idx) {
+        let end = pointFor(idx, maxRadius);
+        let label = pointFor(idx, maxRadius + 18);
+        return '<line x1="' + centerX + '" y1="' + centerY + '" x2="' + end[0].toFixed(1) + '" y2="' + end[1].toFixed(1) + '"></line>' +
+          '<text x="' + label[0].toFixed(1) + '" y="' + label[1].toFixed(1) + '">' + escapeHtml(item.shortLabel) + '</text>';
+      }).join("");
+
+      devMiniRadarShape.setAttribute("points", healthModel.dimensions.map(function (item, idx) {
+        let point = pointFor(idx, maxRadius * (item.value / 100));
+        return point[0].toFixed(1) + "," + point[1].toFixed(1);
+      }).join(" "));
     }
   }
 
   function renderDeveloperInsights(stats, activityEvents) {
+    renderDeveloperHeroStats(stats, activityEvents);
     renderDeveloperHomeDiagnostics(stats);
+    renderDeveloperInsightLists(stats, activityEvents);
+    renderDeveloperPatchNotes(stats);
+    renderDeveloperHealthMini(stats, activityEvents);
   }
 
   function renderActivityFeed(activityEvents) {
@@ -1780,6 +2037,27 @@
     });
 
     return { labels: labels, values: buckets };
+  }
+
+  function buildUniqueTimeSeries(events, bucketCount, keyPicker) {
+    let labels = buildTimeSeries([], bucketCount, function () { return 0; }).labels;
+    let bucketSets = Array.from({ length: bucketCount }, function () { return new Set(); });
+    let cutoff = getRangeCutoff();
+    let span = Math.max(Date.now() - cutoff, 1);
+
+    (events || []).forEach(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord.timestamp);
+      if (ts === null || ts < cutoff) return;
+      let uniqueKey = keyPicker(eventRecord);
+      if (!uniqueKey) return;
+      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+      bucketSets[bucketIndex].add(String(uniqueKey));
+    });
+
+    return {
+      labels: labels,
+      values: bucketSets.map(function (bucketSet) { return bucketSet.size; })
+    };
   }
 
   function getEventRating(eventRecord) {
@@ -1867,10 +2145,10 @@
   function renderEventBreakdown(events) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
-      { key: "Performance", className: "teal", count: 0 },
-      { key: "Errors", className: "coral", count: 0 },
-      { key: "Feedback", className: "amber", count: 0 },
-      { key: "Clicks", className: "blue", count: 0 }
+      { key: "Performance", className: "teal", count: 0, detail: "Pageload + web vitals" },
+      { key: "Errors", className: "coral", count: 0, detail: "Runtime + API failures" },
+      { key: "Feedback", className: "amber", count: 0, detail: "Ratings + comments" },
+      { key: "Clicks", className: "blue", count: 0, detail: "Click + custom actions" }
     ];
 
     (events || []).forEach(function (eventRecord) {
@@ -1885,12 +2163,12 @@
     let stops = groups.map(function (group) {
       let start = cursor;
       cursor += (group.count / total) * 100;
-      return "var(--" + (group.className === "coral" ? "coral" : group.className === "amber" ? "amber" : group.className === "blue" ? "blue" : "teal") + ") " + start.toFixed(1) + "% " + cursor.toFixed(1) + "%";
+      return "var(--" + group.className + ") " + start.toFixed(1) + "% " + cursor.toFixed(1) + "%";
     });
     breakdownDonut.style.background = "conic-gradient(" + stops.join(", ") + ")";
     breakdownList.innerHTML = groups.map(function (group) {
       let pct = Math.round((group.count / total) * 100);
-      return '<li><span><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong></li>';
+      return '<li class="breakdown-item ' + group.className + '"><span class="breakdown-main"><i class="legend-dot ' + group.className + '"></i><span class="breakdown-label">' + group.key + '</span></span><strong>' + pct + '%</strong><small class="breakdown-detail">' + group.detail + "</small></li>";
     }).join("");
   }
 
@@ -1930,6 +2208,137 @@
     }).join("");
   }
 
+  function getLatencyMsFromEvent(eventRecord) {
+    if (!eventRecord || !eventRecord.data) return null;
+
+    if (eventRecord.type === "pageload") {
+      let pageloadDuration = Number(eventRecord.data.duration);
+      return Number.isFinite(pageloadDuration) ? pageloadDuration : null;
+    }
+
+    if (eventRecord.type === "performance") {
+      let metricName = String(eventRecord.data.metricName || eventRecord.data.name || "").toLowerCase();
+      let metricValue = Number(eventRecord.data.value);
+      if (!Number.isFinite(metricValue)) {
+        metricValue = Number(eventRecord.data.duration);
+      }
+      if (!Number.isFinite(metricValue)) {
+        metricValue = Number(eventRecord.data.latency);
+      }
+      if (!Number.isFinite(metricValue)) return null;
+      if (metricName.indexOf("latency") !== -1 || metricName.indexOf("duration") !== -1 || metricName.indexOf("ttfb") !== -1 || metricName.indexOf("load") !== -1) {
+        return metricValue;
+      }
+    }
+
+    return null;
+  }
+
+  function renderDeveloperLatencyCanvas(rangeEvents, bucketCount) {
+    if (!developerLatencyCanvas) return;
+    let context = developerLatencyCanvas.getContext("2d");
+    if (!context) return;
+
+    let width = developerLatencyCanvas.clientWidth || 640;
+    let height = developerLatencyCanvas.clientHeight || 240;
+    let dpr = window.devicePixelRatio || 1;
+    developerLatencyCanvas.width = Math.round(width * dpr);
+    developerLatencyCanvas.height = Math.round(height * dpr);
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    context.clearRect(0, 0, width, height);
+
+    let labels = buildTimeSeries([], bucketCount, function () { return 0; }).labels;
+    let cutoff = getRangeCutoff();
+    let span = Math.max(Date.now() - cutoff, 1);
+    let latencyBuckets = Array.from({ length: bucketCount }, function () { return []; });
+
+    (rangeEvents || []).forEach(function (eventRecord) {
+      let ts = getValidTimestamp(eventRecord.timestamp);
+      if (ts === null || ts < cutoff) return;
+      let latencyMs = getLatencyMsFromEvent(eventRecord);
+      if (!Number.isFinite(latencyMs)) return;
+      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+      latencyBuckets[bucketIndex].push(latencyMs);
+    });
+
+    let values = latencyBuckets.map(function (bucket) {
+      if (!bucket.length) return 0;
+      return Math.round(bucket.reduce(function (sum, latencyMs) { return sum + latencyMs; }, 0) / bucket.length);
+    });
+
+    let threshold = 250;
+    if (developerLatencyThresholdInput) {
+      let parsed = Number(developerLatencyThresholdInput.value);
+      if (Number.isFinite(parsed) && parsed > 0) threshold = parsed;
+    }
+
+    let maxValue = Math.max(100, threshold, Math.max.apply(null, values.concat([0])));
+    let padLeft = 42;
+    let padRight = 12;
+    let padTop = 16;
+    let padBottom = 32;
+    let chartWidth = Math.max(1, width - padLeft - padRight);
+    let chartHeight = Math.max(1, height - padTop - padBottom);
+    let xStep = bucketCount > 1 ? (chartWidth / (bucketCount - 1)) : 0;
+
+    context.strokeStyle = "rgba(140, 161, 182, 0.25)";
+    context.lineWidth = 1;
+    for (let gridIndex = 0; gridIndex <= 4; gridIndex += 1) {
+      let y = padTop + (chartHeight * (gridIndex / 4));
+      context.beginPath();
+      context.moveTo(padLeft, y);
+      context.lineTo(width - padRight, y);
+      context.stroke();
+    }
+
+    let thresholdY = padTop + chartHeight - ((threshold / maxValue) * chartHeight);
+    context.setLineDash([6, 4]);
+    context.strokeStyle = "rgba(255, 185, 66, 0.8)";
+    context.beginPath();
+    context.moveTo(padLeft, thresholdY);
+    context.lineTo(width - padRight, thresholdY);
+    context.stroke();
+    context.setLineDash([]);
+    context.fillStyle = "rgba(255, 185, 66, 0.95)";
+    context.font = "12px Inter, system-ui, sans-serif";
+    context.fillText("Threshold " + threshold + "ms", padLeft + 8, thresholdY - 6);
+
+    let points = values.map(function (value, idx) {
+      let x = padLeft + (idx * xStep);
+      let y = padTop + chartHeight - ((value / maxValue) * chartHeight);
+      return { x: x, y: y, value: value };
+    });
+
+    context.strokeStyle = "rgba(44, 196, 211, 0.95)";
+    context.lineWidth = 2.4;
+    context.beginPath();
+    points.forEach(function (point, idx) {
+      if (idx === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    });
+    context.stroke();
+
+    points.forEach(function (point) {
+      context.fillStyle = point.value > threshold ? "rgba(255, 117, 103, 0.95)" : "rgba(44, 196, 211, 0.95)";
+      context.beginPath();
+      context.arc(point.x, point.y, 3, 0, Math.PI * 2);
+      context.fill();
+    });
+
+    context.fillStyle = "rgba(197, 214, 235, 0.9)";
+    context.font = "11px Inter, system-ui, sans-serif";
+    labels.forEach(function (label, idx) {
+      let x = padLeft + (idx * xStep);
+      context.fillText(label, Math.max(0, x - 14), height - 10);
+    });
+
+    if (points.every(function (point) { return point.value === 0; })) {
+      context.fillStyle = "rgba(160, 178, 199, 0.92)";
+      context.font = "13px Inter, system-ui, sans-serif";
+      context.fillText("No latency samples yet. Use \"Simulate Slow Load\" in demo.", padLeft, Math.floor(height / 2));
+    }
+  }
+
   function renderAnalyticsSummary(eventsInRange, latencySummary) {
     if (analyticsRangeUsers) {
       let usersSet = new Set();
@@ -1961,41 +2370,27 @@
   }
 
   function renderHealthSummary(stats, events) {
-    let errorPressure = Math.min(100, (stats.totalErrors || 0) * 12);
-    let routeEntries = Object.keys(stats.latencyByRoute || {}).map(function (route) { return stats.latencyByRoute[route]; });
-    let peakLatency = routeEntries.reduce(function (max, entry) { return Math.max(max, Number(entry.p95) || 0); }, 0);
-    let feedbackRatings = (events || []).map(getEventRating).filter(function (rating) { return rating !== null; });
-    let avgRating = feedbackRatings.length ? feedbackRatings.reduce(function (sum, rating) { return sum + rating; }, 0) / feedbackRatings.length : 4;
-    let dimensions = [
-      { label: "Availability", value: Math.max(55, 100 - errorPressure) },
-      { label: "Errors", value: Math.max(20, 100 - errorPressure) },
-      { label: "Latency", value: Math.max(20, 100 - Math.min(80, peakLatency / 45)) },
-      { label: "Signal", value: Math.min(100, 45 + Math.min(55, (stats.totalEvents || 0) * 3)) },
-      { label: "Feedback", value: Math.round((avgRating / 5) * 100) }
-    ];
-    let average = Math.round(dimensions.reduce(function (sum, item) { return sum + item.value; }, 0) / dimensions.length);
-    let statusClass = average >= 82 ? "good" : (average >= 62 ? "warning" : "danger");
-    let statusText = average >= 82 ? "Healthy" : (average >= 62 ? "Watch" : "Action needed");
+    let healthModel = buildHealthModel(stats, events);
 
-    if (healthSummaryText) healthSummaryText.textContent = average + "% reliability score";
+    if (healthSummaryText) healthSummaryText.textContent = healthModel.average + "% reliability score";
     if (healthStatusToken) {
-      healthStatusToken.className = "status-token " + statusClass;
-      healthStatusToken.textContent = statusText;
+      healthStatusToken.className = "status-token " + healthModel.statusClass;
+      healthStatusToken.textContent = healthModel.statusText;
     }
     if (healthCopy) {
-      healthCopy.textContent = "Score combines " + formatNumber(stats.totalEvents || 0) + " ingested signals, " + formatNumber(stats.totalErrors || 0) + " recent errors, and " + routeEntries.length + " observed routes.";
+      healthCopy.textContent = "Score combines " + formatNumber(stats.totalEvents || 0) + " ingested signals, " + formatNumber(stats.totalErrors || 0) + " recent errors, and " + healthModel.routeCount + " observed routes.";
     }
     if (healthPriorityListContainer) {
       let priorities = [];
       if ((stats.totalErrors || 0) > 0) priorities.push("Triage " + stats.totalErrors + " recent runtime errors before the next deploy.");
-      if (peakLatency > 1800) priorities.push("Investigate p95 latency above 1.8s on the slowest route.");
+      if (healthModel.peakLatency > 1800) priorities.push("Investigate p95 latency above 1.8s on the slowest route.");
       if (priorities.length === 0) priorities.push("No active production blockers detected in the current telemetry window.");
       healthPriorityListContainer.innerHTML = priorities.map(function (item) {
         return '<li><span aria-hidden="true">!</span> ' + escapeHtml(item) + '</li>';
       }).join("");
     }
     if (healthLegend) {
-      healthLegend.innerHTML = dimensions.map(function (item) {
+      healthLegend.innerHTML = healthModel.dimensions.map(function (item) {
         return '<li><span>' + escapeHtml(item.label) + '</span><strong>' + Math.round(item.value) + '%</strong></li>';
       }).join("");
     }
@@ -2003,24 +2398,24 @@
       let centerX = 260;
       let centerY = 170;
       let maxRadius = 118;
-      let angleStep = (Math.PI * 2) / dimensions.length;
+      let angleStep = (Math.PI * 2) / healthModel.dimensions.length;
       let pointFor = function (idx, radius) {
         let angle = -Math.PI / 2 + idx * angleStep;
         return [centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius];
       };
       healthRadarGrid.innerHTML = [0.33, 0.66, 1].map(function (scale) {
-        return '<polygon points="' + dimensions.map(function (_item, idx) {
+        return '<polygon points="' + healthModel.dimensions.map(function (_item, idx) {
           let point = pointFor(idx, maxRadius * scale);
           return point[0].toFixed(1) + "," + point[1].toFixed(1);
         }).join(" ") + '"></polygon>';
       }).join("");
-      healthRadarAxis.innerHTML = dimensions.map(function (item, idx) {
+      healthRadarAxis.innerHTML = healthModel.dimensions.map(function (item, idx) {
         let end = pointFor(idx, maxRadius);
         let label = pointFor(idx, maxRadius + 30);
         return '<line x1="' + centerX + '" y1="' + centerY + '" x2="' + end[0].toFixed(1) + '" y2="' + end[1].toFixed(1) + '"></line>' +
           '<text x="' + label[0].toFixed(1) + '" y="' + label[1].toFixed(1) + '">' + escapeHtml(item.label) + '</text>';
       }).join("");
-      healthRadarShape.setAttribute("points", dimensions.map(function (item, idx) {
+      healthRadarShape.setAttribute("points", healthModel.dimensions.map(function (item, idx) {
         let point = pointFor(idx, maxRadius * (item.value / 100));
         return point[0].toFixed(1) + "," + point[1].toFixed(1);
       }).join(" "));
@@ -2030,8 +2425,11 @@
   function renderAnalyticsPanels(stats, events) {
     let rangeEvents = getRangeEvents(events);
     let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
-    let userSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.userId ? 1 : 0; });
+    let userSeries = buildUniqueTimeSeries(rangeEvents, bucketCount, function (eventRecord) {
+      return eventRecord.userId || eventRecord.sessionId || null;
+    });
     let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
+    let errorSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "error" ? 1 : 0; });
     let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
       return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
     }, 0);
@@ -2039,6 +2437,8 @@
     renderBarChart(userChartContainer, userSeries.labels, userSeries.values, userSeries.values.length - 1);
     renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1);
     renderLatencyChart(stats);
+    renderBarChart(developerErrorChartContainer, errorSeries.labels, errorSeries.values, errorSeries.values.length - 1);
+    renderDeveloperLatencyCanvas(rangeEvents, bucketCount);
     renderRatingSummary(rangeEvents);
     renderEventBreakdown(rangeEvents);
     renderAnalyticsSummary(rangeEvents, stats.latencyByRoute || {});
@@ -2057,6 +2457,9 @@
     if (totalEventsValue) totalEventsValue.textContent = String(stats.totalEvents || 0);
     if (totalErrorsValue) totalErrorsValue.textContent = String(stats.totalErrors || 0);
     if (versionCountValue) versionCountValue.textContent = String(Object.keys(stats.errorsByVersion || {}).length);
+    if (sidebarUsersValue) sidebarUsersValue.textContent = String(stats.activeUsers || 0);
+    if (sidebarEventsValue) sidebarEventsValue.textContent = String(stats.totalEvents || 0);
+    if (sidebarErrorsValue) sidebarErrorsValue.textContent = String(stats.totalErrors || 0);
     if (activeIssueCountLabel) activeIssueCountLabel.textContent = (stats.totalErrors || 0) + " active " + ((stats.totalErrors || 0) === 1 ? "issue" : "issues");
     if (alertPillButton) alertPillButton.classList.toggle("quiet", (stats.totalErrors || 0) === 0);
 
@@ -2104,6 +2507,15 @@
     if (refreshDashboardButton) refreshDashboardButton.addEventListener("click", fetchDashboardStats);
   }
 
+  function initializeDeveloperAnalyticsControls() {
+    if (!developerLatencyThresholdInput) return;
+    developerLatencyThresholdInput.addEventListener("input", function () {
+      if (uiState.latestStats) {
+        renderAnalyticsPanels(uiState.latestStats, uiState.latestEvents || []);
+      }
+    });
+  }
+
   function initializeWatchTowerFrontend() {
     let hash = window.location.hash.replace("#", "");
     initializeViewNavigation();
@@ -2119,6 +2531,7 @@
     initializeNotificationControls();
     initializeProfileControls();
     initializeManualRefresh();
+    initializeDeveloperAnalyticsControls();
     initializeLiveEventStream();
     activateView(availableViewNames.indexOf(hash) === -1 ? "home" : hash);
     fetchDashboardStats();
