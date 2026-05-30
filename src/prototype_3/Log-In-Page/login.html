@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log In — WatchTower</title>
   <link rel="icon" type="image/png" href="assets/watchtower-transparent.png">
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("watchtower_auth_theme") !== "light") {
+          document.documentElement.dataset.theme = "dark";
+        }
+      } catch (error) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,10 +26,28 @@
       <img src="assets/watchtower-transparent.png" alt="" class="header-logo">
       <span>WatchTower</span>
     </a>
-    <a href="../Landing-Page/index.html" class="back-link">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
-      Back to landing
-    </a>
+    <div class="header-actions">
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 14.4A8.2 8.2 0 0 1 9.6 3 8.5 8.5 0 1 0 21 14.4Z"></path>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.9 4.9 1.4 1.4"></path>
+          <path d="m17.7 17.7 1.4 1.4"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.3 17.7-1.4 1.4"></path>
+          <path d="m19.1 4.9-1.4 1.4"></path>
+        </svg>
+      </button>
+      <a href="../Landing-Page/index.html" class="back-link" aria-label="Back to landing">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
+        Back to landing
+      </a>
+    </div>
   </header>
 
   <main class="auth-page">
