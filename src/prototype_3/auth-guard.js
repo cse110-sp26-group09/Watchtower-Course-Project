@@ -74,7 +74,7 @@
   function frontendApiFromKey(key) {
     const encoded = key.replace(/^pk_(test|live)_/, "");
     try {
-      return atob(encoded).replace(/\$+$/, "") || null;
+      return window.atob(encoded).replace(/\$+$/, "") || null;
     } catch (_error) {
       return null;
     }
