@@ -111,9 +111,16 @@
    * Redirects the user to the login page.
    */
   function goLogin() {
-    const currentPath = window.location.pathname.replace(/\\/g, "/");
-    const directFileUrl = window.location.protocol === "file:" || currentPath.indexOf("/Landing-Page/") !== -1;
-    window.location.href = directFileUrl ? "../Log-In-Page/login.html" : "/login/";
+    const inPrototypeServer = window.location.port === "3000" && !window.location.pathname.includes("/src/");
+    window.location.href = inPrototypeServer ? "/login" : "../Log-In-Page/login.html";
+  }
+
+  function updateDashboardLinks() {
+    const inPrototypeServer = window.location.port === "3000" && !window.location.pathname.includes("/src/");
+    const hrefValue = inPrototypeServer ? "/dashboard" : "../prototype_3/index.html";
+    document.querySelectorAll(".dashboard-demo-link").forEach(function (linkElement) {
+      linkElement.setAttribute("href", hrefValue);
+    });
   }
 
   // Global Event Delegation
@@ -127,10 +134,6 @@
     const actionElement = target.closest("[data-action]");
     if (!actionElement) {
       return;
-    }
-
-    if (actionElement instanceof window.HTMLAnchorElement) {
-      event.preventDefault();
     }
     
     const actionName = actionElement.getAttribute("data-action");
@@ -167,6 +170,7 @@
     });
   }
 
+  updateDashboardLinks();
   updateStickyCta();
   window.addEventListener("scroll", updateStickyCta, { passive: true });
   window.addEventListener("resize", updateStickyCta);
