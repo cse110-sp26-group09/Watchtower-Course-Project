@@ -1,309 +1,168 @@
 /**
- * WatchTower Auth — Client-side Validation & UI Interactions
+ * WatchTower Auth — Clerk integration for the login / signup shell.
  *
- * This file is PURE FRONTEND. No backend calls are made.
- * All forms use `action=""` as a placeholder — swap with a
- * fetch() call to your API endpoint when backend is ready.
+ * Responsibilities:
+ *   - Read the frontend-safe publishable key from `window.CLERK_PUBLISHABLE_KEY`
+ *     (set in clerk-config.js, loaded before this file).
+ *   - Lazily load Clerk's browser SDK from the CDN that matches the key.
+ *   - Mount Clerk's hosted Sign In component into  #clerk-sign-in (login.html).
+ *   - Mount Clerk's hosted Sign Up component into  #clerk-sign-up (signup.html).
+ *   - Redirect signed-in users to the protected Prototype 1 dashboard.
  *
- * Shared across: login.html, signup.html, forgot-password.html
- * Each section only runs if its form element exists on the page.
+ * Security notes:
+ *   - Only the PUBLISHABLE key is used here. Never reference a Clerk secret key.
+ *   - WatchTower does not collect, transmit, or store passwords. Clerk owns the
+ *     full credential lifecycle (sign-in, sign-up, sessions, password reset).
+ *
+ * No build step, framework, or extra dependency is required.
  */
 (() => {
+  "use strict";
 
-  // ─── PASSWORD VISIBILITY TOGGLE ──────────────────────────
-  // Toggles between password/text input type and swaps the eye icon.
-  document.querySelectorAll('.toggle-pw').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const input = btn.parentElement.querySelector('input');
-      const hidden = input.type === 'password';
-      input.type = hidden ? 'text' : 'password';
-      btn.classList.toggle('revealed', hidden);
-      btn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
-    });
-  });
+  // Resolve absolute URLs so redirects work under file:// and http(s):// alike.
+  const DASHBOARD_URL = new URL("../prototype_1/index.html", window.location.href).href;
+  const SIGN_IN_URL = new URL("./login.html", window.location.href).href;
+  const SIGN_UP_URL = new URL("./signup.html", window.location.href).href;
 
-  // ─── VALIDATION HELPERS ──────────────────────────────────
-
-  /** Basic email format check */
-  const isValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const signInContainer = document.getElementById("clerk-sign-in");
+  const signUpContainer = document.getElementById("clerk-sign-up");
+  const forgotForm = document.getElementById("forgot-form");
 
   /**
-   * Sets a field wrapper to error, valid, or neutral state.
-   * CSS classes .has-error / .is-valid control border color and error text visibility.
+   * Show a message in the page's status banner, falling back to the console.
+   * @param {string} type - Banner style: "info" | "success" | "error".
+   * @param {string} message - Human-readable message.
+   * @returns {void}
    */
-  function setFieldState(fieldId, state, message) {
-    const wrapper = document.getElementById(fieldId);
-    if (!wrapper) return;
-    wrapper.classList.remove('has-error', 'is-valid');
-    if (state === 'error') wrapper.classList.add('has-error');
-    if (state === 'valid') wrapper.classList.add('is-valid');
-    const errorEl = wrapper.querySelector('.field-error');
-    if (errorEl) errorEl.textContent = state === 'error' ? message : '';
-  }
-
-  /** Reset a single field to neutral (no error, no valid) */
-  function clearField(fieldId) {
-    setFieldState(fieldId, '', '');
-  }
-
-  /** Reset all fields on the page to neutral */
-  function clearAllFields() {
-    document.querySelectorAll('.field').forEach(f => {
-      f.classList.remove('has-error', 'is-valid');
-      const err = f.querySelector('.field-error');
-      if (err) err.textContent = '';
-    });
-    // Also clear terms checkbox error if present
-    document.querySelectorAll('.terms-check + .field-error').forEach(el => {
-      el.textContent = '';
-      el.classList.remove('visible');
-    });
-  }
-
-  /** Show a status banner (info/success/error) at the top of the card */
   function showBanner(type, message) {
-    const banner = document.getElementById('status-banner');
-    if (!banner) return;
-    banner.className = 'status-banner ' + type;
-    banner.textContent = message;
+    const banner = document.getElementById("status-banner");
+    if (banner) {
+      banner.className = "status-banner " + type;
+      banner.textContent = message;
+    } else if (type === "error") {
+      console.error("[watchtower-auth] " + message);
+    } else {
+      console.warn("[watchtower-auth] " + message);
+    }
   }
 
-  /** Hide the status banner */
-  function hideBanner() {
-    const banner = document.getElementById('status-banner');
-    if (!banner) return;
-    banner.className = 'status-banner';
-    banner.textContent = '';
-  }
-
-  // ─── INLINE BLUR VALIDATION ──────────────────────────────
-  // Validates a field when the user tabs/clicks away from it.
-  // Shows error or valid state in real time (before submit).
-  function addBlurValidation(inputId, fieldId, validate) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    input.addEventListener('blur', () => {
-      const val = input.value.trim();
-      // Don't show error for empty fields on blur — only on submit
-      if (!val) { clearField(fieldId); return; }
-      const err = validate(val);
-      setFieldState(fieldId, err ? 'error' : 'valid', err || '');
-    });
-    // Hide any status banner when user starts editing again
-    input.addEventListener('focus', () => hideBanner());
-  }
-
-
-  // ═══════════════════════════════════════════════════════════
-  // LOGIN PAGE
-  // Only runs if #login-form exists (login.html)
-  // ═══════════════════════════════════════════════════════════
-  const loginForm = document.getElementById('login-form');
-  const googleLoginButton = document.getElementById('google-login-btn');
-
-  if (loginForm) {
-    // Blur validators
-    addBlurValidation('email', 'field-email', v =>
-      !isValidEmail(v) ? 'Enter a valid email address.' : null
-    );
-    addBlurValidation('password', 'field-password', v =>
-      !v ? 'Password is required.' : null
-    );
-
-    // Submit handler
-    loginForm.addEventListener('submit', e => {
-      e.preventDefault();
-      clearAllFields();
-      hideBanner();
-
-      const email    = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      let valid = true;
-
-      if (!email) {
-        setFieldState('field-email', 'error', 'Email is required.');
-        valid = false;
-      } else if (!isValidEmail(email)) {
-        setFieldState('field-email', 'error', 'Enter a valid email address.');
-        valid = false;
-      }
-
-      if (!password) {
-        setFieldState('field-password', 'error', 'Password is required.');
-        valid = false;
-      }
-
-      // Focus the first invalid field so user knows where to fix
-      if (!valid) {
-        const first = loginForm.querySelector('.has-error input');
-        if (first) first.focus();
-        return;
-      }
-
-      // TODO: Replace with fetch() to your auth endpoint
-      showBanner('info', 'Backend not connected yet. Validation passed — ready for integration.');
-    });
-  }
-
-  if (googleLoginButton) {
-    googleLoginButton.addEventListener('click', () => {
-      hideBanner();
-      showBanner('info', 'Google sign-in is a prototype action for now.');
-    });
-  }
-
-
-  // ═══════════════════════════════════════════════════════════
-  // SIGNUP PAGE
-  // Only runs if #signup-form exists (signup.html)
-  // ═══════════════════════════════════════════════════════════
-  const signupForm = document.getElementById('signup-form');
-
-  if (signupForm) {
-
-    // Blur validators for each field
-    addBlurValidation('display-name', 'field-display-name', v =>
-      v.length < 2 ? 'Name must be at least 2 characters.' : null
-    );
-    addBlurValidation('email', 'field-email', v =>
-      !isValidEmail(v) ? 'Enter a valid email address.' : null
-    );
-    addBlurValidation('password', 'field-password', v =>
-      v.length < 8 ? 'Must be at least 8 characters.' : null
-    );
-    addBlurValidation('confirm-password', 'field-confirm', v => {
-      const pw = document.getElementById('password').value;
-      if (!v) return null;
-      return v !== pw ? 'Passwords do not match.' : null;
-    });
-
-    // ── Password strength meter ──
-    // Listens on keystrokes and updates the colored bar + label.
-    // Levels: weak (red), fair (amber), strong (green)
-    const pwInput = document.getElementById('password');
-    const pwBlock = document.getElementById('pw-strength');
-    const pwFill  = document.getElementById('pw-fill');
-    const pwLabel = document.getElementById('pw-label');
-
-    if (pwInput && pwBlock) {
-      pwInput.addEventListener('input', () => {
-        const v = pwInput.value;
-        if (!v) { pwBlock.hidden = true; return; }
-        pwBlock.hidden = false;
-
-        const hasUpper  = /[A-Z]/.test(v);
-        const hasLower  = /[a-z]/.test(v);
-        const hasDigit  = /[0-9]/.test(v);
-        const hasSymbol = /[^A-Za-z0-9]/.test(v);
-        const long      = v.length >= 8;
-
-        let level = 'weak';
-        if (long && hasUpper && hasLower && hasDigit) level = 'fair';
-        if (long && hasUpper && hasLower && hasDigit && hasSymbol && v.length >= 10) level = 'strong';
-
-        pwFill.className  = 'pw-fill ' + level;
-        pwLabel.className = 'pw-label ' + level;
-        pwLabel.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+  // ─── Pages without a Clerk container ──────────────────────────────────────
+  // The legacy forgot-password page still ships a (passwordless) email form.
+  // Clerk handles password resets inside its own Sign In flow, so we simply
+  // point users there instead of pretending to send a reset email.
+  if (!signInContainer && !signUpContainer) {
+    if (forgotForm) {
+      forgotForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        showBanner(
+          "info",
+          "Password resets are handled on the sign-in page. Use \"Forgot password?\" inside the sign-in box."
+        );
       });
     }
+    return;
+  }
 
-    // Submit handler
-    signupForm.addEventListener('submit', e => {
-      e.preventDefault();
-      clearAllFields();
-      hideBanner();
+  /**
+   * Derive the Clerk Frontend API host from a publishable key.
+   * The host is base64-encoded into the key after the pk_test_/pk_live_ prefix
+   * and ends with a "$" sentinel (e.g. "your-app.clerk.accounts.dev$").
+   * @param {string} key - Clerk publishable key.
+   * @returns {string|null} Frontend API host, or null if it cannot be decoded.
+   */
+  function frontendApiFromKey(key) {
+    const encoded = key.replace(/^pk_(test|live)_/, "");
+    try {
+      return atob(encoded).replace(/\$+$/, "") || null;
+    } catch (_error) {
+      return null;
+    }
+  }
 
-      const name     = document.getElementById('display-name').value.trim();
-      const email    = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const confirm  = document.getElementById('confirm-password').value;
-      const terms    = document.getElementById('accept-terms');
-      const termsErr = document.getElementById('terms-error');
-      let valid = true;
-
-      if (!name) {
-        setFieldState('field-display-name', 'error', 'Display name is required.');
-        valid = false;
-      } else if (name.length < 2) {
-        setFieldState('field-display-name', 'error', 'Name must be at least 2 characters.');
-        valid = false;
+  /**
+   * Load and initialize Clerk's browser SDK using the publishable key.
+   * @param {string} key - Clerk publishable key.
+   * @returns {Promise<object>} Resolves with the initialized global Clerk instance.
+   */
+  function loadClerk(key) {
+    return new Promise((resolve, reject) => {
+      if (window.Clerk) {
+        window.Clerk.load().then(() => resolve(window.Clerk)).catch(reject);
+        return;
       }
-
-      if (!email) {
-        setFieldState('field-email', 'error', 'Email is required.');
-        valid = false;
-      } else if (!isValidEmail(email)) {
-        setFieldState('field-email', 'error', 'Enter a valid email address.');
-        valid = false;
+      const frontendApi = frontendApiFromKey(key);
+      if (!frontendApi) {
+        reject(new Error("Could not derive Clerk Frontend API from publishable key."));
+        return;
       }
-
-      if (!password) {
-        setFieldState('field-password', 'error', 'Password is required.');
-        valid = false;
-      } else if (password.length < 8) {
-        setFieldState('field-password', 'error', 'Must be at least 8 characters.');
-        valid = false;
-      }
-
-      if (!confirm) {
-        setFieldState('field-confirm', 'error', 'Please confirm your password.');
-        valid = false;
-      } else if (password !== confirm) {
-        setFieldState('field-confirm', 'error', 'Passwords do not match.');
-        valid = false;
-      }
-
-      // Terms checkbox validation
-      if (terms && !terms.checked) {
-        if (termsErr) {
-          termsErr.textContent = 'You must accept the terms to continue.';
-          termsErr.classList.add('visible');
+      const script = document.createElement("script");
+      script.src = "https://" + frontendApi + "/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.setAttribute("data-clerk-publishable-key", key);
+      script.addEventListener("load", () => {
+        if (!window.Clerk) {
+          reject(new Error("Clerk SDK loaded but window.Clerk is undefined."));
+          return;
         }
-        valid = false;
-      }
-
-      if (!valid) {
-        const first = signupForm.querySelector('.has-error input');
-        if (first) first.focus();
-        return;
-      }
-
-      // TODO: Replace with fetch() to your signup endpoint
-      showBanner('info', 'Backend not connected yet. Validation passed — ready for integration.');
+        window.Clerk.load().then(() => resolve(window.Clerk)).catch(reject);
+      });
+      script.addEventListener("error", () =>
+        reject(new Error("Failed to load the Clerk SDK from the CDN."))
+      );
+      document.head.appendChild(script);
     });
   }
 
-
-  // ═══════════════════════════════════════════════════════════
-  // FORGOT PASSWORD PAGE
-  // Only runs if #forgot-form exists (forgot-password.html)
-  // ═══════════════════════════════════════════════════════════
-  const forgotForm = document.getElementById('forgot-form');
-
-  if (forgotForm) {
-    addBlurValidation('email', 'field-email', v =>
-      !isValidEmail(v) ? 'Enter a valid email address.' : null
+  // ─── Validate config ──────────────────────────────────────────────────────
+  const publishableKey = window.CLERK_PUBLISHABLE_KEY;
+  if (
+    !publishableKey ||
+    !/^pk_(test|live)_/.test(publishableKey) ||
+    publishableKey.includes("REPLACE_ME")
+  ) {
+    showBanner(
+      "error",
+      "Authentication is not configured yet. Set CLERK_PUBLISHABLE_KEY in .env and run npm run config:clerk."
     );
-
-    forgotForm.addEventListener('submit', e => {
-      e.preventDefault();
-      clearAllFields();
-      hideBanner();
-
-      const email = document.getElementById('email').value.trim();
-
-      if (!email) {
-        setFieldState('field-email', 'error', 'Email is required.');
-        return;
-      }
-      if (!isValidEmail(email)) {
-        setFieldState('field-email', 'error', 'Enter a valid email address.');
-        return;
-      }
-
-      // TODO: Replace with fetch() to your password reset endpoint
-      showBanner('info', 'Backend not connected yet. Validation passed — ready for integration.');
-    });
+    return;
   }
 
+  // ─── Bootstrap Clerk and mount the right component ────────────────────────
+  loadClerk(publishableKey)
+    .then((clerk) => {
+      // Already signed in? Skip the form and go straight to the dashboard.
+      if (clerk.user) {
+        window.location.replace(DASHBOARD_URL);
+        return;
+      }
+
+      if (signInContainer) {
+        clerk.mountSignIn(signInContainer, {
+          signUpUrl: SIGN_UP_URL,
+          forceRedirectUrl: DASHBOARD_URL,
+          fallbackRedirectUrl: DASHBOARD_URL,
+        });
+      }
+
+      if (signUpContainer) {
+        clerk.mountSignUp(signUpContainer, {
+          signInUrl: SIGN_IN_URL,
+          forceRedirectUrl: DASHBOARD_URL,
+          fallbackRedirectUrl: DASHBOARD_URL,
+        });
+      }
+
+      // Safety net: if a session becomes active without a full-page redirect,
+      // send the user to the protected dashboard.
+      clerk.addListener((payload) => {
+        if (payload && payload.user) {
+          window.location.replace(DASHBOARD_URL);
+        }
+      });
+    })
+    .catch((error) => {
+      console.error("[watchtower-auth] Clerk initialization failed:", error);
+      showBanner("error", "Could not load the sign-in experience. Please try again later.");
+    });
 })();

@@ -8,6 +8,7 @@ ingestion server.
 
 ```bash
 npm install
+cp .env.example .env          # set CLERK_PUBLISHABLE_KEY for auth
 npm run start:prototype1
 ```
 
@@ -40,6 +41,24 @@ Open in a browser:
 - UI check screenshots:
   - [Analytics navigation](../../docs/design/media/prototype-1-navigation-analytics.png)
   - [Settings navigation](../../docs/design/media/prototype-1-navigation-settings.png)
+
+## Authentication (Clerk)
+
+The dashboard is gated by a client-side Clerk route guard:
+
+- `index.html` loads `../Log-In-Page/clerk-config.js` and `auth-guard.js` (in
+  `<head>`) before `app.js`.
+- `auth-guard.js` hides the shell until Clerk confirms a session. Signed-out
+  visitors are redirected to `../Log-In-Page/login.html`; signed-in users see
+  the dashboard, a user label in the topbar, and a working **Logout** button
+  (which also wires the Settings → "Sign out" control).
+
+This is **frontend-only** protection for the prototype — the `/api/*` endpoints
+remain open and are intentionally untouched. Production must verify Clerk
+session tokens server-side. Note that the cross-folder paths assume the
+static/file flow; the Node server (`npm run start:prototype1`) serves only this
+directory and does not serve the Log-In-Page assets. See
+[`docs/architecture/auth-workflow.md`](../../docs/architecture/auth-workflow.md).
 
 ## Storage
 

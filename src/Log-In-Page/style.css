@@ -138,6 +138,22 @@ a:hover { text-decoration: underline; }
   box-shadow: var(--shadow-card);
 }
 
+/* Transparent wrapper for Clerk's mounted sign-in/sign-up component.
+   Clerk renders its own branded card, so this container intentionally has
+   no card chrome (background/border/shadow) to avoid a card-in-a-card look. */
+.auth-clerk-shell {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-clerk-shell .status-banner {
+  width: 100%;
+}
+
 .auth-card h1 {
   font-size: 26px;
   font-weight: 800;

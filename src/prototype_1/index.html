@@ -6,6 +6,11 @@
   <title>WatchTower Candidate 1</title>
   <link rel="icon" type="image/png" href="assets/watchtower-transparent.png">
   <link rel="stylesheet" href="style.css">
+
+  <!-- Clerk auth: publishable key config + client-side route guard.
+       Loaded in <head> so anonymous users never see protected content flash. -->
+  <script src="../Log-In-Page/clerk-config.js"></script>
+  <script src="./auth-guard.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -28,6 +33,8 @@
           <span class="live-dot" aria-hidden="true"></span>
           <span id="live-status-text">Live</span>
         </div>
+        <span id="auth-user-label" class="auth-user-label" aria-live="polite"></span>
+        <button id="logout-button" class="ghost-button" type="button">Logout</button>
       </div>
     </header>
 

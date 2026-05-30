@@ -1,8 +1,39 @@
 # WatchTower — Auth Pages
 
-Static Login, Sign Up, and Forgot Password pages for WatchTower.  
-Pure frontend — no backend, no API calls, no database.  
-Ready for backend wiring in future sprints.
+Login and Sign Up pages for WatchTower, using our own UI shell with
+**[Clerk](https://clerk.com)** for real authentication, sessions, and sign-out.
+
+WatchTower stores **no passwords** — Clerk owns the credential lifecycle. The
+Clerk *publishable* key is injected at runtime into `clerk-config.js` (generated,
+gitignored) from the `CLERK_PUBLISHABLE_KEY` environment variable. A Clerk
+*secret* key must never be added here or committed.
+
+### Configure Clerk
+
+```bash
+cp .env.example .env          # set CLERK_PUBLISHABLE_KEY=pk_test_...
+npm run config:clerk          # writes src/Log-In-Page/clerk-config.js
+```
+
+On **Render**, add `CLERK_PUBLISHABLE_KEY` under Environment. Start scripts run
+`config:clerk` automatically before the server boots.
+
+See [`docs/architecture/auth-workflow.md`](../../docs/architecture/auth-workflow.md)
+and [`docs/adr/ADR-0006-use-clerk-for-dashboard-auth.md`](../../docs/adr/ADR-0006-use-clerk-for-dashboard-auth.md).
+
+## How Clerk is wired
+
+- `clerk-config.js` (generated from `CLERK_PUBLISHABLE_KEY`) exposes
+  `window.CLERK_PUBLISHABLE_KEY` and loads **before** `auth.js` on both pages.
+- `auth.js` derives the Clerk CDN from the key, loads the browser SDK, and:
+  - mounts the Sign In component into `#clerk-sign-in` (login.html),
+  - mounts the Sign Up component into `#clerk-sign-up` (signup.html),
+  - redirects to `../prototype_1/index.html` after auth (and immediately if a
+    session already exists).
+- The earlier fake password forms were removed; they never authenticated anyone
+  and never sent passwords anywhere.
+- `forgot-password.html` now directs users to Clerk's built-in "Forgot
+  password?" link inside the sign-in box.
 
 ## Pages
 
