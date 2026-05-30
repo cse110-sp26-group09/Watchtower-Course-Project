@@ -1,7 +1,7 @@
 # Research: Interactive Email Alerts
 
 **Author:** @dwu0501  
-**Sprint:** 2
+**Sprint:** 4
 
 ---
 
