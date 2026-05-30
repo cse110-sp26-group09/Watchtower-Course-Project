@@ -112,12 +112,14 @@
   function WatchTower(config) {
     config = config || {};
     this.endpoint = config.endpoint || DEFAULT_ENDPOINT;
+    this.beaconEndpoint = config.beaconEndpoint || this.endpoint.replace(/[^/]+$/, "beacon");
     this.deployVersion = config.deployVersion || "unknown";
     this.appName = config.appName || location.hostname;
     this.sessionId = getSessionId();
     this.userId = config.userId || null;
     this._queue = [];
     this._flushing = false;
+    this._beaconSent = false;
 
     this._bindErrors();
     this._bindPerformance();
@@ -192,6 +194,33 @@
   };
 
   /**
+   * Flush queued events using the Beacon API for reliable delivery on page unload.
+   *
+   * Falls back to a regular _flush() when sendBeacon is unavailable or the
+   * queue is empty. A _beaconSent guard prevents double-firing when both
+   * visibilitychange and pagehide fire on the same unload.
+   *
+   * @private
+   * @returns {void}
+   */
+  WatchTower.prototype._flushBeacon = function () {
+    if (this._beaconSent || this._queue.length === 0) return;
+    this._beaconSent = true;
+
+    if (navigator.sendBeacon) {
+      var batch = this._queue.splice(0);
+      var blob = new Blob([JSON.stringify({ events: batch })], { type: "application/json" });
+      var sent = navigator.sendBeacon(this.beaconEndpoint, blob);
+      if (!sent) {
+        this._queue = batch.concat(this._queue);
+        this._flush();
+      }
+    } else {
+      this._flush();
+    }
+  };
+
+  /**
    * Start the periodic background flush cycle.
    *
    * @private
@@ -205,7 +234,15 @@
     }, FLUSH_INTERVAL);
 
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "hidden") sdkInstance._flush();
+      if (document.visibilityState === "hidden") {
+        sdkInstance._flushBeacon();
+      } else {
+        sdkInstance._beaconSent = false;
+      }
+    });
+
+    window.addEventListener("pagehide", function () {
+      sdkInstance._flushBeacon();
     });
   };
 
@@ -251,15 +288,28 @@
 
     window.addEventListener("load", function () {
       setTimeout(function () {
-        var navigationEntry = performance.getEntriesByType("navigation")[0];
-        if (!navigationEntry) return;
+        var nav = performance.getEntriesByType("navigation")[0];
+        if (!nav) return;
+
+        var tls = nav.secureConnectionStart > 0
+          ? Math.round(nav.connectEnd - nav.secureConnectionStart)
+          : 0;
+
+        var resourceCount = performance.getEntriesByType("resource").length;
 
         sdkInstance._enqueue("pageload", {
-          duration: Math.round(navigationEntry.duration),
-          ttfb: Math.round(navigationEntry.responseStart - navigationEntry.requestStart),
-          domContentLoaded: Math.round(navigationEntry.domContentLoadedEventEnd - navigationEntry.startTime),
-          loadComplete: Math.round(navigationEntry.loadEventEnd - navigationEntry.startTime),
-          transferSize: navigationEntry.transferSize || 0,
+          duration: Math.round(nav.duration),
+          ttfb: Math.round(nav.responseStart - nav.fetchStart),
+          dns: Math.round(nav.domainLookupEnd - nav.domainLookupStart),
+          tcp: Math.round(nav.connectEnd - nav.connectStart),
+          tls: tls,
+          redirect: Math.round(nav.redirectEnd - nav.redirectStart),
+          domInteractive: Math.round(nav.domInteractive - nav.startTime),
+          domContentLoaded: Math.round(nav.domContentLoadedEventEnd - nav.startTime),
+          domComplete: Math.round(nav.domComplete - nav.startTime),
+          loadComplete: Math.round(nav.loadEventEnd - nav.startTime),
+          transferSize: nav.transferSize || 0,
+          resourceCount: resourceCount,
         });
       }, 100);
     });
@@ -351,8 +401,8 @@
    * @returns {Promise<Object|null>} Server response on success, `null` on failure.
    */
   function sendWatchTowerEvent(event, endpoint) {
-    const url = endpoint || DEFAULT_ENDPOINT;
-    const payload = event && typeof event === "object" ? event : {};
+    var url = endpoint || DEFAULT_ENDPOINT;
+    var payload = event && typeof event === "object" ? event : {};
 
     if (!payload.timestamp) {
       payload.timestamp = new Date().toISOString();
