@@ -6,6 +6,11 @@
   <title>WatchTower Prototype 3</title>
   <link rel="icon" type="image/png" href="assets/watchtower-transparent.png">
   <link rel="stylesheet" href="style.css">
+
+  <!-- Clerk auth: publishable key config + client-side route guard.
+       Loaded in <head> so anonymous users never see protected content flash. -->
+  <script src="./Log-In-Page/clerk-config.js"></script>
+  <script src="./auth-guard.js"></script>
 </head>
 <body>
   <!--
@@ -39,6 +44,8 @@
           <span id="active-issues-count">0 active issues</span>
         </button>
         <button class="mode-pill mode-pill-button" id="dashboard-mode-pill" type="button" aria-label="Toggle dashboard mode" title="Toggle dashboard mode">Manager view</button>
+        <span id="auth-user-label" class="auth-user-label" aria-live="polite"></span>
+        <button id="logout-button" class="ghost-button" type="button">Logout</button>
       </div>
     </header>
 

@@ -7,7 +7,7 @@
  *   - Lazily load Clerk's browser SDK from the CDN that matches the key.
  *   - Mount Clerk's hosted Sign In component into  #clerk-sign-in (login.html).
  *   - Mount Clerk's hosted Sign Up component into  #clerk-sign-up (signup.html).
- *   - Redirect signed-in users to the protected Prototype 1 dashboard.
+ *   - Redirect signed-in users to the protected Prototype 3 dashboard.
  *
  * Security notes:
  *   - Only the PUBLISHABLE key is used here. Never reference a Clerk secret key.
@@ -20,7 +20,8 @@
   "use strict";
 
   // Resolve absolute URLs so redirects work under file:// and http(s):// alike.
-  const DASHBOARD_URL = new URL("../prototype_1/index.html", window.location.href).href;
+  // The dashboard lives one level up from this Log-In-Page folder in prototype_3.
+  const DASHBOARD_URL = new URL("../index.html", window.location.href).href;
   const SIGN_IN_URL = new URL("./login.html", window.location.href).href;
   const SIGN_UP_URL = new URL("./signup.html", window.location.href).href;
 
