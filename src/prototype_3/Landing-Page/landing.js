@@ -111,7 +111,9 @@
    * Redirects the user to the login page.
    */
   function goLogin() {
-    window.location.href = "/login";
+    const currentPath = window.location.pathname.replace(/\\/g, "/");
+    const directFileUrl = window.location.protocol === "file:" || currentPath.indexOf("/Landing-Page/") !== -1;
+    window.location.href = directFileUrl ? "../Log-In-Page/login.html" : "/login/";
   }
 
   // Global Event Delegation
@@ -125,6 +127,10 @@
     const actionElement = target.closest("[data-action]");
     if (!actionElement) {
       return;
+    }
+
+    if (actionElement instanceof window.HTMLAnchorElement) {
+      event.preventDefault();
     }
     
     const actionName = actionElement.getAttribute("data-action");
