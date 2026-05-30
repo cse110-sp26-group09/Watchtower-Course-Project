@@ -6,16 +6,6 @@
   const passwordInput = document.getElementById("password");
   const passwordToggle = document.getElementById("toggle-password");
   const googleLoginButton = document.getElementById("google-login");
-  const dialogButtons = document.querySelectorAll("[data-dialog-target]");
-  const dialogCloseButtons = document.querySelectorAll("[data-dialog-close]");
-
-  function closeDialog(dialog) {
-    if (!dialog) {
-      return;
-    }
-
-    dialog.close();
-  }
 
   if (passwordToggle && passwordInput) {
     passwordToggle.addEventListener("click", function () {
@@ -56,28 +46,4 @@
       }
     });
   }
-
-  dialogButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      const dialog = document.getElementById(button.dataset.dialogTarget);
-
-      if (dialog) {
-        dialog.showModal();
-      }
-    });
-  });
-
-  dialogCloseButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      closeDialog(button.closest("dialog"));
-    });
-  });
-
-  document.querySelectorAll(".info-dialog").forEach(function (dialog) {
-    dialog.addEventListener("click", function (event) {
-      if (event.target === dialog) {
-        closeDialog(dialog);
-      }
-    });
-  });
 })();
