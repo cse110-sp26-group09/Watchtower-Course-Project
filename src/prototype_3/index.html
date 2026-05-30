@@ -33,12 +33,16 @@
         </a>
       </div>
 
+      <p class="mode-current-view topbar-current-view" id="mode-current-view">Currently on: Manager view</p>
+
       <div class="topbar-actions">
         <button class="alert-pill" type="button" data-view="issues">
           <span class="alert-dot" aria-hidden="true"></span>
           <span id="active-issues-count">0 active issues</span>
         </button>
-        <button class="mode-pill mode-pill-button" id="dashboard-mode-pill" type="button" aria-label="Toggle dashboard mode" title="Toggle dashboard mode">Manager view</button>
+        <div class="mode-pill-wrap">
+          <button class="mode-pill mode-pill-button" id="dashboard-mode-pill" type="button" aria-label="Toggle dashboard mode" title="Toggle dashboard mode">Manager view</button>
+        </div>
       </div>
     </header>
 
@@ -278,33 +282,34 @@
             </div>
           </section>
 
-          <!-- Developer home bottom row: two side-by-side panels.
-               Left panel = Health radar + Overall score with breakdown.
-               Right panel = Current Patch Notes showing deployed versions with error details. -->
+          <!-- Developer home bottom row: summary + patch notes. -->
           <div class="dev-home-bottom-row" data-dashboard-mode="developer" hidden>
-            <div class="panel developer-status-bar">
-              <div class="dev-status-col dev-status-radar" data-view="health" data-scroll-target="health-title" tabindex="0" role="button" aria-label="View full health details">
-                <p class="eyebrow">System health</p>
-                <svg class="dev-mini-radar" id="dev-mini-radar" viewBox="0 0 200 200" role="img" aria-label="Health radar preview">
-                  <g class="health-radar-grid" id="dev-mini-radar-grid"></g>
-                  <g class="health-radar-axis" id="dev-mini-radar-axis"></g>
-                  <polygon class="health-radar-shape" id="dev-mini-radar-shape" points=""></polygon>
-                </svg>
-                <p class="status-token good" id="dev-health-token">Healthy</p>
+            <a class="panel developer-summary-panel" href="#health" data-view="health" data-scroll-target="health-title" aria-label="Open health page">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Summary</p>
+                  <h2>Developer summary</h2>
+                </div>
               </div>
-              <div class="dev-status-col dev-status-score">
-                <p class="eyebrow">Overall score</p>
-                <div class="dev-score-value" id="dev-overall-score">0%</div>
-                <p class="dev-score-label" id="dev-overall-label">Reliability</p>
-                <ul class="dev-score-breakdown" id="dev-score-breakdown">
-                  <li><span>Availability</span><strong>0%</strong></li>
-                  <li><span>Error rate</span><strong>0%</strong></li>
-                  <li><span>Latency</span><strong>0%</strong></li>
-                  <li><span>Signal</span><strong>0%</strong></li>
-                  <li><span>Feedback</span><strong>0%</strong></li>
-                </ul>
+              <p class="developer-summary-copy" id="dev-home-summary-copy">Waiting for telemetry from the demo app.</p>
+              <ul class="priority-list developer-summary-list" id="dev-home-summary-list">
+                <li><span aria-hidden="true">!</span> Trigger demo actions to populate this summary.</li>
+              </ul>
+              <div class="developer-summary-metrics" id="dev-home-summary-metrics">
+                <div class="summary-chip">
+                  <p>Reliability</p>
+                  <strong id="dev-overall-score">0%</strong>
+                </div>
+                <div class="summary-chip">
+                  <p>Status</p>
+                  <strong id="dev-overall-label">Healthy</strong>
+                </div>
+                <div class="summary-chip">
+                  <p>Open errors</p>
+                  <strong id="dev-home-summary-errors">0</strong>
+                </div>
               </div>
-            </div>
+            </a>
             <section class="panel dev-home-patches-panel">
               <div class="panel-header">
                 <div>
