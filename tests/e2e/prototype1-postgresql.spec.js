@@ -1,14 +1,14 @@
 "use strict";
 
 /**
- * Prototype 1 SQLite end-to-end verification.
+ * Prototype 1 PostgreSQL end-to-end verification.
  *
  * This spec is the runnable counterpart of the manual verification flow
  * documented in `docs/architecture/event-storage.md`. It boots its own
- * Prototype 1 server in-process, against a temporary SQLite database
- * file, then exercises:
+ * Prototype 1 server in-process, against the configured Supabase Postgres
+ * table, then exercises:
  *
- *   1. `GET /api/health` reports `storage: "sqlite"`.
+ *   1. `GET /api/health` reports `storage: "postgresql"`.
  *   2. `POST /api/events` accepts SDK-shaped (camelCase) and
  *      external-shaped (snake_case) events and persists them.
  *   3. `GET /api/events` returns the stored events in dashboard-friendly
@@ -22,27 +22,32 @@
  */
 
 const path = require("path");
-const fs = require("fs");
-const os = require("os");
+const { config: loadEnv } = require("dotenv");
 const { test, expect } = require("@playwright/test");
+
+const REPO_ROOT = path.resolve(__dirname, "../..");
+loadEnv({ path: path.join(REPO_ROOT, ".env"), quiet: true });
 
 const PROTOTYPE_1_PORT = process.env.PROTOTYPE_1_PORT
   ? Number(process.env.PROTOTYPE_1_PORT)
   : 3110;
 const BASE_URL = "http://localhost:" + PROTOTYPE_1_PORT;
+const HAS_SUPABASE_ENV = Boolean(
+  process.env.SUPABASE_URL &&
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+);
 
 let serverModule;
-let tempDatabasePath;
+const cleanupVersions = [];
 
-test.describe("Prototype 1 SQLite event flow (local validation)", () => {
+test.describe("Prototype 1 PostgreSQL event flow (local validation)", () => {
+  test.skip(
+    !HAS_SUPABASE_ENV,
+    "Prototype 1 PostgreSQL e2e requires SUPABASE_URL and a Supabase API key"
+  );
+
   test.beforeAll(async () => {
-    tempDatabasePath = path.join(
-      fs.mkdtempSync(path.join(os.tmpdir(), "wt-p1-")),
-      "watchtower.sqlite"
-    );
-
     process.env.PORT = String(PROTOTYPE_1_PORT);
-    process.env.WATCHTOWER_P1_DB = tempDatabasePath;
 
     delete require.cache[require.resolve("../../src/prototype_1/server/event-store")];
     delete require.cache[require.resolve("../../src/prototype_1/server/server")];
@@ -56,37 +61,52 @@ test.describe("Prototype 1 SQLite event flow (local validation)", () => {
   });
 
   test.afterAll(async () => {
-    if (serverModule && serverModule.server.listening) {
-      await new Promise((resolve) => serverModule.server.close(resolve));
-    }
-    if (serverModule && serverModule.database) {
+    if (serverModule && serverModule.database && cleanupVersions.length > 0) {
       try {
-        serverModule.database.close();
-      } catch (_error) {
-        // already closed
-      }
-    }
-    if (tempDatabasePath && fs.existsSync(tempDatabasePath)) {
-      try {
-        fs.rmSync(path.dirname(tempDatabasePath), { recursive: true, force: true });
+        await serverModule.database
+          .from(serverModule.EVENTS_TABLE)
+          .delete()
+          .in("app_version", cleanupVersions);
       } catch (_error) {
         // best-effort cleanup
       }
     }
+    if (serverModule && serverModule.server.listening) {
+      await new Promise((resolve) => serverModule.server.close(resolve));
+    }
+    if (serverModule && serverModule.store) {
+      try {
+        await serverModule.store.close();
+      } catch (_error) {
+        // already closed
+      }
+    }
   });
 
-  test("GET /api/health reports sqlite storage", async ({ playwright }) => {
+  test("GET /api/health reports postgresql storage", async ({ playwright }) => {
     const api = await playwright.request.newContext({ baseURL: BASE_URL });
     try {
       const response = await api.get("/api/health");
       expect(response.ok()).toBeTruthy();
       const body = await response.json();
       expect(body.status).toBe("ok");
-      expect(body.storage).toBe("sqlite");
-      expect(body.databasePath).toContain("watchtower.sqlite");
+      expect(body.storage).toBe("postgresql");
+      expect(body.table).toBeTruthy();
+      expect(typeof body.eventCount).toBe("number");
       expect(Array.isArray(body.knownEventTypes)).toBe(true);
       expect(body.knownEventTypes).toEqual(
-        expect.arrayContaining(["page_view", "error", "performance", "interaction", "feedback", "custom"])
+        expect.arrayContaining([
+          "page_view",
+          "error",
+          "performance",
+          "interaction",
+          "feedback",
+          "custom",
+          "pageload",
+          "click",
+          "login",
+          "logout",
+        ])
       );
     } finally {
       await api.dispose();
@@ -96,7 +116,8 @@ test.describe("Prototype 1 SQLite event flow (local validation)", () => {
   test("POST /api/events accepts SDK camelCase batches and persists them", async ({ playwright }) => {
     const api = await playwright.request.newContext({ baseURL: BASE_URL });
     try {
-      const tag = "p1-sqlite-" + Date.now();
+      const tag = "p1-postgres-" + Date.now();
+      cleanupVersions.push(tag);
       const payload = {
         events: [
           {
@@ -155,6 +176,7 @@ test.describe("Prototype 1 SQLite event flow (local validation)", () => {
     const api = await playwright.request.newContext({ baseURL: BASE_URL });
     try {
       const tag = "p1-ext-" + Date.now();
+      cleanupVersions.push(tag);
       const externalEvent = {
         id: tag + "-id",
         type: "interaction",
@@ -190,8 +212,19 @@ test.describe("Prototype 1 SQLite event flow (local validation)", () => {
   test("POST /api/events rejects invalid envelopes without crashing", async ({ playwright }) => {
     const api = await playwright.request.newContext({ baseURL: BASE_URL });
     try {
+      const tag = "p1-invalid-" + Date.now();
+      cleanupVersions.push(tag);
       const response = await api.post("/api/events", {
-        data: { events: [{ type: "" }, { type: "valid", timestamp: new Date().toISOString() }] },
+        data: {
+          events: [
+            { type: "" },
+            {
+              type: "valid",
+              timestamp: new Date().toISOString(),
+              deployVersion: tag,
+            },
+          ],
+        },
       });
       expect(response.ok()).toBeTruthy();
       const body = await response.json();
@@ -206,6 +239,7 @@ test.describe("Prototype 1 SQLite event flow (local validation)", () => {
     const api = await playwright.request.newContext({ baseURL: BASE_URL });
     try {
       const tag = "p1-stats-" + Date.now();
+      cleanupVersions.push(tag);
       await api.post("/api/events", {
         data: {
           events: [
