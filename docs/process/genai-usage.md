@@ -132,3 +132,31 @@
 - **Scale:** Modified src/prototype_3/app.js, src/prototype_3/index.html, src/prototype_3/style.css, src/prototype_3/server/server.js, and src/prototype_3/sdk/watchtower.js
 - **Description:** Asked GenAI to polish Prototype 3 and build out the Developer View for a PostHog-style analytics/observability platform. This was needed to make Developer View feel closer to DevTools/Datadog/Sentry/Segment debugger, with real event inspection, schema diagnostics, SDK health, query tools, feature flag debugging, identity resolution, performance/error monitoring, pipeline observability, governance panels, and CI fixes.
 - **Prompt:** Polish up the UI and features of prototype-3. Work on Prototype 3. Build a developer-focused analytics workspace that feels closer to Chrome DevTools, Datadog, Sentry, and Segment debugger than a traditional analytics dashboard. Prioritize observability, debugging, instrumentation trust, raw event inspection, schema validation, realtime diagnostics, and operational visibility. Implement live event stream, schema registry, session replay dev overlay, SDK diagnostics, query playground, feature flag debugger, identity resolution viewer, performance monitoring, error monitoring, pipeline observability, environment support, and data governance. Maintain existing code style and fix failing CI/lint issues.
+
+
+- **Name:** Jason Nguyen
+- **Date:** 05/30/26
+- **Sprint #:** 4
+- **Model:** Codex 5.5 medium reasoning
+- **LOC:** 532
+- **Scale:** src/prototype_1/event-store.js
+- **Description:** Asked codex to reformat event-store.js to migrate from sqlite to postgresql access patterns so that it is compatible with supabase.
+- **Prompt:** can you reformat event-store.js to migrate all code using SQLite to work with PostgreSQL Supabase
+
+- **Name:** Jason Nguyen
+- **Date:** 05/30/26
+- **Sprint #:** 4
+- **Model:** Codex 5.5 medium reasoning
+- **LOC:** 342
+- **Scale:** src/prototype_1/server.js
+- **Description:** Asked codex to reformat server.js to migrate from sqlite to postgresql access patterns so that it is compatible with supabase.
+- **Prompt:** can you rewrite server.js to use PostgreSQL to match event-store.js
+
+- **Name:** Jason Nguyen
+- **Date:** 05/30/26
+- **Sprint #:** 4
+- **Model:** Codex 5.5 medium reasoning
+- **LOC:** 
+- **Scale:** tests/unit/prototype1-event-store.test.js, tests/e2e/prototype1-postgresql.spec.js (formerly tests/e2e/prototype1-sqlite.spec.js)
+- **Description:** Asked codex to reformat .js to migrate from sqlite to postgresql access patterns so that it is compatible with supabase.
+- **Prompt:** look at unit/prototype1-event-store.text.js, and also look at e2e/prototype1-sqlite.spec.js. They are linked to each other. Are there any changes needed to the unit and e2e test? You can address those changes to make sure that the tests are compatible with postgresql instead of sqlite
