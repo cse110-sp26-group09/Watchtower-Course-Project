@@ -6,6 +6,7 @@
  * @module prototype_3/server
  */
 
+const { sendAlert } = require("./mailer");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -774,7 +775,19 @@ const server = http.createServer(function (request, response) {
       let norm = arr.filter(isValidEvent).map(normalizeIncomingEvent);
       norm.forEach(e => storedEvents.push(e));
       while (storedEvents.length > MAX_EVENTS) storedEvents.shift();
-      if (norm.length) broadcastEvents(norm);
+      if (norm.length) {
+        broadcastEvents(norm);
+        const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
+        const errorEvents = norm.filter(e => e.type === "error");
+        if (errorEvents.length >= threshold) {
+          const first = errorEvents[0];
+          sendAlert(
+            first.data && first.data.message ? first.data.message : "Unknown error",
+            first.route || "unknown",
+            first.deployVersion || "unknown"
+          ).catch(err => console.error("[mailer] Failed to send alert:", err));
+        }
+      }
       sendJson(response, 200, { accepted: norm.length });
     });
     return;
