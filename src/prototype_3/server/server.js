@@ -61,6 +61,7 @@ const GOVERNANCE_MASKING_RULES = [
 
 const sseClients = new Set();
 const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
+let registeredAlertRecipient = "";
 
 const MIME = {
   ".html": "text/html",
@@ -817,23 +818,55 @@ function getIncomingEvents(body) {
   return [body];
 }
 
+function isEmailLike(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeString(value).trim());
+}
+
+function getAlertRecipientFromBody(body) {
+  if (!body || typeof body !== "object") return "";
+
+  if (typeof body.alertRecipient === "string" && body.alertRecipient.trim()) {
+    return body.alertRecipient.trim();
+  }
+  if (typeof body.recipient === "string" && body.recipient.trim()) {
+    return body.recipient.trim();
+  }
+
+  if (body.alerts && typeof body.alerts.email === "string" && body.alerts.email.trim()) {
+    return body.alerts.email.trim();
+  }
+
+  if (body.user && typeof body.user.email === "string" && body.user.email.trim()) {
+    return body.user.email.trim();
+  }
+
+  return registeredAlertRecipient;
+}
+
 async function ingestEventsBody(body) {
   let arr = getIncomingEvents(body);
   let norm = await eventStore.insertEvents(arr.filter(isValidEvent));
   await eventStore.pruneOldest(MAX_EVENTS);
+
   if (norm.length) {
     broadcastEvents(norm);
+
     const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
     const errorEvents = norm.filter(e => e.type === "error");
+    const alertRecipient = getAlertRecipientFromBody(body);
+
     if (errorEvents.length >= threshold) {
       const first = errorEvents[0];
+
       sendAlert(
         first.data && first.data.message ? first.data.message : "Unknown error",
         first.route || "unknown",
-        first.deployVersion || "unknown"
+        first.deployVersion || "unknown",
+        alertRecipient
       ).catch(err => console.error("[mailer] Failed to send alert:", err));
     }
   }
+
   return norm;
 }
 
@@ -847,6 +880,23 @@ const server = http.createServer(async function (request, response) {
 
   if (request.method === "OPTIONS") {
     applyCors(response, request); response.writeHead(204); response.end(); return;
+  }
+  if (request.method === "POST" && pathname === "/api/alert-recipient") {
+    try {
+      let body = await readJsonBody(request);
+      let email = safeString(body && body.email).trim();
+      if (!isEmailLike(email)) {
+        sendJson(response, 400, { error: "Valid email is required" }, request);
+        return;
+      }
+      registeredAlertRecipient = email;
+      console.log("[mailer] Registered alert recipient " + registeredAlertRecipient);
+      sendJson(response, 200, { ok: true }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to register alert recipient:", error);
+      sendJson(response, 500, { error: "Failed to register alert recipient" }, request);
+    }
+    return;
   }
   if (request.method === "POST" && pathname === "/api/events") {
     try {
