@@ -18,6 +18,15 @@ const oAuth2Client = new google.auth.OAuth2(
 );
 oAuth2Client.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function sendAlert(errorMessage, route, version) {
   try {
     const accessToken = await oAuth2Client.getAccessToken();
@@ -38,9 +47,9 @@ async function sendAlert(errorMessage, route, version) {
       from: `WatchTower Alerts <${GMAIL_ADDRESS}>`,
       to: process.env.ALERT_RECIPIENT,
       subject: "WatchTower Alert: Error spike detected",
-      html: `<p>High error rate on <strong>${version}</strong>.<br>
-             Route: ${route}<br>
-             Error: ${errorMessage}</p>`,
+      html: `<p>High error rate on <strong>${escapeHtml(version)}</strong>.<br>
+             Route: ${escapeHtml(route)}<br>
+             Error: ${escapeHtml(errorMessage)}</p>`,
     });
 
     console.log("[mailer] Alert email sent successfully");
