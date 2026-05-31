@@ -3,9 +3,9 @@
 /**
  * Minimal Playwright configuration for the WatchTower end-to-end tests.
  *
- * The CI workflow starts the WatchTower server separately (so the same
- * config works locally and on CI), which is why we do not declare a
- * `webServer` block here. Tests rely on `BASE_URL` if set, otherwise
+ * The CI workflow starts the Prototype 3 WatchTower server separately (so
+ * the same config works locally and on CI), which is why we do not declare
+ * a `webServer` block here. Tests rely on `BASE_URL` if set, otherwise
  * default to `http://localhost:3000`.
  */
 module.exports = {
