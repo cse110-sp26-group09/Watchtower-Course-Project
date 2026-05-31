@@ -221,6 +221,40 @@ async function handleIngestEvents(request, response) {
 }
 
 /**
+ * Handle `POST /api/beacon`. Accepts the same event payload as `/api/events`
+ * but returns 204 No Content — the Beacon API ignores the response body.
+ *
+ * @param {http.IncomingMessage} request - HTTP request.
+ * @param {http.ServerResponse} response - HTTP response.
+ * @returns {Promise<void>}
+ */
+async function handleBeacon(request, response) {
+  try {
+    const body = await readJsonBody(request);
+    const incomingEvents = Array.isArray(body && body.events)
+      ? body.events
+      : Array.isArray(body)
+      ? body
+      : [body];
+
+    const validEvents = incomingEvents.filter(function (candidate) {
+      return eventStoreModule.validateEvent(candidate).ok;
+    });
+
+    if (validEvents.length > 0) {
+      const storedEvents = store.insertEventBatch(validEvents);
+      store.pruneOldest(MAX_EVENTS);
+      if (storedEvents.length > 0) broadcastEvents(storedEvents);
+    }
+  } catch (_error) {
+    // Beacon errors are silently swallowed — the client never sees the response.
+  }
+  applyCors(response);
+  response.writeHead(204);
+  response.end();
+}
+
+/**
  * Handle `GET /api/events` with optional `type`, `version`, and `limit` filters.
  *
  * @param {http.ServerResponse} response - HTTP response.
@@ -340,6 +374,11 @@ const server = http.createServer(async function (request, response) {
 
   if (request.method === "POST" && pathname === "/api/events") {
     await handleIngestEvents(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/beacon") {
+    await handleBeacon(request, response);
     return;
   }
 

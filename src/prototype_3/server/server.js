@@ -6,17 +6,31 @@
  * @module prototype_3/server
  */
 
+const { sendAlert } = require("./mailer");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const {
+  isFiniteNumber,
+  isValidEvent,
+  calculateAverage,
+  calculatePercentile,
+  parseTimestamp,
+  safeString,
+  clampNumber,
+  normalizeEnvironment,
+  deriveEventName,
+  deriveIngestionLatency,
+  normalizeIncomingEvent,
+  normalizeStreamFilters,
+  toInspectorEvent,
+  queryEventsWithFilters,
+  getRecentEvents,
+} = require("./server-helpers");
 
 const PORT = process.env.PORT || 3000;
 const MAX_EVENTS = 10000;
 const ACTIVE_USER_WINDOW = 5 * 60 * 1000;
-const DEFAULT_STREAM_LIMIT = 80;
-const MAX_STREAM_LIMIT = 500;
-
-const KNOWN_ENVIRONMENTS = ["production", "staging", "development", "preview"];
 const FEATURE_FLAG_DEFINITIONS = [
   {
     key: "new-checkout-ui",
@@ -62,36 +76,6 @@ function responseWithMime(res, targetPath) {
   res.writeHead(200, { "Content-Type": MIME[path.extname(targetPath)] || "application/octet-stream" });
 }
 
-function isFiniteNumber(v) { return typeof v === "number" && Number.isFinite(v); }
-function isValidEvent(ev) { return Boolean(ev && typeof ev === "object" && typeof ev.type === "string"); }
-
-function calculateAverage(arr) {
-  let valid = (arr || []).filter(isFiniteNumber);
-  return valid.length ? valid.reduce((s, v) => s + v, 0) / valid.length : 0;
-}
-
-function calculatePercentile(arr, p) {
-  let valid = (arr || []).filter(isFiniteNumber).sort((a, b) => a - b);
-  if (!valid.length) return 0;
-  let pos = (p / 100) * (valid.length - 1);
-  let low = Math.floor(pos), high = Math.ceil(pos);
-  return low === high ? valid[low] : valid[low] + (valid[high] - valid[low]) * (pos - low);
-}
-
-function parseTimestamp(v) { let t = new Date(v).getTime(); return Number.isFinite(t) ? t : null; }
-function safeString(v) { return v == null ? "" : String(v); }
-function clampNumber(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-function normalizeEnvironment(v, host) {
-  let raw = safeString(v).trim().toLowerCase();
-  if (KNOWN_ENVIRONMENTS.indexOf(raw) !== -1) return raw;
-  let h = safeString(host).toLowerCase();
-  if (h.indexOf("localhost") !== -1 || h.indexOf("127.0.0.1") !== -1 || h.indexOf("dev") !== -1) return "development";
-  if (h.indexOf("preview") !== -1 || h.indexOf("vercel") !== -1) return "preview";
-  if (h.indexOf("staging") !== -1) return "staging";
-  return "production";
-}
-
 function inferValueType(v) {
   if (v == null) return "null";
   if (Array.isArray(v)) return "array";
@@ -118,17 +102,6 @@ function hashString(str) {
     h |= 0;
   }
   return Math.abs(h);
-}
-
-function deriveEventName(ev) {
-  if (ev.type === "custom") return safeString(ev.data && ev.data.name).trim() || "custom";
-  if (ev.type === "performance") return "performance:" + safeString(ev.data && ev.data.metricName);
-  return safeString(ev.type) || "unknown";
-}
-
-function deriveIngestionLatency(ev) {
-  let em = parseTimestamp(ev.timestamp), rc = parseTimestamp(ev.receivedAt);
-  return (em === null || rc === null) ? null : Math.max(0, rc - em);
 }
 
 function getEventColumnValue(ev, col) {
@@ -167,12 +140,6 @@ function mapToCountRows(map, keyName, countName) {
     row[countName] = map[key];
     return row;
   }).sort(function (a, b) { return b[countName] - a[countName]; });
-}
-
-function getRecentEvents(events, limit) {
-  return (events || []).slice().sort(function (a, b) {
-    return getEventSortTimestamp(b) - getEventSortTimestamp(a);
-  }).slice(0, limit || 50);
 }
 
 function getNumericDataValue(eventRecord, keys) {
@@ -243,25 +210,6 @@ function broadcastEvents(batch) {
   sseClients.forEach(c => c.write("data: " + str + "\n\n"));
 }
 
-function normalizeIncomingEvent(raw) {
-  let n = {
-    type: raw.type || "custom",
-    eventName: safeString(raw.eventName || raw.name || "").trim(),
-    timestamp: raw.timestamp || new Date().toISOString(),
-    sessionId: raw.sessionId || "unknown-session",
-    userId: raw.userId || null,
-    deployVersion: raw.deployVersion || "unknown",
-    appName: raw.appName || "shopdemo",
-    environment: normalizeEnvironment(raw.environment || raw.env, raw.url),
-    sdkVersion: raw.sdkVersion || "sdk-unknown",
-    route: raw.route || "/",
-    data: raw.data && typeof raw.data === "object" ? raw.data : {},
-    receivedAt: new Date().toISOString()
-  };
-  if (!n.eventName) n.eventName = deriveEventName(n);
-  return n;
-}
-
 function buildLatencySummary() {
   let routes = {};
   storedEvents.forEach(function (e) {
@@ -300,73 +248,6 @@ function getDashboardStats() {
     latencyByRoute: buildLatencySummary(),
     recentErrors: recentErrors,
     recentActivity: storedEvents.slice(-20)
-  };
-}
-
-function getEventSortTimestamp(e) { return parseTimestamp(e.receivedAt || e.timestamp) || 0; }
-function buildEventSearchBlob(e) { return [e.type, e.userId, e.sessionId, e.route, JSON.stringify(e.data || {})].join(" ").toLowerCase(); }
-
-function normalizeStreamFilters(searchParams) {
-  let from = parseTimestamp(searchParams.get("dateFrom"));
-  let to = parseTimestamp(searchParams.get("dateTo"));
-  let limit = parseInt(searchParams.get("limit") || "80", 10);
-  let cursor = parseInt(searchParams.get("cursor") || "0", 10);
-
-  return {
-    eventName: safeString(searchParams.get("eventName")).toLowerCase(),
-    user: safeString(searchParams.get("user")).toLowerCase(),
-    session: safeString(searchParams.get("session")).toLowerCase(),
-    environment: safeString(searchParams.get("environment")).toLowerCase(),
-    sdkVersion: safeString(searchParams.get("sdkVersion")).toLowerCase(),
-    search: safeString(searchParams.get("search")).toLowerCase(),
-    dateFrom: from,
-    dateTo: to,
-    limit: clampNumber(Number.isFinite(limit) ? limit : DEFAULT_STREAM_LIMIT, 1, MAX_STREAM_LIMIT),
-    cursor: Math.max(0, Number.isFinite(cursor) ? cursor : 0)
-  };
-}
-
-function matchesStreamFilters(e, f) {
-  let et = parseTimestamp(e.timestamp);
-  if (f.eventName && (e.eventName || "").toLowerCase().indexOf(f.eventName) === -1) return false;
-  if (f.user && (e.userId || "").toLowerCase().indexOf(f.user) === -1) return false;
-  if (f.session && (e.sessionId || "").toLowerCase().indexOf(f.session) === -1) return false;
-  if (f.environment && (e.environment || "production").toLowerCase() !== f.environment) return false;
-  if (f.sdkVersion && (e.sdkVersion || "unknown").toLowerCase().indexOf(f.sdkVersion) === -1) return false;
-  if (f.dateFrom !== null && (et === null || et < f.dateFrom)) return false;
-  if (f.dateTo !== null && (et === null || et > f.dateTo)) return false;
-  if (f.search && buildEventSearchBlob(e).indexOf(f.search) === -1) return false;
-  return true;
-}
-
-function toInspectorEvent(e) {
-  let lat = deriveIngestionLatency(e);
-  return {
-    id: [e.timestamp, e.sessionId, e.type, e.route].join("|"),
-    type: e.type,
-    eventName: e.eventName || deriveEventName(e),
-    userId: e.userId,
-    sessionId: e.sessionId,
-    environment: e.environment || "production",
-    sdkVersion: e.sdkVersion || "unknown",
-    deployVersion: e.deployVersion || "unknown",
-    route: e.route || "/",
-    timestamp: e.timestamp,
-    receivedAt: e.receivedAt,
-    ingestionLatencyMs: lat === null ? null : Math.round(lat),
-    data: e.data || {},
-    raw: e
-  };
-}
-
-function queryEventsWithFilters(events, f) {
-  let filtered = events.filter(e => matchesStreamFilters(e, f)).sort((a, b) => getEventSortTimestamp(b) - getEventSortTimestamp(a));
-  let start = f.cursor, end = start + f.limit;
-  return {
-    total: filtered.length,
-    cursor: start,
-    nextCursor: end < filtered.length ? end : null,
-    events: filtered.slice(start, end).map(toInspectorEvent)
   };
 }
 
@@ -880,6 +761,7 @@ function evaluateFeatureFlagsForIdentity(identity) {
 const server = http.createServer(function (request, response) {
   let parsedUrl = new URL(request.url, "http://localhost");
   let pathname = parsedUrl.pathname;
+  // Landing-Page and Log-In-Page live inside the prototype_3 directory.
   let prototypeRoot = path.join(__dirname, "..");
   let landingRoot = path.join(prototypeRoot, "Landing-Page");
   let loginRoot = path.join(prototypeRoot, "Log-In-Page");
@@ -893,7 +775,19 @@ const server = http.createServer(function (request, response) {
       let norm = arr.filter(isValidEvent).map(normalizeIncomingEvent);
       norm.forEach(e => storedEvents.push(e));
       while (storedEvents.length > MAX_EVENTS) storedEvents.shift();
-      if (norm.length) broadcastEvents(norm);
+      if (norm.length) {
+        broadcastEvents(norm);
+        const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
+        const errorEvents = norm.filter(e => e.type === "error");
+        if (errorEvents.length >= threshold) {
+          const first = errorEvents[0];
+          sendAlert(
+            first.data && first.data.message ? first.data.message : "Unknown error",
+            first.route || "unknown",
+            first.deployVersion || "unknown"
+          ).catch(err => console.error("[mailer] Failed to send alert:", err));
+        }
+      }
       sendJson(response, 200, { accepted: norm.length });
     });
     return;
