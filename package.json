@@ -21,6 +21,9 @@
     "jsdoc": "^4.0.4"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0"
+    "better-sqlite3": "^12.10.0",
+    "dotenv": "^17.4.2",
+    "googleapis": "^173.0.0",
+    "nodemailer": "^8.0.10"
   }
 }
