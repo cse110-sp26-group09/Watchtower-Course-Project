@@ -129,6 +129,31 @@
     return email || user.username || name || "Signed in";
   }
 
+  function userPrimaryEmail(user) {
+    if (!user) return "";
+    if (user.primaryEmailAddress && user.primaryEmailAddress.emailAddress) {
+      return user.primaryEmailAddress.emailAddress;
+    }
+    if (Array.isArray(user.emailAddresses) && user.emailAddresses.length > 0) {
+      return user.emailAddresses[0].emailAddress || "";
+    }
+    return "";
+  }
+
+  function registerAlertRecipient(user) {
+    const email = userPrimaryEmail(user);
+    if (!email) return;
+
+    fetch("/api/alert-recipient", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      keepalive: true,
+    }).catch((error) => {
+      console.error("[auth-guard] Failed to register alert recipient:", error);
+    });
+  }
+
   /**
    * Populate the optional user label and wire all logout controls.
    * @param {object} clerk - Initialized Clerk instance.
@@ -187,12 +212,15 @@
       }
       revealApp();
       wireUi(clerk);
+      registerAlertRecipient(clerk.user);
 
       // If the session ends in another tab, bounce back to login.
       clerk.addListener((payload) => {
         if (!payload.user) {
           redirectToLogin();
+          return;
         }
+        registerAlertRecipient(payload.user);
       });
     })
     .catch((error) => {
