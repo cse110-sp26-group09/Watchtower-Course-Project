@@ -178,6 +178,64 @@ test.describe("WatchTower JSON API", () => {
     }
   });
 
+  test("POST /api/beacon accepts pageload timing data without a response body", async ({ playwright }) => {
+    const api = await playwright.request.newContext({ baseURL: BASE_URL });
+    const marker = `playwright-beacon-${Date.now()}`;
+    try {
+      const beaconRes = await api.post("/api/beacon", {
+        data: {
+          events: [
+            {
+              type: "pageload",
+              timestamp: new Date().toISOString(),
+              sessionId: marker,
+              deployVersion: "playwright-v0",
+              route: "/playwright-beacon",
+              data: {
+                source: marker,
+                duration: 640,
+                ttfb: 45,
+                navigationFetchStartToResponse: 80,
+                dns: 5,
+                tcp: 10,
+                tls: 12,
+                redirect: 0,
+                domInteractive: 280,
+                domComplete: 590,
+                loadComplete: 640,
+                transferSize: 51200,
+                resourceCount: 8,
+              },
+            },
+          ],
+        },
+      });
+
+      expect(beaconRes.status()).toBe(204);
+      expect(await beaconRes.text()).toBe("");
+
+      const invalidRes = await api.post("/api/beacon", { data: { ignored: true } });
+      expect(invalidRes.status()).toBe(204);
+
+      const getRes = await api.get("/api/events");
+      expect(getRes.ok()).toBeTruthy();
+      const getBody = await getRes.json();
+      const found = getBody.events.some(
+        (ev) => ev && ev.sessionId === marker && ev.data && ev.data.source === marker
+      );
+      expect(found).toBe(true);
+
+      const insightsRes = await api.get("/api/developer/insights");
+      expect(insightsRes.ok()).toBeTruthy();
+      const insights = await insightsRes.json();
+      expect(insights.performance.ttfb.sampleCount).toBeGreaterThan(0);
+      expect(insights.performance.navigationFetchStartToResponse.sampleCount).toBeGreaterThan(0);
+      expect(insights.performance.resourceCount.sampleCount).toBeGreaterThan(0);
+    } finally {
+      await api.dispose();
+    }
+  });
+
   test("POST /api/events surfaces an error event through GET /api/stats", async ({ playwright }) => {
     const api = await playwright.request.newContext({ baseURL: BASE_URL });
     try {

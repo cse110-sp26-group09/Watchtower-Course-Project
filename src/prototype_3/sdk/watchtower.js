@@ -102,6 +102,25 @@
     return "production";
   }
 
+  function getClerkPrimaryEmail() {
+    let clerk = global.Clerk;
+    let user = clerk && clerk.user;
+    console.log("Clerk user object:", user);
+    console.log("Clerk primary email:", user && user.primaryEmailAddress && user.primaryEmailAddress.emailAddress);
+
+    if (!user) return "";
+
+    if (user.primaryEmailAddress && user.primaryEmailAddress.emailAddress) {
+      return user.primaryEmailAddress.emailAddress;
+    }
+
+    if (Array.isArray(user.emailAddresses) && user.emailAddresses.length > 0) {
+      return user.emailAddresses[0].emailAddress || "";
+    }
+
+    return "";
+  }
+
   /**
    * Return a stable session identifier for the current tab.
    *
@@ -126,10 +145,12 @@
    * @param {string} [config.deployVersion] - Deploy version label.
    * @param {string} [config.appName] - Application name label.
    * @param {string} [config.userId] - Initial user identifier.
+   * @param {string} [config.alertRecipient] - Email address for alert notifications.
    */
   function WatchTower(config) {
     config = config || {};
     this.endpoint = config.endpoint || DEFAULT_ENDPOINT;
+    this.beaconEndpoint = config.beaconEndpoint || this.endpoint.replace(/[^/]+$/, "beacon");
     this.deployVersion = config.deployVersion || "unknown";
     this.appName = config.appName || location.hostname;
     this.environment = config.environment || resolveEnvironment();
@@ -137,8 +158,10 @@
     this.maxQueueSize = typeof config.maxQueueSize === "number" ? config.maxQueueSize : MAX_QUEUE_SIZE;
     this.sessionId = getSessionId();
     this.userId = config.userId || null;
+    this.alertRecipient = config.alertRecipient || null;
     this._queue = [];
     this._flushing = false;
+    this._beaconSent = false;
     this._lastRoute = location.pathname + location.search + location.hash;
     this._pendingDropCount = 0;
     this._retryCount = 0;
@@ -227,7 +250,10 @@
     fetch(this.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ events: batch }),
+      body: JSON.stringify({
+        alertRecipient: this.getAlertRecipient(),
+        events: batch,
+      }),
       keepalive: true,
     })
       .then(function () {
@@ -256,6 +282,32 @@
   };
 
   /**
+   * Flush queued events through the Beacon API during page unload.
+   *
+   * @private
+   * @returns {void}
+   */
+  WatchTower.prototype._flushBeacon = function () {
+    if (this._beaconSent || this._queue.length === 0) return;
+    this._beaconSent = true;
+
+    if (navigator.sendBeacon) {
+      let batch = this._queue.splice(0);
+      let blob = new Blob([JSON.stringify({
+        alertRecipient: this.getAlertRecipient(),
+        events: batch,
+      })], { type: "application/json" });
+      let sent = navigator.sendBeacon(this.beaconEndpoint, blob);
+      if (!sent) {
+        this._queue = batch.concat(this._queue);
+        this._flush();
+      }
+    } else {
+      this._flush();
+    }
+  };
+
+  /**
    * Start the periodic background flush cycle.
    *
    * @private
@@ -269,7 +321,15 @@
     }, FLUSH_INTERVAL);
 
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "hidden") sdkInstance._flush();
+      if (document.visibilityState === "hidden") {
+        sdkInstance._flushBeacon();
+      } else {
+        sdkInstance._beaconSent = false;
+      }
+    });
+
+    window.addEventListener("pagehide", function () {
+      sdkInstance._flushBeacon();
     });
   };
 
@@ -459,13 +519,25 @@
       setTimeout(function () {
         let navigationEntry = performance.getEntriesByType("navigation")[0];
         if (!navigationEntry) return;
+        let tls = navigationEntry.secureConnectionStart > 0
+          ? Math.round(navigationEntry.connectEnd - navigationEntry.secureConnectionStart)
+          : 0;
+        let resourceCount = performance.getEntriesByType("resource").length;
 
         sdkInstance._enqueue("pageload", {
           duration: Math.round(navigationEntry.duration),
           ttfb: Math.round(navigationEntry.responseStart - navigationEntry.requestStart),
+          navigationFetchStartToResponse: Math.round(navigationEntry.responseStart - navigationEntry.fetchStart),
+          dns: Math.round(navigationEntry.domainLookupEnd - navigationEntry.domainLookupStart),
+          tcp: Math.round(navigationEntry.connectEnd - navigationEntry.connectStart),
+          tls: tls,
+          redirect: Math.round(navigationEntry.redirectEnd - navigationEntry.redirectStart),
+          domInteractive: Math.round(navigationEntry.domInteractive - navigationEntry.startTime),
           domContentLoaded: Math.round(navigationEntry.domContentLoadedEventEnd - navigationEntry.startTime),
+          domComplete: Math.round(navigationEntry.domComplete - navigationEntry.startTime),
           loadComplete: Math.round(navigationEntry.loadEventEnd - navigationEntry.startTime),
           transferSize: navigationEntry.transferSize || 0,
+          resourceCount: resourceCount,
         }, "pageload");
       }, 100);
     });
@@ -479,6 +551,14 @@
    */
   WatchTower.prototype.setUser = function (userId) {
     this.userId = userId;
+  };
+
+  WatchTower.prototype.getAlertRecipient = function () {
+    return this.alertRecipient || getClerkPrimaryEmail();
+  };
+
+  WatchTower.prototype.setAlertRecipient = function (email) {
+    this.alertRecipient = email || null;
   };
 
   /**

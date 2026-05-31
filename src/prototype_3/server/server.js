@@ -10,6 +10,7 @@ const { sendAlert } = require("./mailer");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const eventStoreModule = require("./event-store");
 const {
   isFiniteNumber,
   isValidEvent,
@@ -21,7 +22,6 @@ const {
   normalizeEnvironment,
   deriveEventName,
   deriveIngestionLatency,
-  normalizeIncomingEvent,
   normalizeStreamFilters,
   toInspectorEvent,
   queryEventsWithFilters,
@@ -29,8 +29,12 @@ const {
 } = require("./server-helpers");
 
 const PORT = process.env.PORT || 3000;
-const MAX_EVENTS = 10000;
-const ACTIVE_USER_WINDOW = 5 * 60 * 1000;
+const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
+  ? parseInt(process.env.MAX_EVENTS, 10)
+  : 10000;
+const ACTIVE_USER_WINDOW = Number.isFinite(parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10))
+  ? parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10)
+  : 30000;
 const FEATURE_FLAG_DEFINITIONS = [
   {
     key: "new-checkout-ui",
@@ -55,8 +59,9 @@ const GOVERNANCE_MASKING_RULES = [
   { field: "password", action: "drop" }
 ];
 
-const storedEvents = [];
 const sseClients = new Set();
+const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
+let registeredAlertRecipient = "";
 
 const MIME = {
   ".html": "text/html",
@@ -181,14 +186,26 @@ function detectPiiFields(eventRecord) {
   return detections;
 }
 
-function applyCors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function getAllowedCorsOrigin(origin) {
+  const configured = safeString(process.env.CORS_ALLOWED_ORIGINS).trim();
+  if (!configured || configured === "*") return "*";
+  const allowedOrigins = configured.split(",").map(function (value) {
+    return value.trim();
+  }).filter(Boolean);
+  return allowedOrigins.indexOf(origin) !== -1 ? origin : "";
+}
+
+function applyCors(res, req) {
+  const origin = req && req.headers ? safeString(req.headers.origin) : "";
+  const allowedOrigin = getAllowedCorsOrigin(origin);
+  if (allowedOrigin) res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  if (allowedOrigin && allowedOrigin !== "*") res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-function sendJson(res, status, payload) {
-  applyCors(res);
+function sendJson(res, status, payload, req) {
+  applyCors(res, req);
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(payload));
 }
@@ -210,9 +227,9 @@ function broadcastEvents(batch) {
   sseClients.forEach(c => c.write("data: " + str + "\n\n"));
 }
 
-function buildLatencySummary() {
+function buildLatencySummary(events) {
   let routes = {};
-  storedEvents.forEach(function (e) {
+  (events || []).forEach(function (e) {
     if (e.type !== "pageload" || !e.data || e.data.duration == null) return;
     if (!routes[e.route]) routes[e.route] = [];
     routes[e.route].push(e.data.duration);
@@ -227,12 +244,13 @@ function buildLatencySummary() {
   }, {});
 }
 
-function getDashboardStats() {
+function getDashboardStats(events) {
+  const sourceEvents = events || [];
   let activeSessions = new Set(), errorsByVersion = {}, recentErrors = [];
-  let cutoff = Date.now() - (5 * 60 * 1000);
+  let cutoff = Date.now() - ACTIVE_USER_WINDOW;
 
-  for (let i = storedEvents.length - 1; i >= 0; i--) {
-    let e = storedEvents[i];
+  for (let i = sourceEvents.length - 1; i >= 0; i--) {
+    let e = sourceEvents[i];
     if (parseTimestamp(e.timestamp) >= cutoff) activeSessions.add(e.sessionId);
     if (e.type === "error") {
       errorsByVersion[e.deployVersion] = (errorsByVersion[e.deployVersion] || 0) + 1;
@@ -242,12 +260,12 @@ function getDashboardStats() {
 
   return {
     activeUsers: activeSessions.size,
-    totalEvents: storedEvents.length,
+    totalEvents: sourceEvents.length,
     totalErrors: recentErrors.length,
     errorsByVersion: errorsByVersion,
-    latencyByRoute: buildLatencySummary(),
+    latencyByRoute: buildLatencySummary(sourceEvents),
     recentErrors: recentErrors,
-    recentActivity: storedEvents.slice(-20)
+    recentActivity: sourceEvents.slice(-20)
   };
 }
 
@@ -406,6 +424,15 @@ function buildSdkDiagnostics(events) {
 
 function buildPerformanceInsights(events) {
   let pageLoad = [];
+  let ttfb = [];
+  let navigationFetchStartToResponse = [];
+  let dns = [];
+  let tcp = [];
+  let tls = [];
+  let redirect = [];
+  let domInteractive = [];
+  let domComplete = [];
+  let resourceCount = [];
   let lcp = [];
   let cls = [];
   let inp = [];
@@ -416,6 +443,24 @@ function buildPerformanceInsights(events) {
     if (e.type === "pageload") {
       let duration = getNumericDataValue(e, ["duration", "loadComplete"]);
       if (duration !== null) pageLoad.push(duration);
+      let ttfbValue = getNumericDataValue(e, ["ttfb"]);
+      if (ttfbValue !== null) ttfb.push(ttfbValue);
+      let navigationFetchValue = getNumericDataValue(e, ["navigationFetchStartToResponse"]);
+      if (navigationFetchValue !== null) navigationFetchStartToResponse.push(navigationFetchValue);
+      let dnsValue = getNumericDataValue(e, ["dns"]);
+      if (dnsValue !== null) dns.push(dnsValue);
+      let tcpValue = getNumericDataValue(e, ["tcp"]);
+      if (tcpValue !== null) tcp.push(tcpValue);
+      let tlsValue = getNumericDataValue(e, ["tls"]);
+      if (tlsValue !== null) tls.push(tlsValue);
+      let redirectValue = getNumericDataValue(e, ["redirect"]);
+      if (redirectValue !== null) redirect.push(redirectValue);
+      let domInteractiveValue = getNumericDataValue(e, ["domInteractive"]);
+      if (domInteractiveValue !== null) domInteractive.push(domInteractiveValue);
+      let domCompleteValue = getNumericDataValue(e, ["domComplete"]);
+      if (domCompleteValue !== null) domComplete.push(domCompleteValue);
+      let resourceCountValue = getNumericDataValue(e, ["resourceCount"]);
+      if (resourceCountValue !== null) resourceCount.push(resourceCountValue);
       let transferSize = getNumericDataValue(e, ["transferSize", "encodedBodySize"]);
       if (transferSize !== null) bundleCost.push(Math.round(transferSize / 1024));
     }
@@ -436,6 +481,15 @@ function buildPerformanceInsights(events) {
   });
   return {
     pageLoad: summarizeNumeric(pageLoad),
+    ttfb: summarizeNumeric(ttfb),
+    navigationFetchStartToResponse: summarizeNumeric(navigationFetchStartToResponse),
+    dns: summarizeNumeric(dns),
+    tcp: summarizeNumeric(tcp),
+    tls: summarizeNumeric(tls),
+    redirect: summarizeNumeric(redirect),
+    domInteractive: summarizeNumeric(domInteractive),
+    domComplete: summarizeNumeric(domComplete),
+    resourceCount: summarizeNumeric(resourceCount),
     lcp: summarizeNumeric(lcp),
     cls: summarizeNumeric(cls),
     inp: summarizeNumeric(inp),
@@ -758,7 +812,65 @@ function evaluateFeatureFlagsForIdentity(identity) {
   };
 }
 
-const server = http.createServer(function (request, response) {
+function getIncomingEvents(body) {
+  if (body && Array.isArray(body.events)) return body.events;
+  if (Array.isArray(body)) return body;
+  return [body];
+}
+
+function isEmailLike(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeString(value).trim());
+}
+
+function getAlertRecipientFromBody(body) {
+  if (!body || typeof body !== "object") return "";
+
+  if (typeof body.alertRecipient === "string" && body.alertRecipient.trim()) {
+    return body.alertRecipient.trim();
+  }
+  if (typeof body.recipient === "string" && body.recipient.trim()) {
+    return body.recipient.trim();
+  }
+
+  if (body.alerts && typeof body.alerts.email === "string" && body.alerts.email.trim()) {
+    return body.alerts.email.trim();
+  }
+
+  if (body.user && typeof body.user.email === "string" && body.user.email.trim()) {
+    return body.user.email.trim();
+  }
+
+  return registeredAlertRecipient;
+}
+
+async function ingestEventsBody(body) {
+  let arr = getIncomingEvents(body);
+  let norm = await eventStore.insertEvents(arr.filter(isValidEvent));
+  await eventStore.pruneOldest(MAX_EVENTS);
+
+  if (norm.length) {
+    broadcastEvents(norm);
+
+    const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
+    const errorEvents = norm.filter(e => e.type === "error");
+    const alertRecipient = getAlertRecipientFromBody(body);
+
+    if (errorEvents.length >= threshold) {
+      const first = errorEvents[0];
+
+      sendAlert(
+        first.data && first.data.message ? first.data.message : "Unknown error",
+        first.route || "unknown",
+        first.deployVersion || "unknown",
+        alertRecipient
+      ).catch(err => console.error("[mailer] Failed to send alert:", err));
+    }
+  }
+
+  return norm;
+}
+
+const server = http.createServer(async function (request, response) {
   let parsedUrl = new URL(request.url, "http://localhost");
   let pathname = parsedUrl.pathname;
   // Landing-Page and Log-In-Page live inside the prototype_3 directory.
@@ -767,52 +879,112 @@ const server = http.createServer(function (request, response) {
   let loginRoot = path.join(prototypeRoot, "Log-In-Page");
 
   if (request.method === "OPTIONS") {
-    applyCors(response); response.writeHead(204); response.end(); return;
+    applyCors(response, request); response.writeHead(204); response.end(); return;
+  }
+  if (request.method === "POST" && pathname === "/api/alert-recipient") {
+    try {
+      let body = await readJsonBody(request);
+      let email = safeString(body && body.email).trim();
+      if (!isEmailLike(email)) {
+        sendJson(response, 400, { error: "Valid email is required" }, request);
+        return;
+      }
+      registeredAlertRecipient = email;
+      console.log("[mailer] Registered alert recipient " + registeredAlertRecipient);
+      sendJson(response, 200, { ok: true }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to register alert recipient:", error);
+      sendJson(response, 500, { error: "Failed to register alert recipient" }, request);
+    }
+    return;
   }
   if (request.method === "POST" && pathname === "/api/events") {
-    readJsonBody(request).then(body => {
-      let arr = Array.isArray(body.events) ? body.events : [body];
-      let norm = arr.filter(isValidEvent).map(normalizeIncomingEvent);
-      norm.forEach(e => storedEvents.push(e));
-      while (storedEvents.length > MAX_EVENTS) storedEvents.shift();
-      if (norm.length) {
-        broadcastEvents(norm);
-        const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
-        const errorEvents = norm.filter(e => e.type === "error");
-        if (errorEvents.length >= threshold) {
-          const first = errorEvents[0];
-          sendAlert(
-            first.data && first.data.message ? first.data.message : "Unknown error",
-            first.route || "unknown",
-            first.deployVersion || "unknown"
-          ).catch(err => console.error("[mailer] Failed to send alert:", err));
-        }
-      }
-      sendJson(response, 200, { accepted: norm.length });
-    });
+    try {
+      let body = await readJsonBody(request);
+      let norm = await ingestEventsBody(body);
+      sendJson(response, 200, { accepted: norm.length }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to ingest events:", error);
+      sendJson(response, 500, { error: "Failed to store events" }, request);
+    }
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/beacon") {
+    try {
+      let body = await readJsonBody(request);
+      await ingestEventsBody(body);
+    } catch (_error) {
+      // Beacon callers ignore response bodies, so keep this endpoint fail-closed.
+    }
+    applyCors(response, request);
+    response.writeHead(204);
+    response.end();
     return;
   }
   if (request.method === "GET" && pathname === "/api/events") {
-    sendJson(response, 200, { events: storedEvents.slice(-100) }); return;
+    try {
+      let events = await eventStore.listEvents(100);
+      sendJson(response, 200, { events: events }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to list events:", error);
+      sendJson(response, 500, { error: "Failed to fetch events" }, request);
+    }
+    return;
   }
   if (request.method === "GET" && pathname === "/api/developer/stream") {
-    let f = normalizeStreamFilters(parsedUrl.searchParams);
-    sendJson(response, 200, queryEventsWithFilters(storedEvents, f)); return;
+    try {
+      let events = await eventStore.allEvents(MAX_EVENTS);
+      let f = normalizeStreamFilters(parsedUrl.searchParams);
+      sendJson(response, 200, queryEventsWithFilters(events, f), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to load developer stream:", error);
+      sendJson(response, 500, { error: "Failed to fetch developer stream" }, request);
+    }
+    return;
   }
   if (request.method === "GET" && pathname === "/api/developer/insights") {
-    sendJson(response, 200, buildDeveloperInsights(storedEvents)); return;
+    try {
+      let events = await eventStore.allEvents(MAX_EVENTS);
+      sendJson(response, 200, buildDeveloperInsights(events), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to build developer insights:", error);
+      sendJson(response, 500, { error: "Failed to fetch developer insights" }, request);
+    }
+    return;
   }
   if (request.method === "POST" && pathname === "/api/developer/query") {
-    readJsonBody(request).then(body => sendJson(response, 200, executeDeveloperQuery(body.query, storedEvents))); return;
+    try {
+      let body = await readJsonBody(request);
+      let events = await eventStore.allEvents(MAX_EVENTS);
+      sendJson(response, 200, executeDeveloperQuery(body.query, events), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to execute developer query:", error);
+      sendJson(response, 500, { error: "Failed to execute developer query" }, request);
+    }
+    return;
   }
   if (request.method === "POST" && pathname === "/api/developer/feature-flags/evaluate") {
-    readJsonBody(request).then(body => sendJson(response, 200, evaluateFeatureFlagsForIdentity(body))); return;
+    try {
+      let body = await readJsonBody(request);
+      sendJson(response, 200, evaluateFeatureFlagsForIdentity(body), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to evaluate feature flags:", error);
+      sendJson(response, 500, { error: "Failed to evaluate feature flags" }, request);
+    }
+    return;
   }
   if (request.method === "GET" && pathname === "/api/stats") {
-    sendJson(response, 200, getDashboardStats()); return;
+    try {
+      let events = await eventStore.allEvents(MAX_EVENTS);
+      sendJson(response, 200, getDashboardStats(events), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to fetch stats:", error);
+      sendJson(response, 500, { error: "Failed to fetch stats" }, request);
+    }
+    return;
   }
   if (request.method === "GET" && pathname === "/api/events/stream") {
-    applyCors(response);
+    applyCors(response, request);
     response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
     response.write(":\n\n"); sseClients.add(response);
     request.on("close", () => sseClients.delete(response)); return;
@@ -924,4 +1096,5 @@ const server = http.createServer(function (request, response) {
 
 server.listen(PORT, function () {
   console.log("Observability dashboard shell active at http://localhost:" + PORT);
+  console.log("Prototype 3 event storage: " + eventStore.type + (eventStore.tableName ? " (" + eventStore.tableName + ")" : ""));
 });
