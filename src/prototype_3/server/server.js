@@ -10,8 +10,6 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const {
-  DEFAULT_STREAM_LIMIT,
-  MAX_STREAM_LIMIT,
   isFiniteNumber,
   isValidEvent,
   calculateAverage,
@@ -19,9 +17,9 @@ const {
   parseTimestamp,
   safeString,
   clampNumber,
+  normalizeEnvironment,
   deriveEventName,
   deriveIngestionLatency,
-  getEventSortTimestamp,
   normalizeIncomingEvent,
   normalizeStreamFilters,
   toInspectorEvent,
