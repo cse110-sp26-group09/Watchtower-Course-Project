@@ -14,10 +14,24 @@ const { test, expect } = require("@playwright/test");
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
-/** Stub a signed-in Clerk session so the dashboard auth guard reveals the shell. */
+/**
+ * Stub a signed-in Clerk session so the dashboard auth guard reveals the shell.
+ *
+ * The guard reads `window.CLERK_PUBLISHABLE_KEY` from the page-served
+ * `clerk-config.js`, which CI regenerates with an empty key (no secret on CI).
+ * We intercept that request to inject a valid publishable key, and stub
+ * `window.Clerk` so the guard's `loadClerk` short-circuits to a signed-in user
+ * without ever hitting Clerk's CDN.
+ */
 async function stubSignedInClerk(page) {
+  await page.route("**/clerk-config.js", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: 'window.CLERK_PUBLISHABLE_KEY = "pk_test_ZW5kLXRvLWVuZC10ZXN0JA";',
+    })
+  );
+
   await page.addInitScript(() => {
-    window.CLERK_PUBLISHABLE_KEY = "pk_test_ZW5kLXRvLWVuZC10ZXN0";
     window.Clerk = {
       user: {
         primaryEmailAddress: { emailAddress: "e2e@watchtower.test" },
