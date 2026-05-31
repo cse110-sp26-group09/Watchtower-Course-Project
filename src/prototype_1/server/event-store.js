@@ -1,36 +1,67 @@
 "use strict";
 
 /**
- * Prototype 1 SQLite event store.
+ * Prototype 1 Supabase-backed event store.
  *
- * Wraps `better-sqlite3` so the prototype 1 server can persist WatchTower
- * telemetry to a single-file database. Pure helpers (`normalizeForStorage`,
- * `rowToApiEvent`, `generateEventId`, `isValidTimestamp`) are exported so
- * they can be unit tested without opening a database file.
+ * Persists WatchTower telemetry to the `events` table in Supabase Postgres.
+ * Pure helpers (`normalizeForStorage`, `rowToApiEvent`, `generateEventId`,
+ * `isValidTimestamp`) are exported so they can be unit tested without opening
+ * a network connection.
  *
- * Schema (single `events` table):
+ * Expected Supabase table:
  *
- * | column       | type | notes                                              |
- * |--------------|------|----------------------------------------------------|
- * | id           | TEXT | primary key, generated server-side if not provided |
- * | type         | TEXT | event type (page_view, error, performance, ...)    |
- * | timestamp    | TEXT | ISO-8601, client-side                              |
- * | source       | TEXT | optional originating script/label                  |
- * | session_id   | TEXT | per-tab session id from the SDK                    |
- * | page_url     | TEXT | full URL or pathname when the event was created    |
- * | message      | TEXT | human-readable summary, e.g. error message         |
- * | severity     | TEXT | optional severity label                            |
- * | app_version  | TEXT | deploy/release label                               |
- * | metadata     | TEXT | JSON-stringified extras (data payload, userId, ..) |
- * | received_at  | TEXT | ISO-8601 server ingestion time                     |
+ * | column       | type        | notes                                              |
+ * |--------------|-------------|----------------------------------------------------|
+ * | id           | text        | primary key, generated server-side if not provided |
+ * | type         | text        | event type (page_view, error, performance, ...)    |
+ * | timestamp    | timestamptz | client-side event timestamp                        |
+ * | source       | text        | optional originating script/label                  |
+ * | session_id   | text        | per-tab session id from the SDK                    |
+ * | page_url     | text        | full URL or pathname when the event was created    |
+ * | message      | text        | human-readable summary, e.g. error message         |
+ * | severity     | text        | optional severity label                            |
+ * | app_version  | text        | deploy/release label                               |
+ * | metadata     | jsonb       | extras (data payload, userId, appName, route, ...) |
+ * | received_at  | timestamptz | server ingestion time                              |
  *
  * @module prototype_1/server/event-store
  */
 
-const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
-const Database = require("better-sqlite3");
+const { randomUUID } = require("crypto");
+const { config: loadEnv } = require("dotenv");
+const { createClient } = require("@supabase/supabase-js");
+
+const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
+
+loadEnv({ quiet: true });
+loadEnv({ path: path.join(REPO_ROOT, ".env"), quiet: true });
+
+const DEFAULT_EVENTS_TABLE = "events";
+const MAX_STATS_ROWS = Number.isFinite(parseInt(process.env.EVENT_STORE_STATS_LIMIT, 10))
+  ? parseInt(process.env.EVENT_STORE_STATS_LIMIT, 10)
+  : 10000;
+
+const EVENTS_TABLE_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS public.events (
+  id text PRIMARY KEY,
+  type text NOT NULL,
+  timestamp timestamptz NOT NULL,
+  source text,
+  session_id text,
+  page_url text,
+  message text,
+  severity text,
+  app_version text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  received_at timestamptz NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_type ON public.events(type);
+CREATE INDEX IF NOT EXISTS idx_events_app_version ON public.events(app_version);
+CREATE INDEX IF NOT EXISTS idx_events_received_at ON public.events(received_at);
+CREATE INDEX IF NOT EXISTS idx_events_session_id ON public.events(session_id);
+`;
 
 const KNOWN_EVENT_TYPES = Object.freeze([
   "page_view",
@@ -45,17 +76,9 @@ const KNOWN_EVENT_TYPES = Object.freeze([
   "logout",
 ]);
 
-/**
- * Generate a short pseudo-random event identifier.
- *
- * Uses `crypto.randomUUID` when available; falls back to a timestamp+random
- * id so old Node versions still work.
- *
- * @returns {string} A stable event id (e.g. `"7f1c3d8e-..."`).
- */
 function generateEventId() {
-  if (typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+  if (typeof randomUUID === "function") {
+    return randomUUID();
   }
   return (
     Date.now().toString(36) +
@@ -64,12 +87,6 @@ function generateEventId() {
   );
 }
 
-/**
- * Return true if the value is a non-empty string that parses as a valid date.
- *
- * @param {unknown} value - Value to inspect.
- * @returns {boolean}
- */
 function isValidTimestamp(value) {
   if (typeof value !== "string" || value.length === 0) {
     return false;
@@ -77,12 +94,6 @@ function isValidTimestamp(value) {
   return Number.isFinite(Date.parse(value));
 }
 
-/**
- * Validate the minimum envelope of a WatchTower event.
- *
- * @param {unknown} event - Candidate event.
- * @returns {{ok: true} | {ok: false, reason: string}}
- */
 function validateEvent(event) {
   if (!event || typeof event !== "object" || Array.isArray(event)) {
     return { ok: false, reason: "Event must be a non-null object" };
@@ -99,13 +110,6 @@ function validateEvent(event) {
   return { ok: true };
 }
 
-/**
- * Pick the first non-empty string from a list of candidates.
- *
- * @private
- * @param {Array<unknown>} candidates - Values to search.
- * @returns {string|null}
- */
 function firstNonEmptyString(candidates) {
   for (const candidate of candidates) {
     if (typeof candidate === "string" && candidate.length > 0) {
@@ -115,30 +119,6 @@ function firstNonEmptyString(candidates) {
   return null;
 }
 
-/**
- * Translate an inbound event (camelCase or snake_case, SDK or external)
- * into the snake_case row shape used by the SQLite `events` table.
- *
- * Anything that isn't a first-class column (notably `data`, `userId`,
- * `appName`, `route`, and arbitrary `metadata` extras) is preserved inside
- * the JSON-stringified `metadata` column so {@link rowToApiEvent} can
- * reconstruct the original event for the dashboard.
- *
- * @param {Object} rawEvent - Inbound event payload.
- * @returns {{
- *   id: string,
- *   type: string,
- *   timestamp: string,
- *   source: string|null,
- *   session_id: string|null,
- *   page_url: string|null,
- *   message: string|null,
- *   severity: string|null,
- *   app_version: string|null,
- *   metadata: string,
- *   received_at: string
- * }} A row ready for the prepared INSERT statement.
- */
 function normalizeForStorage(rawEvent) {
   const event = rawEvent && typeof rawEvent === "object" ? rawEvent : {};
   const dataObject = event.data && typeof event.data === "object" && !Array.isArray(event.data) ? event.data : {};
@@ -155,62 +135,54 @@ function normalizeForStorage(rawEvent) {
   const message = firstNonEmptyString([event.message, dataObject.message]);
   const severity = firstNonEmptyString([event.severity, type === "error" ? "critical" : null]);
 
-  const metadataPayload = Object.assign(
-    {},
-    userMetadata,
-    {
-      data: dataObject,
-      userId: event.userId !== undefined ? event.userId : null,
-      appName: typeof event.appName === "string" ? event.appName : null,
-      url: typeof event.url === "string" ? event.url : null,
-      route: typeof event.route === "string" ? event.route : null,
-      deployVersion: appVersion,
-    }
-  );
+  const metadataPayload = Object.assign({}, userMetadata, {
+    data: dataObject,
+    userId: event.userId !== undefined ? event.userId : null,
+    appName: typeof event.appName === "string" ? event.appName : null,
+    url: typeof event.url === "string" ? event.url : null,
+    route: typeof event.route === "string" ? event.route : null,
+    deployVersion: appVersion,
+  });
 
   return {
     id,
     type,
     timestamp,
-    source: source,
+    source,
     session_id: sessionId,
     page_url: pageUrl,
     message,
     severity,
     app_version: appVersion,
-    metadata: JSON.stringify(metadataPayload),
+    metadata: metadataPayload,
     received_at: new Date().toISOString(),
   };
 }
 
-/**
- * Translate a SQLite row back into the dashboard-friendly event shape.
- *
- * The returned object exposes both camelCase fields (used by the existing
- * prototype 1 dashboard such as `sessionId`, `deployVersion`, `appName`,
- * `url`, `route`, `data`) and the canonical column-aligned fields
- * (`session_id`, `page_url`, `app_version`, `severity`).
- *
- * @param {Object} row - Row fetched from the events table.
- * @returns {Object} Dashboard-compatible event object.
- */
+function parseMetadata(metadataValue) {
+  if (!metadataValue) {
+    return {};
+  }
+  if (typeof metadataValue === "object" && !Array.isArray(metadataValue)) {
+    return metadataValue;
+  }
+  if (typeof metadataValue === "string" && metadataValue.length > 0) {
+    try {
+      const parsed = JSON.parse(metadataValue);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 function rowToApiEvent(row) {
   if (!row) {
     return null;
   }
 
-  let metadata = {};
-  if (typeof row.metadata === "string" && row.metadata.length > 0) {
-    try {
-      metadata = JSON.parse(row.metadata);
-      if (!metadata || typeof metadata !== "object") {
-        metadata = {};
-      }
-    } catch (_error) {
-      metadata = {};
-    }
-  }
-
+  const metadata = parseMetadata(row.metadata);
   const dataPayload = metadata.data && typeof metadata.data === "object" ? metadata.data : {};
   const route = typeof metadata.route === "string" && metadata.route.length > 0 ? metadata.route : null;
   const url = typeof metadata.url === "string" && metadata.url.length > 0 ? metadata.url : (row.page_url || null);
@@ -230,331 +202,233 @@ function rowToApiEvent(row) {
     appVersion: row.app_version,
     app_version: row.app_version,
     deployVersion: row.app_version,
-    appName: appName,
+    appName,
     userId: metadata.userId !== undefined ? metadata.userId : null,
-    url: url,
-    route: route,
+    url,
+    route,
     data: dataPayload,
-    metadata: metadata,
+    metadata,
     receivedAt: row.received_at,
     received_at: row.received_at,
   };
 }
 
-/**
- * Open (or create) the SQLite database file and ensure the events table
- * and indexes exist.
- *
- * The directory containing `databasePath` is created automatically when
- * missing so callers do not have to coordinate filesystem setup.
- *
- * @param {string} databasePath - Absolute filesystem path to the .sqlite file.
- * @returns {Object} An opened `better-sqlite3` database handle.
- */
-function openDatabase(databasePath) {
-  const directory = path.dirname(databasePath);
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true });
+function createSupabaseClient(options) {
+  const opts = options || {};
+  const supabaseUrl = opts.supabaseUrl || process.env.SUPABASE_URL;
+  const supabaseKey =
+    opts.supabaseKey ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("SUPABASE_URL is required for the event store");
+  }
+  if (!supabaseKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY is required for the event store");
   }
 
-  const db = new Database(databasePath);
-  db.pragma("journal_mode = WAL");
-
-  db.prepare(
-    "CREATE TABLE IF NOT EXISTS events (" +
-      "id TEXT PRIMARY KEY, " +
-      "type TEXT NOT NULL, " +
-      "timestamp TEXT NOT NULL, " +
-      "source TEXT, " +
-      "session_id TEXT, " +
-      "page_url TEXT, " +
-      "message TEXT, " +
-      "severity TEXT, " +
-      "app_version TEXT, " +
-      "metadata TEXT, " +
-      "received_at TEXT NOT NULL" +
-      ")"
-  ).run();
-
-  db.prepare("CREATE INDEX IF NOT EXISTS idx_events_type ON events(type)").run();
-  db.prepare("CREATE INDEX IF NOT EXISTS idx_events_app_version ON events(app_version)").run();
-  db.prepare("CREATE INDEX IF NOT EXISTS idx_events_received_at ON events(received_at)").run();
-  db.prepare("CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id)").run();
-
-  return db;
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
-/**
- * Create a high-level event store bound to an opened database handle.
- *
- * Returned methods:
- * - `insertEvent(event)` - persist a normalized event, returns the stored row's API shape.
- * - `getEvents({type, version, limit})` - filtered listing, most-recent first.
- * - `getStats(activeUserWindowMs)` - aggregated dashboard stats.
- * - `countEvents()` - convenience count.
- * - `pruneOldest(maxRows)` - cap the table size by deleting oldest rows.
- * - `close()` - close the underlying database handle.
- *
- * @param {Object} db - Opened `better-sqlite3` database handle.
- * @returns {Object} Event store API.
- */
-function createEventStore(db) {
-  const insertStatement = db.prepare(
-    "INSERT INTO events (" +
-      "id, type, timestamp, source, session_id, page_url, message, severity, app_version, metadata, received_at" +
-      ") VALUES (" +
-      "@id, @type, @timestamp, @source, @session_id, @page_url, @message, @severity, @app_version, @metadata, @received_at" +
-      ")"
-  );
+function openDatabase(options) {
+  return createSupabaseClient(options);
+}
 
-  const upsertStatement = db.prepare(
-    "INSERT INTO events (" +
-      "id, type, timestamp, source, session_id, page_url, message, severity, app_version, metadata, received_at" +
-      ") VALUES (" +
-      "@id, @type, @timestamp, @source, @session_id, @page_url, @message, @severity, @app_version, @metadata, @received_at" +
-      ") ON CONFLICT(id) DO NOTHING"
-  );
-
-  const countStatement = db.prepare("SELECT COUNT(*) AS count FROM events");
-
-  const deleteOverflowStatement = db.prepare(
-    "DELETE FROM events WHERE id IN (SELECT id FROM events ORDER BY received_at ASC, rowid ASC LIMIT ?)"
-  );
-
-  /**
-   * Insert one normalized event. If an event with the same id already
-   * exists, the insert is skipped silently.
-   *
-   * @param {Object} event - Inbound event payload (camelCase or snake_case).
-   * @returns {Object} The stored event in dashboard API shape.
-   */
-  function insertEvent(event) {
-    const row = normalizeForStorage(event);
-    upsertStatement.run(row);
-    return rowToApiEvent(row);
+function assertSupabaseResult(result, context) {
+  if (result.error) {
+    throw new Error(context + ": " + result.error.message);
   }
+  return result;
+}
 
-  /**
-   * Insert a batch of events inside a single transaction.
-   *
-   * @param {Array<Object>} events - Inbound events.
-   * @returns {Array<Object>} Stored events in dashboard API shape.
-   */
-  function insertEventBatch(events) {
-    if (!Array.isArray(events) || events.length === 0) {
+function createEventStore(client, options) {
+  const opts = options || {};
+  const supabase = client || createSupabaseClient(opts);
+  const tableName = opts.tableName || process.env.SUPABASE_EVENTS_TABLE || DEFAULT_EVENTS_TABLE;
+
+  async function insertRows(rows) {
+    if (rows.length === 0) {
       return [];
     }
-    const insertMany = db.transaction((items) => {
-      const stored = [];
-      for (const item of items) {
-        const row = normalizeForStorage(item);
-        upsertStatement.run(row);
-        stored.push(rowToApiEvent(row));
-      }
-      return stored;
-    });
-    return insertMany(events);
-  }
-
-  /**
-   * Filtered event listing. Returns the most-recent N rows that match the
-   * optional filters, in descending insertion order.
-   *
-   * @param {Object} [options] - Filter options.
-   * @param {string} [options.type] - Optional `type` exact-match filter.
-   * @param {string} [options.version] - Optional `app_version` exact-match filter.
-   * @param {number} [options.limit] - Maximum rows to return (default 100).
-   * @returns {Array<Object>} Events in dashboard API shape.
-   */
-  function getEvents(options) {
-    const opts = options || {};
-    const conditions = [];
-    const params = [];
-
-    if (typeof opts.type === "string" && opts.type.length > 0) {
-      conditions.push("type = ?");
-      params.push(opts.type);
-    }
-    if (typeof opts.version === "string" && opts.version.length > 0) {
-      conditions.push("app_version = ?");
-      params.push(opts.version);
-    }
-
-    const whereClause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
-    const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? Math.floor(opts.limit) : 100;
-
-    const rows = db
-      .prepare("SELECT * FROM events " + whereClause + " ORDER BY received_at DESC, rowid DESC LIMIT ?")
-      .all(...params, limit);
-
+    const result = await supabase
+      .from(tableName)
+      .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
+      .select("*");
+    assertSupabaseResult(result, "Failed to insert events");
     return rows.map(rowToApiEvent);
   }
 
-  /**
-   * Compute dashboard statistics.
-   *
-   * Stats include:
-   * - `totalEvents`, `totalErrors`
-   * - `activeUsers` (distinct sessions in the last `activeUserWindowMs`)
-   * - `eventsByType`, `errorsByVersion`
-   * - `latencyByRoute` (computed from performance / pageload metadata)
-   * - `recentErrors`, `recentActivity`
-   * - `analytics` (breakdownCounts, feedbackBreakdown, userSeries, etc.)
-   *
-   * @param {number} [activeUserWindowMs] - Active-user lookback window. Defaults to 5 minutes.
-   * @returns {Object} Dashboard stats payload.
-   */
-  function getStats(activeUserWindowMs) {
-    const windowMs = Number.isFinite(activeUserWindowMs) ? activeUserWindowMs : 5 * 60 * 1000;
-    const totalEvents = countStatement.get().count;
+  async function insertEvent(event) {
+    const stored = await insertRows([normalizeForStorage(event)]);
+    return stored[0] || null;
+  }
 
-    const activeWindowStart = new Date(Date.now() - windowMs).toISOString();
-    const activeUserRow = db
-      .prepare(
-        "SELECT COUNT(DISTINCT session_id) AS count FROM events " +
-          "WHERE session_id IS NOT NULL AND received_at >= ?"
-      )
-      .get(activeWindowStart);
+  async function insertEventBatch(events) {
+    if (!Array.isArray(events) || events.length === 0) {
+      return [];
+    }
+    return insertRows(events.map(normalizeForStorage));
+  }
 
-    const eventsByTypeRows = db
-      .prepare("SELECT type, COUNT(*) AS count FROM events GROUP BY type")
-      .all();
-    const eventsByType = {};
-    for (const row of eventsByTypeRows) {
-      eventsByType[row.type] = row.count;
+  async function getEvents(options) {
+    const opts = options || {};
+    const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? Math.floor(opts.limit) : 100;
+
+    let query = supabase
+      .from(tableName)
+      .select("*")
+      .order("received_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit);
+
+    if (typeof opts.type === "string" && opts.type.length > 0) {
+      query = query.eq("type", opts.type);
+    }
+    if (typeof opts.version === "string" && opts.version.length > 0) {
+      query = query.eq("app_version", opts.version);
     }
 
-    const errorsByVersionRows = db
-      .prepare(
-        "SELECT COALESCE(app_version, 'unknown') AS app_version, COUNT(*) AS count " +
-          "FROM events WHERE type = 'error' GROUP BY COALESCE(app_version, 'unknown')"
-      )
-      .all();
+    const result = await query;
+    assertSupabaseResult(result, "Failed to fetch events");
+    return (result.data || []).map(rowToApiEvent);
+  }
+
+  async function countEvents() {
+    const result = await supabase
+      .from(tableName)
+      .select("id", { count: "exact", head: true });
+    assertSupabaseResult(result, "Failed to count events");
+    return result.count || 0;
+  }
+
+  async function pruneOldest(maxRows) {
+    if (!Number.isFinite(maxRows) || maxRows <= 0) {
+      return 0;
+    }
+
+    const total = await countEvents();
+    if (total <= maxRows) {
+      return 0;
+    }
+
+    const overflow = total - maxRows;
+    const oldestResult = await supabase
+      .from(tableName)
+      .select("id")
+      .order("received_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(overflow);
+    assertSupabaseResult(oldestResult, "Failed to find old events");
+
+    const ids = (oldestResult.data || []).map((row) => row.id).filter(Boolean);
+    if (ids.length === 0) {
+      return 0;
+    }
+
+    const deleteResult = await supabase.from(tableName).delete().in("id", ids);
+    assertSupabaseResult(deleteResult, "Failed to prune old events");
+    return ids.length;
+  }
+
+  async function getStats(activeUserWindowMs) {
+    const windowMs = Number.isFinite(activeUserWindowMs) ? activeUserWindowMs : 5 * 60 * 1000;
+    const activeWindowStart = new Date(Date.now() - windowMs).toISOString();
+
+    const [
+      totalEvents,
+      activeUsersResult,
+      allRowsResult,
+      recentErrorRowsResult,
+      recentActivityRowsResult,
+      performanceRowsResult,
+    ] = await Promise.all([
+      countEvents(),
+      supabase
+        .from(tableName)
+        .select("session_id")
+        .not("session_id", "is", null)
+        .gte("received_at", activeWindowStart)
+        .limit(MAX_STATS_ROWS),
+      supabase
+        .from(tableName)
+        .select("*")
+        .order("received_at", { ascending: true })
+        .order("id", { ascending: true })
+        .limit(MAX_STATS_ROWS),
+      supabase
+        .from(tableName)
+        .select("*")
+        .eq("type", "error")
+        .order("received_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(20),
+      supabase
+        .from(tableName)
+        .select("*")
+        .order("received_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(50),
+      supabase
+        .from(tableName)
+        .select("*")
+        .in("type", ["performance", "pageload"])
+        .order("received_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(5000),
+    ]);
+
+    assertSupabaseResult(activeUsersResult, "Failed to fetch active users");
+    assertSupabaseResult(allRowsResult, "Failed to fetch analytics rows");
+    assertSupabaseResult(recentErrorRowsResult, "Failed to fetch recent errors");
+    assertSupabaseResult(recentActivityRowsResult, "Failed to fetch recent activity");
+    assertSupabaseResult(performanceRowsResult, "Failed to fetch performance rows");
+
+    const allRows = allRowsResult.data || [];
+    const eventsByType = {};
     const errorsByVersion = {};
     let totalErrors = 0;
-    for (const row of errorsByVersionRows) {
-      errorsByVersion[row.app_version] = row.count;
-      totalErrors += row.count;
-    }
 
-    const recentErrorRows = db
-      .prepare("SELECT * FROM events WHERE type = 'error' ORDER BY received_at DESC, rowid DESC LIMIT 20")
-      .all();
-    const recentActivityRows = db
-      .prepare("SELECT * FROM events ORDER BY received_at DESC, rowid DESC LIMIT 50")
-      .all();
-
-    const recentErrors = recentErrorRows.map(rowToApiEvent);
-    const recentActivity = recentActivityRows.map(rowToApiEvent);
-
-    const performanceRows = db
-      .prepare(
-        "SELECT * FROM events WHERE type IN ('performance', 'pageload') ORDER BY received_at DESC, rowid DESC LIMIT 5000"
-      )
-      .all();
-
-    const latencyByRoute = {};
-    for (const row of performanceRows) {
-      const apiEvent = rowToApiEvent(row);
-      const data = apiEvent.data || {};
-      const duration = Number(data.duration);
-      if (!Number.isFinite(duration)) {
-        continue;
-      }
-      const routeKey = apiEvent.route || apiEvent.page_url || "/";
-      if (!latencyByRoute[routeKey]) {
-        latencyByRoute[routeKey] = {
-          durations: [],
-          ttfbValues: [],
-          points: [],
-        };
-      }
-      latencyByRoute[routeKey].durations.push(duration);
-      const ttfb = Number(data.ttfb);
-      if (Number.isFinite(ttfb)) {
-        latencyByRoute[routeKey].ttfbValues.push(ttfb);
-      }
-      if (latencyByRoute[routeKey].points.length < 100) {
-        latencyByRoute[routeKey].points.push({
-          duration: Math.round(duration),
-          ttfb: Number.isFinite(ttfb) ? Math.round(ttfb) : 0,
-          timestamp: apiEvent.timestamp,
-        });
+    for (const row of allRows) {
+      eventsByType[row.type] = (eventsByType[row.type] || 0) + 1;
+      if (row.type === "error") {
+        const version = row.app_version || "unknown";
+        errorsByVersion[version] = (errorsByVersion[version] || 0) + 1;
+        totalErrors += 1;
       }
     }
 
-    const outputLatencyByRoute = {};
-    for (const [route, bucket] of Object.entries(latencyByRoute)) {
-      const sortedDurations = bucket.durations.slice().sort((a, b) => a - b);
-      const avg = bucket.durations.length === 0
-        ? 0
-        : Math.round(
-            bucket.durations.reduce((sum, value) => sum + value, 0) /
-              bucket.durations.length
-          );
-      outputLatencyByRoute[route] = {
-        count: bucket.durations.length,
-        p50: percentile(sortedDurations, 50),
-        p95: percentile(sortedDurations, 95),
-        avg,
-        points: bucket.points,
-      };
+    const activeSessions = new Set();
+    for (const row of activeUsersResult.data || []) {
+      if (row.session_id) {
+        activeSessions.add(row.session_id);
+      }
     }
 
-    let averageLatency = 0;
-    let perfSampleCount = 0;
-    let perfDurationSum = 0;
-    for (const bucket of Object.values(latencyByRoute)) {
-      perfSampleCount += bucket.durations.length;
-      perfDurationSum += bucket.durations.reduce((sum, value) => sum + value, 0);
-    }
-    if (perfSampleCount > 0) {
-      averageLatency = Math.round(perfDurationSum / perfSampleCount);
-    }
-
-    const analytics = computeAnalytics(db);
+    const latencyByRoute = buildLatencyByRoute(performanceRowsResult.data || []);
+    const analytics = computeAnalytics(allRows);
 
     return {
       totalEvents,
       totalErrors,
-      activeUsers: activeUserRow.count,
+      activeUsers: activeSessions.size,
       eventsByType,
       errorsByVersion,
-      latencyByRoute: outputLatencyByRoute,
-      recentErrors,
-      recentActivity,
-      averageLatency,
+      latencyByRoute: latencyByRoute.byRoute,
+      recentErrors: (recentErrorRowsResult.data || []).map(rowToApiEvent),
+      recentActivity: (recentActivityRowsResult.data || []).map(rowToApiEvent),
+      averageLatency: latencyByRoute.averageLatency,
       analytics,
     };
   }
 
-  /**
-   * @returns {number} Total number of stored events.
-   */
-  function countEvents() {
-    return countStatement.get().count;
-  }
-
-  /**
-   * Trim the table to at most `maxRows` rows by deleting the oldest entries.
-   *
-   * @param {number} maxRows - Maximum number of rows to keep.
-   * @returns {number} Number of rows deleted.
-   */
-  function pruneOldest(maxRows) {
-    if (!Number.isFinite(maxRows) || maxRows <= 0) {
-      return 0;
-    }
-    const total = countStatement.get().count;
-    if (total <= maxRows) {
-      return 0;
-    }
-    const result = deleteOverflowStatement.run(total - maxRows);
-    return result.changes || 0;
-  }
-
-  function close() {
-    db.close();
+  async function close() {
+    return undefined;
   }
 
   return {
@@ -565,19 +439,67 @@ function createEventStore(db) {
     countEvents,
     pruneOldest,
     close,
-    _db: db,
-    _insertStatement: insertStatement,
+    _client: supabase,
+    _tableName: tableName,
   };
 }
 
-/**
- * Nearest-rank percentile over an ascending-sorted array.
- *
- * @private
- * @param {number[]} sortedValues - Ascending-sorted samples.
- * @param {number} percent - Percentile in [0, 100].
- * @returns {number}
- */
+function buildLatencyByRoute(rows) {
+  const latencyByRoute = {};
+
+  for (const row of rows) {
+    const apiEvent = rowToApiEvent(row);
+    const data = apiEvent.data || {};
+    const duration = Number(data.duration);
+    if (!Number.isFinite(duration)) {
+      continue;
+    }
+    const routeKey = apiEvent.route || apiEvent.page_url || "/";
+    if (!latencyByRoute[routeKey]) {
+      latencyByRoute[routeKey] = {
+        durations: [],
+        ttfbValues: [],
+        points: [],
+      };
+    }
+    latencyByRoute[routeKey].durations.push(duration);
+    const ttfb = Number(data.ttfb);
+    if (Number.isFinite(ttfb)) {
+      latencyByRoute[routeKey].ttfbValues.push(ttfb);
+    }
+    if (latencyByRoute[routeKey].points.length < 100) {
+      latencyByRoute[routeKey].points.push({
+        duration: Math.round(duration),
+        ttfb: Number.isFinite(ttfb) ? Math.round(ttfb) : 0,
+        timestamp: apiEvent.timestamp,
+      });
+    }
+  }
+
+  const outputLatencyByRoute = {};
+  let perfSampleCount = 0;
+  let perfDurationSum = 0;
+
+  for (const [route, bucket] of Object.entries(latencyByRoute)) {
+    const sortedDurations = bucket.durations.slice().sort((a, b) => a - b);
+    const durationSum = bucket.durations.reduce((sum, value) => sum + value, 0);
+    perfSampleCount += bucket.durations.length;
+    perfDurationSum += durationSum;
+    outputLatencyByRoute[route] = {
+      count: bucket.durations.length,
+      p50: percentile(sortedDurations, 50),
+      p95: percentile(sortedDurations, 95),
+      avg: bucket.durations.length === 0 ? 0 : Math.round(durationSum / bucket.durations.length),
+      points: bucket.points,
+    };
+  }
+
+  return {
+    byRoute: outputLatencyByRoute,
+    averageLatency: perfSampleCount === 0 ? 0 : Math.round(perfDurationSum / perfSampleCount),
+  };
+}
+
 function percentile(sortedValues, percent) {
   if (!Array.isArray(sortedValues) || sortedValues.length === 0) {
     return 0;
@@ -588,15 +510,7 @@ function percentile(sortedValues, percent) {
   return Math.round(sortedValues[index]);
 }
 
-/**
- * Compute the analytics block returned by `getStats`. Kept separate so
- * the SQL projection can stay readable.
- *
- * @private
- * @param {Object} db - Opened `better-sqlite3` database handle.
- * @returns {Object} Analytics summary.
- */
-function computeAnalytics(db) {
+function computeAnalytics(rows) {
   const breakdownCounts = {
     performance: 0,
     errors: 0,
@@ -608,11 +522,7 @@ function computeAnalytics(db) {
   let feedbackSum = 0;
   let customActivityTotal = 0;
 
-  const summaryRows = db
-    .prepare("SELECT type, metadata FROM events ORDER BY received_at ASC, rowid ASC")
-    .all();
-
-  for (const row of summaryRows) {
+  for (const row of rows) {
     if (row.type === "pageload" || row.type === "performance") {
       breakdownCounts.performance += 1;
     } else if (row.type === "error") {
@@ -625,31 +535,19 @@ function computeAnalytics(db) {
 
     if (row.type === "feedback") {
       breakdownCounts.feedback += 1;
-      try {
-        const metadata = JSON.parse(row.metadata || "{}");
-        const data = metadata.data && typeof metadata.data === "object" ? metadata.data : {};
-        const rating = Number(data.rating);
-        if (Number.isFinite(rating) && rating >= 1 && rating <= 5) {
-          const bucket = Math.round(rating);
-          feedbackBreakdown[bucket] = (feedbackBreakdown[bucket] || 0) + 1;
-          feedbackSum += bucket;
-          feedbackTotal += 1;
-        }
-      } catch (_error) {
-        // Ignore malformed feedback payloads.
+      const metadata = parseMetadata(row.metadata);
+      const data = metadata.data && typeof metadata.data === "object" ? metadata.data : {};
+      const rating = Number(data.rating);
+      if (Number.isFinite(rating) && rating >= 1 && rating <= 5) {
+        const bucket = Math.round(rating);
+        feedbackBreakdown[bucket] = (feedbackBreakdown[bucket] || 0) + 1;
+        feedbackSum += bucket;
+        feedbackTotal += 1;
       }
     }
   }
 
-  const lastSevenRows = db
-    .prepare(
-      "SELECT * FROM (" +
-        "SELECT events.*, events.rowid AS _row_order FROM events " +
-        "ORDER BY received_at DESC, events.rowid DESC LIMIT 7" +
-      ") ORDER BY received_at ASC, _row_order ASC"
-    )
-    .all();
-
+  const lastSevenRows = rows.slice(-7);
   const userSeriesValues = [0, 0, 0, 0, 0, 0, 0];
   const activitySeriesValues = [0, 0, 0, 0, 0, 0, 0];
   const seenSessions = new Set();
@@ -684,12 +582,14 @@ function computeAnalytics(db) {
 }
 
 module.exports = {
+  EVENTS_TABLE_SCHEMA_SQL,
   KNOWN_EVENT_TYPES,
   generateEventId,
   isValidTimestamp,
   validateEvent,
   normalizeForStorage,
   rowToApiEvent,
+  createSupabaseClient,
   openDatabase,
   createEventStore,
 };

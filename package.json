@@ -21,8 +21,9 @@
     "jsdoc": "^4.0.4"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
+    "@supabase/supabase-js": "^2.106.2",
     "dotenv": "^17.4.2",
+    "pg": "^8.21.0",
     "googleapis": "^173.0.0",
     "nodemailer": "^8.0.10"
   }
