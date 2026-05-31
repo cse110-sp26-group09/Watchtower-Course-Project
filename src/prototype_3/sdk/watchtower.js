@@ -130,6 +130,7 @@
   function WatchTower(config) {
     config = config || {};
     this.endpoint = config.endpoint || DEFAULT_ENDPOINT;
+    this.beaconEndpoint = config.beaconEndpoint || this.endpoint.replace(/[^/]+$/, "beacon");
     this.deployVersion = config.deployVersion || "unknown";
     this.appName = config.appName || location.hostname;
     this.environment = config.environment || resolveEnvironment();
@@ -139,6 +140,7 @@
     this.userId = config.userId || null;
     this._queue = [];
     this._flushing = false;
+    this._beaconSent = false;
     this._lastRoute = location.pathname + location.search + location.hash;
     this._pendingDropCount = 0;
     this._retryCount = 0;
@@ -256,6 +258,29 @@
   };
 
   /**
+   * Flush queued events through the Beacon API during page unload.
+   *
+   * @private
+   * @returns {void}
+   */
+  WatchTower.prototype._flushBeacon = function () {
+    if (this._beaconSent || this._queue.length === 0) return;
+    this._beaconSent = true;
+
+    if (navigator.sendBeacon) {
+      let batch = this._queue.splice(0);
+      let blob = new Blob([JSON.stringify({ events: batch })], { type: "application/json" });
+      let sent = navigator.sendBeacon(this.beaconEndpoint, blob);
+      if (!sent) {
+        this._queue = batch.concat(this._queue);
+        this._flush();
+      }
+    } else {
+      this._flush();
+    }
+  };
+
+  /**
    * Start the periodic background flush cycle.
    *
    * @private
@@ -269,7 +294,15 @@
     }, FLUSH_INTERVAL);
 
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "hidden") sdkInstance._flush();
+      if (document.visibilityState === "hidden") {
+        sdkInstance._flushBeacon();
+      } else {
+        sdkInstance._beaconSent = false;
+      }
+    });
+
+    window.addEventListener("pagehide", function () {
+      sdkInstance._flushBeacon();
     });
   };
 
@@ -459,13 +492,25 @@
       setTimeout(function () {
         let navigationEntry = performance.getEntriesByType("navigation")[0];
         if (!navigationEntry) return;
+        let tls = navigationEntry.secureConnectionStart > 0
+          ? Math.round(navigationEntry.connectEnd - navigationEntry.secureConnectionStart)
+          : 0;
+        let resourceCount = performance.getEntriesByType("resource").length;
 
         sdkInstance._enqueue("pageload", {
           duration: Math.round(navigationEntry.duration),
           ttfb: Math.round(navigationEntry.responseStart - navigationEntry.requestStart),
+          navigationFetchStartToResponse: Math.round(navigationEntry.responseStart - navigationEntry.fetchStart),
+          dns: Math.round(navigationEntry.domainLookupEnd - navigationEntry.domainLookupStart),
+          tcp: Math.round(navigationEntry.connectEnd - navigationEntry.connectStart),
+          tls: tls,
+          redirect: Math.round(navigationEntry.redirectEnd - navigationEntry.redirectStart),
+          domInteractive: Math.round(navigationEntry.domInteractive - navigationEntry.startTime),
           domContentLoaded: Math.round(navigationEntry.domContentLoadedEventEnd - navigationEntry.startTime),
+          domComplete: Math.round(navigationEntry.domComplete - navigationEntry.startTime),
           loadComplete: Math.round(navigationEntry.loadEventEnd - navigationEntry.startTime),
           transferSize: navigationEntry.transferSize || 0,
+          resourceCount: resourceCount,
         }, "pageload");
       }, 100);
     });

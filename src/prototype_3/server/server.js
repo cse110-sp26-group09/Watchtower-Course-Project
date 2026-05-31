@@ -406,6 +406,15 @@ function buildSdkDiagnostics(events) {
 
 function buildPerformanceInsights(events) {
   let pageLoad = [];
+  let ttfb = [];
+  let navigationFetchStartToResponse = [];
+  let dns = [];
+  let tcp = [];
+  let tls = [];
+  let redirect = [];
+  let domInteractive = [];
+  let domComplete = [];
+  let resourceCount = [];
   let lcp = [];
   let cls = [];
   let inp = [];
@@ -416,6 +425,24 @@ function buildPerformanceInsights(events) {
     if (e.type === "pageload") {
       let duration = getNumericDataValue(e, ["duration", "loadComplete"]);
       if (duration !== null) pageLoad.push(duration);
+      let ttfbValue = getNumericDataValue(e, ["ttfb"]);
+      if (ttfbValue !== null) ttfb.push(ttfbValue);
+      let navigationFetchValue = getNumericDataValue(e, ["navigationFetchStartToResponse"]);
+      if (navigationFetchValue !== null) navigationFetchStartToResponse.push(navigationFetchValue);
+      let dnsValue = getNumericDataValue(e, ["dns"]);
+      if (dnsValue !== null) dns.push(dnsValue);
+      let tcpValue = getNumericDataValue(e, ["tcp"]);
+      if (tcpValue !== null) tcp.push(tcpValue);
+      let tlsValue = getNumericDataValue(e, ["tls"]);
+      if (tlsValue !== null) tls.push(tlsValue);
+      let redirectValue = getNumericDataValue(e, ["redirect"]);
+      if (redirectValue !== null) redirect.push(redirectValue);
+      let domInteractiveValue = getNumericDataValue(e, ["domInteractive"]);
+      if (domInteractiveValue !== null) domInteractive.push(domInteractiveValue);
+      let domCompleteValue = getNumericDataValue(e, ["domComplete"]);
+      if (domCompleteValue !== null) domComplete.push(domCompleteValue);
+      let resourceCountValue = getNumericDataValue(e, ["resourceCount"]);
+      if (resourceCountValue !== null) resourceCount.push(resourceCountValue);
       let transferSize = getNumericDataValue(e, ["transferSize", "encodedBodySize"]);
       if (transferSize !== null) bundleCost.push(Math.round(transferSize / 1024));
     }
@@ -436,6 +463,15 @@ function buildPerformanceInsights(events) {
   });
   return {
     pageLoad: summarizeNumeric(pageLoad),
+    ttfb: summarizeNumeric(ttfb),
+    navigationFetchStartToResponse: summarizeNumeric(navigationFetchStartToResponse),
+    dns: summarizeNumeric(dns),
+    tcp: summarizeNumeric(tcp),
+    tls: summarizeNumeric(tls),
+    redirect: summarizeNumeric(redirect),
+    domInteractive: summarizeNumeric(domInteractive),
+    domComplete: summarizeNumeric(domComplete),
+    resourceCount: summarizeNumeric(resourceCount),
     lcp: summarizeNumeric(lcp),
     cls: summarizeNumeric(cls),
     inp: summarizeNumeric(inp),
@@ -758,6 +794,33 @@ function evaluateFeatureFlagsForIdentity(identity) {
   };
 }
 
+function getIncomingEvents(body) {
+  if (body && Array.isArray(body.events)) return body.events;
+  if (Array.isArray(body)) return body;
+  return [body];
+}
+
+function ingestEventsBody(body) {
+  let arr = getIncomingEvents(body);
+  let norm = arr.filter(isValidEvent).map(normalizeIncomingEvent);
+  norm.forEach(e => storedEvents.push(e));
+  while (storedEvents.length > MAX_EVENTS) storedEvents.shift();
+  if (norm.length) {
+    broadcastEvents(norm);
+    const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
+    const errorEvents = norm.filter(e => e.type === "error");
+    if (errorEvents.length >= threshold) {
+      const first = errorEvents[0];
+      sendAlert(
+        first.data && first.data.message ? first.data.message : "Unknown error",
+        first.route || "unknown",
+        first.deployVersion || "unknown"
+      ).catch(err => console.error("[mailer] Failed to send alert:", err));
+    }
+  }
+  return norm;
+}
+
 const server = http.createServer(function (request, response) {
   let parsedUrl = new URL(request.url, "http://localhost");
   let pathname = parsedUrl.pathname;
@@ -771,24 +834,18 @@ const server = http.createServer(function (request, response) {
   }
   if (request.method === "POST" && pathname === "/api/events") {
     readJsonBody(request).then(body => {
-      let arr = Array.isArray(body.events) ? body.events : [body];
-      let norm = arr.filter(isValidEvent).map(normalizeIncomingEvent);
-      norm.forEach(e => storedEvents.push(e));
-      while (storedEvents.length > MAX_EVENTS) storedEvents.shift();
-      if (norm.length) {
-        broadcastEvents(norm);
-        const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
-        const errorEvents = norm.filter(e => e.type === "error");
-        if (errorEvents.length >= threshold) {
-          const first = errorEvents[0];
-          sendAlert(
-            first.data && first.data.message ? first.data.message : "Unknown error",
-            first.route || "unknown",
-            first.deployVersion || "unknown"
-          ).catch(err => console.error("[mailer] Failed to send alert:", err));
-        }
-      }
+      let norm = ingestEventsBody(body);
       sendJson(response, 200, { accepted: norm.length });
+    });
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/beacon") {
+    readJsonBody(request).then(body => {
+      ingestEventsBody(body);
+    }).catch(() => {}).finally(() => {
+      applyCors(response);
+      response.writeHead(204);
+      response.end();
     });
     return;
   }
