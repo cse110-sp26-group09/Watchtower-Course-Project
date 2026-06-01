@@ -2299,48 +2299,45 @@
   }
 
   function renderLatencyChart(stats) {
-    if (!latencyLine || !latencyLegend || !latencyYAxis || !latencyXAxis) return;
+    let chartSvg = document.getElementById("latency-chart");
+    let container = chartSvg ? chartSvg.parentNode : null;
+    if (!container) return;
+
     let routeEntries = Object.keys(stats.latencyByRoute || {}).map(function (route) {
       return { route: route, p95: Number(stats.latencyByRoute[route].p95) || 0, avg: Number(stats.latencyByRoute[route].avg) || 0 };
-    }).sort(function (left, right) { return right.p95 - left.p95; }).slice(0, 6);
+    }).sort(function (left, right) { return right.p95 - left.p95; }).slice(0, 8);
+
+    var barContainer = document.getElementById("latency-bar-chart");
+    if (!barContainer) {
+      chartSvg.style.display = "none";
+      barContainer = document.createElement("div");
+      barContainer.id = "latency-bar-chart";
+      barContainer.className = "bar-chart latency-route-chart";
+      container.insertBefore(barContainer, chartSvg);
+    }
+
+    if (!latencyLegend) return;
 
     if (routeEntries.length === 0) {
-      latencyLine.setAttribute("d", "M60 240 L610 240");
-      latencyYAxis.innerHTML = "";
-      latencyXAxis.innerHTML = "";
-      latencyLegend.innerHTML = '<span><i class="legend-swatch checkout"></i>Waiting for pageload samples</span>';
+      barContainer.style.setProperty("--bar-count", "1");
+      barContainer.classList.add("is-empty");
+      barContainer.innerHTML = '<div class="bar" style="--bar-height:8%" data-value="0"><i class="bar-fill" aria-hidden="true"></i><span>No routes</span></div>';
+      latencyLegend.innerHTML = '<span>Waiting for pageload samples</span>';
       return;
     }
 
-    let max = Math.max.apply(null, routeEntries.map(function (entry) { return entry.p95; }).concat([100]));
-    let points = routeEntries.map(function (entry, idx) {
-      let x = routeEntries.length === 1 ? 335 : 60 + (idx * (550 / (routeEntries.length - 1)));
-      let y = 240 - ((entry.p95 / max) * 200);
-      return { x: Math.round(x), y: Math.round(y), entry: entry };
-    });
-
-    latencyLine.setAttribute("d", points.map(function (point, idx) {
-      return (idx === 0 ? "M" : "L") + point.x + " " + point.y;
-    }).join(" "));
-
-    var dotsGroup = document.getElementById("latency-dots");
-    if (!dotsGroup) {
-      dotsGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      dotsGroup.id = "latency-dots";
-      latencyLine.parentNode.appendChild(dotsGroup);
-    }
-    dotsGroup.innerHTML = points.map(function (point) {
-      var color = point.entry.p95 < 200 ? "var(--green)" : (point.entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
-      return '<circle cx="' + point.x + '" cy="' + point.y + '" r="5" fill="' + color + '"></circle>';
+    barContainer.classList.remove("is-empty");
+    let max = Math.max.apply(null, routeEntries.map(function (e) { return e.p95; }).concat([100]));
+    barContainer.style.setProperty("--bar-count", String(routeEntries.length));
+    barContainer.innerHTML = routeEntries.map(function (entry) {
+      let pct = Math.round((entry.p95 / max) * 100);
+      let color = entry.p95 < 200 ? "var(--green)" : (entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
+      let label = entry.route.replace("/demo", "demo") || "/";
+      return '<div class="bar" style="--bar-height:' + Math.max(pct, 8) + '%" data-value="' + entry.p95 + 'ms">' +
+        '<i class="bar-fill" style="background:' + color + '" aria-hidden="true"></i><span>' + escapeHtml(label) + '</span></div>';
     }).join("");
 
-    latencyYAxis.innerHTML = [max, Math.round(max * 0.75), Math.round(max / 2), Math.round(max * 0.25), 0].map(function (value, idx) {
-      return '<text x="52" y="' + (44 + idx * 50) + '">' + Math.round(value) + 'ms</text>';
-    }).join("");
-    latencyXAxis.innerHTML = points.map(function (point) {
-      return '<text x="' + point.x + '" y="264">' + escapeHtml(point.entry.route.replace("/demo", "demo") || "/") + '</text>';
-    }).join("");
-    latencyLegend.innerHTML = routeEntries.slice(0, 3).map(function (entry) {
+    latencyLegend.innerHTML = routeEntries.slice(0, 4).map(function (entry) {
       var color = entry.p95 < 200 ? "var(--green)" : (entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
       return '<span><i class="legend-swatch" style="background:' + color + '"></i>' + escapeHtml(entry.route) + ' p95 ' + entry.p95 + 'ms</span>';
     }).join("");
