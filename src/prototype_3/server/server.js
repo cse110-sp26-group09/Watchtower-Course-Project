@@ -26,6 +26,7 @@ const {
   toInspectorEvent,
   queryEventsWithFilters,
   getRecentEvents,
+  buildLatencyOverview,
 } = require("./server-helpers");
 
 const PORT = process.env.PORT || 3000;
@@ -258,12 +259,15 @@ function getDashboardStats(events) {
     }
   }
 
+  const latencyByRoute = buildLatencySummary(sourceEvents);
+
   return {
     activeUsers: activeSessions.size,
     totalEvents: sourceEvents.length,
     totalErrors: recentErrors.length,
     errorsByVersion: errorsByVersion,
-    latencyByRoute: buildLatencySummary(sourceEvents),
+    latencyByRoute: latencyByRoute,
+    latency: buildLatencyOverview(latencyByRoute),
     recentErrors: recentErrors,
     recentActivity: sourceEvents.slice(-20)
   };

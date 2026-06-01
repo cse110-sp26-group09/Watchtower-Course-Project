@@ -18,6 +18,7 @@ const {
   normalizeStreamFilters,
   queryEventsWithFilters,
   getRecentEvents,
+  buildLatencyOverview,
 } = require("../../src/prototype_3/server/server-helpers");
 
 describe("isValidEvent (Prototype 3)", () => {
@@ -161,5 +162,25 @@ describe("parseTimestamp / clampNumber", () => {
     expect(clampNumber(5, 1, 10)).toBe(5);
     expect(clampNumber(99, 1, 10)).toBe(10);
     expect(clampNumber(-3, 0, 10)).toBe(0);
+  });
+});
+
+describe("buildLatencyOverview", () => {
+  test("computes weighted average and peak p95 across routes", () => {
+    const byRoute = {
+      "/": { count: 3, avg: 100, p95: 150 },
+      "/checkout": { count: 1, avg: 400, p95: 900 },
+    };
+    const overview = buildLatencyOverview(byRoute);
+    // weighted avg = (100*3 + 400*1) / 4 = 175
+    expect(overview.averageLatency).toBe(175);
+    expect(overview.peakLatency).toBe(900);
+    expect(overview.routeCount).toBe(2);
+    expect(overview.sampleCount).toBe(4);
+  });
+
+  test("returns zeros for empty/missing input", () => {
+    expect(buildLatencyOverview({})).toEqual({ averageLatency: 0, peakLatency: 0, routeCount: 0, sampleCount: 0 });
+    expect(buildLatencyOverview(null)).toEqual({ averageLatency: 0, peakLatency: 0, routeCount: 0, sampleCount: 0 });
   });
 });

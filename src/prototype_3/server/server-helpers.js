@@ -182,6 +182,39 @@ function getRecentEvents(events, limit) {
     .slice(0, limit || 50);
 }
 
+/**
+ * Roll a per-route latency map (as produced by the server's
+ * `buildLatencySummary`: `{ route: { count, avg, p95 } }`) into an overall
+ * latency overview the dashboard can show without recomputing client-side.
+ *
+ * - `averageLatency`: sample-count-weighted mean of per-route averages
+ * - `peakLatency`: highest route p95 (the slowest route)
+ *
+ * @param {Object<string, {count:number, avg:number, p95:number}>} latencyByRoute
+ * @returns {{ averageLatency:number, peakLatency:number, routeCount:number, sampleCount:number }}
+ */
+function buildLatencyOverview(latencyByRoute) {
+  const routes = latencyByRoute && typeof latencyByRoute === "object" ? Object.keys(latencyByRoute) : [];
+  let weightedSum = 0;
+  let sampleCount = 0;
+  let peakLatency = 0;
+  routes.forEach(function (route) {
+    const metrics = latencyByRoute[route] || {};
+    const count = isFiniteNumber(metrics.count) ? metrics.count : 0;
+    const avg = isFiniteNumber(metrics.avg) ? metrics.avg : 0;
+    const p95 = isFiniteNumber(metrics.p95) ? metrics.p95 : 0;
+    weightedSum += avg * count;
+    sampleCount += count;
+    if (p95 > peakLatency) peakLatency = p95;
+  });
+  return {
+    averageLatency: sampleCount > 0 ? Math.round(weightedSum / sampleCount) : 0,
+    peakLatency: peakLatency,
+    routeCount: routes.length,
+    sampleCount: sampleCount,
+  };
+}
+
 module.exports = {
   DEFAULT_STREAM_LIMIT,
   MAX_STREAM_LIMIT,
@@ -205,4 +238,5 @@ module.exports = {
   compareEventsByRecency,
   queryEventsWithFilters,
   getRecentEvents,
+  buildLatencyOverview,
 };
