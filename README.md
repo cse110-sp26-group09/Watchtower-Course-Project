@@ -17,12 +17,12 @@ WatchTower helps development teams understand what's happening in production. By
 
 ## Quick Start
 
-- Static hosted demo: see the [hosted demo guide](src/prototype_2/hosted_demo/README.md)
-
 ### For Developers
-1. Clone the repository
-2. Navigate to the prototype: `cd src/prototype_1`
-3. Follow the [setup instructions](src/prototype_1/README.md)
+1. Clone the repository and run `npm install`
+2. Start the app: `npm start` (runs the prototype_3 server)
+3. See [`src/prototype_3/README.md`](src/prototype_3/README.md) for details
+
+> Earlier iterations `prototype_1` and `prototype_2` are retired and kept under [`archive/`](archive/) for reference.
 
 ### For Documentation & Project Info
 - **Project Overview** — See [Documentation](docs/README.md)

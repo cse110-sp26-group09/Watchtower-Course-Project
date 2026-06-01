@@ -82,7 +82,7 @@ jobs:
           echo "Checking top-level project folders..."
           test -d docs               || (echo "docs/ is missing" && exit 1)
           test -d src                || (echo "src/ is missing" && exit 1)
-          test -d src/prototype_1    || (echo "src/prototype_1/ is missing" && exit 1)
+          test -d src/prototype_3    || (echo "src/prototype_3/ is missing" && exit 1)
           test -d tests              || (echo "tests/ is missing" && exit 1)
           test -d tests/unit         || (echo "tests/unit/ is missing" && exit 1)
           test -d tests/e2e          || (echo "tests/e2e/ is missing" && exit 1)
