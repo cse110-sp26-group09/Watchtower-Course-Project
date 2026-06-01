@@ -26,6 +26,7 @@ const {
   toInspectorEvent,
   queryEventsWithFilters,
   getRecentEvents,
+  buildErrorsOverTime,
 } = require("./server-helpers");
 
 const PORT = process.env.PORT || 3000;
@@ -264,6 +265,7 @@ function getDashboardStats(events) {
     totalErrors: recentErrors.length,
     errorsByVersion: errorsByVersion,
     latencyByRoute: buildLatencySummary(sourceEvents),
+    errorsOverTime: buildErrorsOverTime(sourceEvents, Date.now()),
     recentErrors: recentErrors,
     recentActivity: sourceEvents.slice(-20)
   };

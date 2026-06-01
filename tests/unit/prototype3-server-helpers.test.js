@@ -18,6 +18,7 @@ const {
   normalizeStreamFilters,
   queryEventsWithFilters,
   getRecentEvents,
+  buildErrorsOverTime,
 } = require("../../src/prototype_3/server/server-helpers");
 
 describe("isValidEvent (Prototype 3)", () => {
@@ -161,5 +162,45 @@ describe("parseTimestamp / clampNumber", () => {
     expect(clampNumber(5, 1, 10)).toBe(5);
     expect(clampNumber(99, 1, 10)).toBe(10);
     expect(clampNumber(-3, 0, 10)).toBe(0);
+  });
+});
+
+describe("buildErrorsOverTime", () => {
+  const HOUR = 3600000;
+  const DAY = 86400000;
+  // Fixed reference time so bucket math is deterministic.
+  const now = Date.parse("2026-06-01T12:30:00Z");
+
+  function errorAt(ms) {
+    return { type: "error", timestamp: new Date(ms).toISOString() };
+  }
+
+  test("exposes all four ranges with chart-ready shape", () => {
+    const series = buildErrorsOverTime([], now);
+    expect(Object.keys(series).sort()).toEqual(["24h", "30d", "7d", "today"]);
+    expect(series["24h"].labels).toHaveLength(24);
+    expect(series["24h"].values).toHaveLength(24);
+    expect(series["7d"].values).toHaveLength(7);
+    expect(series["30d"].values).toHaveLength(30);
+    expect(series["24h"].total).toBe(0);
+  });
+
+  test("counts only error events and buckets them by hour/day", () => {
+    const events = [
+      errorAt(now - 30 * 60 * 1000), // 30 min ago -> last hour bucket (24h + today)
+      errorAt(now - 2 * HOUR), // 2h ago -> still within 24h and today
+      errorAt(now - 3 * DAY), // 3 days ago -> within 7d and 30d, not 24h/today
+      { type: "pageload", timestamp: new Date(now).toISOString() }, // ignored
+      { type: "error", timestamp: "not-a-date" }, // ignored
+    ];
+    const series = buildErrorsOverTime(events, now);
+
+    expect(series["24h"].total).toBe(2); // the two within the last 24h
+    expect(series["today"].total).toBe(2); // both happened today (after UTC midnight)
+    expect(series["7d"].total).toBe(3); // all three real errors fall in the last 7 days
+    expect(series["30d"].total).toBe(3);
+
+    // The 24h series' last bucket (current hour) holds the 30-min-ago error.
+    expect(series["24h"].values[series["24h"].values.length - 1]).toBe(1);
   });
 });

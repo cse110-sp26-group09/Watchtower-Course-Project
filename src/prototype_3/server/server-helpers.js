@@ -182,6 +182,72 @@ function getRecentEvents(events, limit) {
     .slice(0, limit || 50);
 }
 
+/**
+ * Build error-count time series for the dashboard's standard ranges.
+ *
+ * Buckets are computed in UTC (timestamps are stored/returned in UTC; the
+ * frontend converts for display). Each range returns chart-ready arrays:
+ * `{ labels, values, total }`.
+ *
+ * Ranges:
+ * - `24h`   : 24 hourly buckets ending at the current hour
+ * - `today` : hourly buckets from UTC midnight through the current hour
+ * - `7d`    : 7 daily buckets ending today (this week)
+ * - `30d`   : 30 daily buckets ending today
+ *
+ * @param {Array<Object>} events - Events; only `type === "error"` are counted.
+ * @param {number} [nowMs] - Reference "now" in ms. Defaults to Date.now().
+ * @returns {{ "24h": Object, today: Object, "7d": Object, "30d": Object }}
+ */
+function buildErrorsOverTime(events, nowMs) {
+  const now = isFiniteNumber(nowMs) ? nowMs : Date.now();
+  const HOUR = 3600000;
+  const DAY = 86400000;
+
+  const errorTimes = [];
+  (events || []).forEach(function (ev) {
+    if (ev && ev.type === "error") {
+      const t = parseTimestamp(ev.timestamp);
+      if (t !== null) errorTimes.push(t);
+    }
+  });
+
+  const hourLabel = function (ms) {
+    return String(new Date(ms).getUTCHours()).padStart(2, "0") + ":00";
+  };
+  const dayLabel = function (ms) {
+    const d = new Date(ms);
+    return String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+  };
+
+  function series(startMs, bucketMs, count, labelFn) {
+    const values = new Array(count).fill(0);
+    for (let i = 0; i < errorTimes.length; i++) {
+      const t = errorTimes[i];
+      if (t < startMs || t > now) continue;
+      let idx = Math.floor((t - startMs) / bucketMs);
+      if (idx < 0) idx = 0;
+      if (idx >= count) idx = count - 1;
+      values[idx] += 1;
+    }
+    const labels = [];
+    for (let i = 0; i < count; i++) labels.push(labelFn(startMs + i * bucketMs));
+    const total = values.reduce(function (sum, v) { return sum + v; }, 0);
+    return { labels: labels, values: values, total: total };
+  }
+
+  const currentHourStart = Math.floor(now / HOUR) * HOUR;
+  const midnight = Math.floor(now / DAY) * DAY;
+  const hoursToday = Math.floor((now - midnight) / HOUR) + 1;
+
+  return {
+    "24h": series(currentHourStart - 23 * HOUR, HOUR, 24, hourLabel),
+    today: series(midnight, HOUR, hoursToday, hourLabel),
+    "7d": series(midnight - 6 * DAY, DAY, 7, dayLabel),
+    "30d": series(midnight - 29 * DAY, DAY, 30, dayLabel),
+  };
+}
+
 module.exports = {
   DEFAULT_STREAM_LIMIT,
   MAX_STREAM_LIMIT,
@@ -205,4 +271,5 @@ module.exports = {
   compareEventsByRecency,
   queryEventsWithFilters,
   getRecentEvents,
+  buildErrorsOverTime,
 };
