@@ -34,16 +34,11 @@
     <section class="landing-section hero" aria-label="Hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow">Error tracking, performance, and feedback</p>
-          <h1>WatchTower</h1>
-          <p class="hero-subtitle">One dashboard for understanding what broke, who felt it, and what changed right before it happened.</p>
-          <p class="lead">
-            WatchTower connects browser errors, slowdowns, feedback, and release context so small teams can debug faster without stitching together four different tools.
-          </p>
+          <h1>Find the issue before your users have to report it.</h1>
+          <p class="hero-subtitle">WatchTower brings errors, slowdowns, feedback, and release context into one focused workspace.</p>
           <div class="hero-actions">
             <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
             <a class="ghost-button dashboard-demo-link" href="/dashboard">View dashboard demo</a>
-            <button class="ghost-button tertiary-cta" type="button" data-action="open-snippet">View install snippet</button>
           </div>
           <div class="signal-strip" role="group" aria-label="WatchTower signal types">
             <span>Errors</span>
@@ -153,56 +148,76 @@
       </div>
     </section>
 
-    <section class="landing-section team-section" id="team" aria-label="Meet the team">
-      <div class="team-card">
-        <div class="team-card-header">
-          <div>
-            <p class="eyebrow">Built by Group 09</p>
-            <h2>Meet the WatchTower team</h2>
+    <section class="landing-chapter workflow-chapter" id="how-it-works" aria-labelledby="workflow-title">
+      <div class="landing-section">
+        <div class="chapter-heading centered-heading">
+          <p class="chapter-label">Workflow</p>
+          <h2 id="workflow-title">From browser signal to next action.</h2>
+          <p>Move through the WatchTower workflow one clear step at a time. Each recording slot is ready for a short product walkthrough.</p>
+        </div>
+        <div class="workflow-shell">
+          <div class="workflow-tabs" role="tablist" aria-label="WatchTower workflow steps">
+            <button class="workflow-tab active" id="workflow-tab-capture" type="button" role="tab" aria-controls="workflow-panel-capture" aria-selected="true" data-workflow-tab="capture">
+              <strong>Capture</strong>
+              <small>Collect browser signals as users move through your app.</small>
+            </button>
+            <button class="workflow-tab" id="workflow-tab-connect" type="button" role="tab" aria-controls="workflow-panel-connect" aria-selected="false" tabindex="-1" data-workflow-tab="connect">
+              <strong>Connect</strong>
+              <small>Bring errors, latency, feedback, and deploys into context.</small>
+            </button>
+            <button class="workflow-tab" id="workflow-tab-prioritize" type="button" role="tab" aria-controls="workflow-panel-prioritize" aria-selected="false" tabindex="-1" data-workflow-tab="prioritize">
+              <strong>Prioritize</strong>
+              <small>Focus the team on the next fix with the clearest impact.</small>
+            </button>
           </div>
-          <span class="team-count">11 members</span>
-        </div>
-        <ul class="team-grid" aria-label="WatchTower team members">
-          <li class="team-member backend"><span class="member-avatar">D</span><span class="member-name">Daniel</span><span class="role-pill">Backend</span></li>
-          <li class="team-member backend"><span class="member-avatar">A</span><span class="member-name">Aditya</span><span class="role-pill">Backend</span></li>
-          <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Waleed</span><span class="role-pill">Backend</span></li>
-          <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hemendra</span><span class="role-pill">Frontend</span></li>
-          <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Woosik</span><span class="role-pill">Backend</span></li>
-          <li class="team-member frontend"><span class="member-avatar">A</span><span class="member-name">Alex</span><span class="role-pill">Frontend</span></li>
-          <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">Josh</span><span class="role-pill">Frontend</span></li>
-          <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">James</span><span class="role-pill">Frontend</span></li>
-          <li class="team-member backend"><span class="member-avatar">J</span><span class="member-name">Jason</span><span class="role-pill">Backend</span></li>
-          <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hieu</span><span class="role-pill">Frontend</span></li>
-          <li class="team-member frontend"><span class="member-avatar">F</span><span class="member-name">Fahad</span><span class="role-pill">Frontend</span></li>
-        </ul>
-        <div class="team-focus" role="group" aria-label="Team color key">
-          <span class="team-focus-label">Color key</span>
-          <span class="frontend">Frontend</span>
-          <span class="backend">Backend</span>
+          <div class="workflow-stage">
+            <div class="workflow-panel" id="workflow-panel-capture" role="tabpanel" aria-labelledby="workflow-tab-capture" data-workflow-panel="capture">
+              <div class="recording-placeholder">
+                <div class="recording-placeholder-topbar">
+                  <span class="recording-badge">Recording placeholder</span>
+                  <span>Capture browser signals</span>
+                </div>
+                <div class="placeholder-window" aria-hidden="true">
+                  <span class="placeholder-play">▶</span>
+                </div>
+                <p>Replace this area with a short clip showing activity in the monitored app.</p>
+              </div>
+            </div>
+            <div class="workflow-panel" id="workflow-panel-connect" role="tabpanel" aria-labelledby="workflow-tab-connect" data-workflow-panel="connect" hidden>
+              <div class="recording-placeholder">
+                <div class="recording-placeholder-topbar">
+                  <span class="recording-badge">Recording placeholder</span>
+                  <span>Connect the context</span>
+                </div>
+                <div class="placeholder-window placeholder-window-connect" aria-hidden="true">
+                  <span class="placeholder-play">▶</span>
+                </div>
+                <p>Replace this area with a clip showing related signals arriving in the dashboard.</p>
+              </div>
+            </div>
+            <div class="workflow-panel" id="workflow-panel-prioritize" role="tabpanel" aria-labelledby="workflow-tab-prioritize" data-workflow-panel="prioritize" hidden>
+              <div class="recording-placeholder">
+                <div class="recording-placeholder-topbar">
+                  <span class="recording-badge">Recording placeholder</span>
+                  <span>Prioritize the fix</span>
+                </div>
+                <div class="placeholder-window placeholder-window-prioritize" aria-hidden="true">
+                  <span class="placeholder-play">▶</span>
+                </div>
+                <p>Replace this area with a clip showing the issue summary and investigation path.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="landing-section" id="how-it-works" aria-label="How it works">
-      <h2>From install to insight in three steps</h2>
-      <div class="steps-grid">
-        <article class="panel step-card">
-          <h3>Install the snippet</h3>
-          <p>Add one script tag to your app. Automatic error, performance, and feedback capture starts immediately.</p>
-        </article>
-        <article class="panel step-card">
-          <h3>Reproduce and record</h3>
-          <p>Trigger an error or load a page. WatchTower logs exceptions, key timings, and optional user feedback in one place.</p>
-        </article>
-        <article class="panel step-card">
-          <h3>Investigate and fix</h3>
-          <p>Open the unified dashboard to see root causes, slow endpoints, and user context, then prioritize and resolve.</p>
-        </article>
+    <section class="landing-section chapter-section" id="capabilities" aria-labelledby="capabilities-title">
+      <div class="chapter-heading">
+        <p class="chapter-label">Capabilities</p>
+        <h2 id="capabilities-title">One workspace. Four signals that matter.</h2>
+        <p>WatchTower keeps the essential production story readable, so teams can investigate without juggling separate tools.</p>
       </div>
-    </section>
-
-    <section class="landing-section" id="capabilities" aria-label="Key capabilities">
-      <h2>What you get on day one</h2>
       <ul class="capabilities-grid">
         <li class="panel capability-card">
           <div class="capability-icon" aria-hidden="true">
@@ -235,30 +250,35 @@
       </ul>
     </section>
 
-    <section class="landing-section" id="who-its-for" aria-label="Who it is for">
-      <h2>Who it is for</h2>
-      <div class="personas-grid">
-        <article class="panel persona-card">
-          <h3>Developers</h3>
-          <p>Get actionable stack traces and timings without wiring custom tooling.</p>
-        </article>
-        <article class="panel persona-card">
-          <h3>Technical Leads</h3>
-          <p>Monitor stability and performance across releases to protect velocity.</p>
-        </article>
-        <article class="panel persona-card">
-          <h3>Product Managers</h3>
-          <p>See user-reported issues and impact to prioritize the next fix.</p>
-        </article>
+    <section class="landing-chapter audience-chapter" id="who-its-for" aria-labelledby="audience-title">
+      <div class="landing-section audience-section">
+        <div class="chapter-heading centered-heading">
+          <p class="chapter-label">Shared context</p>
+          <h2 id="audience-title">A clearer handoff between the people shipping the product.</h2>
+        </div>
+        <div class="personas-grid">
+          <article class="panel persona-card">
+            <h3>Developers</h3>
+            <p>Get actionable stack traces and timings without wiring custom tooling.</p>
+          </article>
+          <article class="panel persona-card">
+            <h3>Technical Leads</h3>
+            <p>Monitor stability and performance across releases to protect velocity.</p>
+          </article>
+          <article class="panel persona-card">
+            <h3>Product Managers</h3>
+            <p>See user-reported issues and impact to prioritize the next fix.</p>
+          </article>
+        </div>
       </div>
     </section>
 
     <section class="landing-section cta-section" id="get-started" aria-label="Get started">
       <div class="panel cta-panel">
         <div>
-          <h2>15 minutes to full visibility</h2>
-          <p class="lead">One script tag, automatic capture, immediate insights.</p>
-          <p class="trust-note">Prototype-ready setup with event capture, local demo data, and dashboard visibility.</p>
+          <p class="chapter-label">Next step</p>
+          <h2>Start with a clearer view of production.</h2>
+          <p class="lead">Bring your most important signals into one workspace and give every issue a more useful starting point.</p>
         </div>
         <div class="cta-actions">
           <button class="primary-button primary-cta" type="button" data-action="go-login">Get started free</button>
@@ -266,10 +286,76 @@
         </div>
       </div>
     </section>
+
+    <section class="landing-section team-section" id="team" aria-label="Meet the team">
+      <div class="team-card">
+        <div class="team-card-header">
+          <div>
+            <p class="eyebrow">Built by Group 09</p>
+            <h2>Meet the WatchTower team</h2>
+          </div>
+        </div>
+        <div class="team-groups">
+          <section class="team-group frontend-group" aria-labelledby="frontend-team-title">
+            <h3 id="frontend-team-title">Frontend</h3>
+            <ul class="team-grid" aria-label="Frontend team members">
+              <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hemendra</span></li>
+              <li class="team-member frontend"><span class="member-avatar">A</span><span class="member-name">Alex</span></li>
+              <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">Josh</span></li>
+              <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">James</span></li>
+              <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hieu</span></li>
+              <li class="team-member frontend"><span class="member-avatar">F</span><span class="member-name">Fahad</span></li>
+            </ul>
+          </section>
+          <section class="team-group backend-group" aria-labelledby="backend-team-title">
+            <h3 id="backend-team-title">Backend</h3>
+            <ul class="team-grid" aria-label="Backend team members">
+              <li class="team-member backend"><span class="member-avatar">D</span><span class="member-name">Daniel</span></li>
+              <li class="team-member backend"><span class="member-avatar">A</span><span class="member-name">Aditya</span></li>
+              <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Waleed</span></li>
+              <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Woosik</span></li>
+              <li class="team-member backend"><span class="member-avatar">J</span><span class="member-name">Jason</span></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
   </main>
 
+  <footer class="landing-footer">
+    <div class="landing-footer-inner">
+      <div class="footer-brand-column">
+        <a class="footer-brand" href="#home" aria-label="WatchTower home">
+          <img src="assets/watchtower-transparent.png" alt="" loading="lazy" decoding="async">
+          <span>WatchTower</span>
+        </a>
+        <p>A CSE 110 course project for monitoring errors, performance signals, and user feedback.</p>
+      </div>
+      <nav class="footer-column" aria-label="Product links">
+        <h2>Product</h2>
+        <a href="#capabilities">Features</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="/dashboard">Dashboard demo</a>
+      </nav>
+      <nav class="footer-column" aria-label="Project links">
+        <h2>Project</h2>
+        <a href="#team">Meet the team</a>
+        <a href="https://github.com/cse110-sp26-group09/Watchtower-Course-Project">GitHub repository</a>
+      </nav>
+      <div class="footer-column">
+        <h2>Legal</h2>
+        <span class="footer-placeholder">Privacy policy <small>Coming soon</small></span>
+        <span class="footer-placeholder">Data notice <small>Coming soon</small></span>
+      </div>
+    </div>
+    <div class="landing-footer-bottom">
+      <span>&copy; 2026 WatchTower</span>
+      <span>Built by CSE 110 Group 09</span>
+    </div>
+  </footer>
+
   <div class="sticky-cta" role="region" aria-label="Sticky actions">
-    <button class="primary-button primary-cta" type="button" data-action="go-login">Start in 15 minutes</button>
+    <button class="primary-button primary-cta" type="button" data-action="go-login">Get started</button>
   </div>
 
   <div class="modal-overlay" hidden>
