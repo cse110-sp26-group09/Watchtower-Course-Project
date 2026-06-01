@@ -4,6 +4,25 @@
   const overlay = document.querySelector(".modal-overlay");
   const snippetCode = document.getElementById("snippet-code");
   const stickyCta = document.querySelector(".sticky-cta");
+  const workflowTabs = Array.from(document.querySelectorAll("[data-workflow-tab]"));
+  const workflowPanels = Array.from(document.querySelectorAll("[data-workflow-panel]"));
+
+  /**
+   * Switches the workflow walkthrough to the requested step.
+   * @param {string} stepName - The workflow step to display.
+   */
+  function activateWorkflowStep(stepName) {
+    workflowTabs.forEach(function (tab) {
+      const isActive = tab.getAttribute("data-workflow-tab") === stepName;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+      tab.setAttribute("tabindex", isActive ? "0" : "-1");
+    });
+
+    workflowPanels.forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-workflow-panel") !== stepName;
+    });
+  }
 
   /**
    * Sets the open state of the overlay.
@@ -171,6 +190,25 @@
   }
 
   updateDashboardLinks();
+  workflowTabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () {
+      activateWorkflowStep(tab.getAttribute("data-workflow-tab") || "");
+    });
+
+    tab.addEventListener("keydown", function (event) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return;
+      }
+
+      event.preventDefault();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex = (index + direction + workflowTabs.length) % workflowTabs.length;
+      const nextTab = workflowTabs[nextIndex];
+      activateWorkflowStep(nextTab.getAttribute("data-workflow-tab") || "");
+      nextTab.focus();
+    });
+  });
+
   updateStickyCta();
   window.addEventListener("scroll", updateStickyCta, { passive: true });
   window.addEventListener("resize", updateStickyCta);
