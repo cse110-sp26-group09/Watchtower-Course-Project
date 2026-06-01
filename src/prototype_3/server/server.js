@@ -26,6 +26,7 @@ const {
   toInspectorEvent,
   queryEventsWithFilters,
   getRecentEvents,
+  computeMaxConcurrentUsers,
 } = require("./server-helpers");
 
 const PORT = process.env.PORT || 3000;
@@ -260,6 +261,7 @@ function getDashboardStats(events) {
 
   return {
     activeUsers: activeSessions.size,
+    maxUsers: computeMaxConcurrentUsers(sourceEvents, ACTIVE_USER_WINDOW),
     totalEvents: sourceEvents.length,
     totalErrors: recentErrors.length,
     errorsByVersion: errorsByVersion,
