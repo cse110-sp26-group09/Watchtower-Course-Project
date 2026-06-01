@@ -32,119 +32,20 @@
 
   <main class="landing-main" id="home">
     <section class="landing-section hero" aria-label="Hero">
-      <div class="hero-grid">
-        <div class="hero-copy">
-          <h1>Find the issue before your users have to report it.</h1>
-          <p class="hero-subtitle">WatchTower brings errors, slowdowns, feedback, and release context into one focused workspace.</p>
-          <div class="hero-actions">
-            <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
-            <a class="ghost-button dashboard-demo-link" href="/dashboard">View dashboard demo</a>
-          </div>
-          <div class="signal-strip" role="group" aria-label="WatchTower signal types">
-            <span>Errors</span>
-            <span>Latency</span>
-            <span>Feedback</span>
-            <span>Deploys</span>
-          </div>
+      <div class="hero-copy">
+        <p class="hero-overline">Production clarity for faster fixes.</p>
+        <h1>Find the issue before your users have to report it.</h1>
+        <p class="hero-subtitle">WatchTower brings errors, slowdowns, feedback, and release context into one focused workspace.</p>
+        <div class="hero-actions">
+          <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
+          <a class="ghost-button dashboard-demo-link" href="/dashboard">View dashboard demo</a>
         </div>
-
-        <section class="hero-visual" aria-label="Dashboard preview">
-          <div class="product-preview" role="group" aria-label="WatchTower dashboard mockup">
-            <div class="preview-sidebar" aria-hidden="true">
-              <span class="preview-logo-dot"></span>
-              <span class="preview-nav active"></span>
-              <span class="preview-nav"></span>
-              <span class="preview-nav"></span>
-              <span class="preview-nav"></span>
-            </div>
-
-            <div class="preview-main">
-              <div class="preview-topbar">
-                <div>
-                  <span class="eyebrow">Realtime operations</span>
-                  <h2>Dashboard</h2>
-                </div>
-                <span class="live-pill-preview"><span></span>Live</span>
-              </div>
-
-              <div class="preview-metrics" role="group" aria-label="Dashboard metrics">
-                <div>
-                  <span>Active users</span>
-                  <strong>128</strong>
-                  <small>Current sessions</small>
-                </div>
-                <div>
-                  <span>Events ingested</span>
-                  <strong>2.4k</strong>
-                  <small>Stable intake</small>
-                </div>
-                <div class="warning">
-                  <span>Open errors</span>
-                  <strong>7</strong>
-                  <small>Needs review</small>
-                </div>
-                <div>
-                  <span>Deploys</span>
-                  <strong>4</strong>
-                  <small>Versions seen</small>
-                </div>
-              </div>
-
-              <div class="preview-grid">
-                <section class="preview-panel issue-feed" aria-label="Errors needing triage">
-                  <header>
-                    <div>
-                      <span class="eyebrow">Issues</span>
-                      <h3>Errors needing triage</h3>
-                    </div>
-                    <span class="stack-badge badge-coral">2 spikes</span>
-                  </header>
-                  <ol class="preview-list">
-                    <li>
-                      <span class="severity critical">Critical</span>
-                      <span>Checkout TypeError</span>
-                      <small>36 users affected</small>
-                    </li>
-                    <li>
-                      <span class="severity warning">Warn</span>
-                      <span>POST /checkout 502</span>
-                      <small>p95 up 18%</small>
-                    </li>
-                    <li>
-                      <span class="severity info">Info</span>
-                      <span>Feedback: button froze</span>
-                      <small>Session attached</small>
-                    </li>
-                  </ol>
-                </section>
-
-                <section class="preview-panel health-feed" aria-label="Production health">
-                  <header>
-                    <div>
-                      <span class="eyebrow">Health</span>
-                      <h3>Production profile</h3>
-                    </div>
-                    <span class="stack-badge badge-teal">Healthy</span>
-                  </header>
-                  <div class="health-bars" aria-hidden="true">
-                    <span style="--bar: 82%"></span>
-                    <span style="--bar: 68%"></span>
-                    <span style="--bar: 74%"></span>
-                    <span style="--bar: 58%"></span>
-                    <span style="--bar: 90%"></span>
-                  </div>
-                  <p>Availability, latency, errors, signal quality, and user feedback in one view.</p>
-                </section>
-              </div>
-
-              <div class="preview-activity" role="note" aria-label="Recent user signal">
-                <span class="highlight-dot" aria-hidden="true"></span>
-                <strong>Deploy 1.8.4</strong>
-                <span>correlated with checkout errors and a p95 latency regression.</span>
-              </div>
-            </div>
-          </div>
-        </section>
+        <div class="signal-strip" role="group" aria-label="WatchTower signal types">
+          <span>Errors</span>
+          <span>Latency</span>
+          <span>Feedback</span>
+          <span>Deploys</span>
+        </div>
       </div>
     </section>
 
@@ -253,22 +154,54 @@
     <section class="landing-chapter audience-chapter" id="who-its-for" aria-labelledby="audience-title">
       <div class="landing-section audience-section">
         <div class="chapter-heading centered-heading">
-          <p class="chapter-label">Shared context</p>
+          <p class="chapter-label">Built for every perspective</p>
           <h2 id="audience-title">A clearer handoff between the people shipping the product.</h2>
         </div>
-        <div class="personas-grid">
-          <article class="panel persona-card">
-            <h3>Developers</h3>
-            <p>Get actionable stack traces and timings without wiring custom tooling.</p>
-          </article>
-          <article class="panel persona-card">
-            <h3>Technical Leads</h3>
-            <p>Monitor stability and performance across releases to protect velocity.</p>
-          </article>
-          <article class="panel persona-card">
-            <h3>Product Managers</h3>
-            <p>See user-reported issues and impact to prioritize the next fix.</p>
-          </article>
+        <div class="personas-grid" role="tablist" aria-label="Perspectives by audience">
+          <button class="panel persona-card active" id="audience-tab-developers" type="button" role="tab" aria-controls="audience-panel-developers" aria-selected="true" data-audience-tab="developers">
+            <span class="persona-title">Developers</span>
+            <span class="persona-copy">Get actionable stack traces and timings without wiring custom tooling.</span>
+          </button>
+          <button class="panel persona-card" id="audience-tab-leads" type="button" role="tab" aria-controls="audience-panel-leads" aria-selected="false" tabindex="-1" data-audience-tab="leads">
+            <span class="persona-title">Technical Leads</span>
+            <span class="persona-copy">Monitor stability and performance across releases to protect velocity.</span>
+          </button>
+          <button class="panel persona-card" id="audience-tab-managers" type="button" role="tab" aria-controls="audience-panel-managers" aria-selected="false" tabindex="-1" data-audience-tab="managers">
+            <span class="persona-title">Product Managers</span>
+            <span class="persona-copy">See user-reported issues and impact to prioritize the next fix.</span>
+          </button>
+        </div>
+        <div class="audience-stage">
+          <div class="audience-panel" id="audience-panel-developers" role="tabpanel" aria-labelledby="audience-tab-developers" data-audience-panel="developers">
+            <div class="audience-placeholder">
+              <span class="audience-placeholder-label">Video placeholder</span>
+              <span class="audience-play" aria-hidden="true">▶</span>
+              <div>
+                <h3>Developer investigation view</h3>
+                <p>Replace this area with a short clip showing stack traces, timings, and the path to a focused fix.</p>
+              </div>
+            </div>
+          </div>
+          <div class="audience-panel" id="audience-panel-leads" role="tabpanel" aria-labelledby="audience-tab-leads" data-audience-panel="leads" hidden>
+            <div class="audience-placeholder">
+              <span class="audience-placeholder-label">Video placeholder</span>
+              <span class="audience-play" aria-hidden="true">▶</span>
+              <div>
+                <h3>Technical lead stability view</h3>
+                <p>Replace this area with a short clip showing release health, regressions, and team-wide operational context.</p>
+              </div>
+            </div>
+          </div>
+          <div class="audience-panel" id="audience-panel-managers" role="tabpanel" aria-labelledby="audience-tab-managers" data-audience-panel="managers" hidden>
+            <div class="audience-placeholder">
+              <span class="audience-placeholder-label">Video placeholder</span>
+              <span class="audience-play" aria-hidden="true">▶</span>
+              <div>
+                <h3>Product manager impact view</h3>
+                <p>Replace this area with a short clip showing user impact, feedback, and a clearer prioritization story.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -291,7 +224,6 @@
       <div class="team-card">
         <div class="team-card-header">
           <div>
-            <p class="eyebrow">Built by Group 09</p>
             <h2>Meet the WatchTower team</h2>
           </div>
         </div>
@@ -299,22 +231,22 @@
           <section class="team-group frontend-group" aria-labelledby="frontend-team-title">
             <h3 id="frontend-team-title">Frontend</h3>
             <ul class="team-grid" aria-label="Frontend team members">
-              <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hemendra</span></li>
-              <li class="team-member frontend"><span class="member-avatar">A</span><span class="member-name">Alex</span></li>
-              <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">Josh</span></li>
-              <li class="team-member frontend"><span class="member-avatar">J</span><span class="member-name">James</span></li>
-              <li class="team-member frontend"><span class="member-avatar">H</span><span class="member-name">Hieu</span></li>
-              <li class="team-member frontend"><span class="member-avatar">F</span><span class="member-name">Fahad</span></li>
+              <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Hemendra.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Hemendra</span></li>
+              <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Alex.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Alex</span></li>
+              <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Josh.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Josh</span></li>
+              <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/James.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">James</span></li>
+              <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Hieu.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Hieu</span></li>
+              <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Fahad.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Fahad</span></li>
             </ul>
           </section>
           <section class="team-group backend-group" aria-labelledby="backend-team-title">
             <h3 id="backend-team-title">Backend</h3>
             <ul class="team-grid" aria-label="Backend team members">
-              <li class="team-member backend"><span class="member-avatar">D</span><span class="member-name">Daniel</span></li>
-              <li class="team-member backend"><span class="member-avatar">A</span><span class="member-name">Aditya</span></li>
-              <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Waleed</span></li>
-              <li class="team-member backend"><span class="member-avatar">W</span><span class="member-name">Woosik</span></li>
-              <li class="team-member backend"><span class="member-avatar">J</span><span class="member-name">Jason</span></li>
+              <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Daniel.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Daniel</span></li>
+              <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Aditya.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Aditya</span></li>
+              <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Waleed.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Waleed</span></li>
+              <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Woosik.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Woosik</span></li>
+              <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Jason.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Jason</span></li>
             </ul>
           </section>
         </div>
@@ -350,7 +282,6 @@
     </div>
     <div class="landing-footer-bottom">
       <span>&copy; 2026 WatchTower</span>
-      <span>Built by CSE 110 Group 09</span>
     </div>
   </footer>
 
