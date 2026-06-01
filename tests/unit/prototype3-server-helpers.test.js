@@ -18,6 +18,8 @@ const {
   normalizeStreamFilters,
   queryEventsWithFilters,
   getRecentEvents,
+  severityForError,
+  buildActiveIssues,
 } = require("../../src/prototype_3/server/server-helpers");
 
 describe("isValidEvent (Prototype 3)", () => {
@@ -161,5 +163,54 @@ describe("parseTimestamp / clampNumber", () => {
     expect(clampNumber(5, 1, 10)).toBe(5);
     expect(clampNumber(99, 1, 10)).toBe(10);
     expect(clampNumber(-3, 0, 10)).toBe(0);
+  });
+});
+
+describe("severityForError", () => {
+  test("matches the dashboard rule and adds an info tier", () => {
+    expect(severityForError({ data: {} })).toBe("critical"); // no message
+    expect(severityForError({ data: { message: "Unhandled TypeError" } })).toBe("critical");
+    expect(severityForError({ data: { message: "Request timeout after 5s" } })).toBe("warning");
+    expect(severityForError({ data: { message: "High latency on /api" } })).toBe("warning");
+    expect(severityForError({ data: { message: "Deprecated API used" } })).toBe("info");
+  });
+});
+
+describe("buildActiveIssues", () => {
+  function err(message, opts) {
+    return Object.assign(
+      { type: "error", timestamp: "2026-06-01T10:00:00.000Z", sessionId: "s1", data: { message } },
+      opts || {}
+    );
+  }
+
+  test("groups errors by signature with counts, severity, status, and a legend", () => {
+    const events = [
+      err("Boom on checkout", { sessionId: "s1", timestamp: "2026-06-01T10:00:00.000Z" }),
+      err("Boom on checkout", { sessionId: "s2", timestamp: "2026-06-01T10:05:00.000Z" }),
+      err("Request timeout", { sessionId: "s3" }),
+      { type: "pageload", timestamp: "2026-06-01T10:00:00.000Z", data: {} }, // ignored
+    ];
+    const result = buildActiveIssues(events);
+
+    expect(result.total).toBe(2); // two distinct signatures
+    expect(result.counts).toEqual({ critical: 1, warning: 1, info: 0 });
+
+    const boom = result.issues.find((i) => i.signature === "Boom on checkout");
+    expect(boom.count).toBe(2);
+    expect(boom.affectedSessions).toBe(2);
+    expect(boom.severity).toBe("critical");
+    expect(boom.status).toBe("open");
+    expect(boom.lastSeen).toBe("2026-06-01T10:05:00.000Z");
+
+    // Critical sorts above warning.
+    expect(result.issues[0].severity).toBe("critical");
+  });
+
+  test("returns empty structure when there are no errors", () => {
+    const result = buildActiveIssues([{ type: "click", data: {} }]);
+    expect(result.total).toBe(0);
+    expect(result.issues).toEqual([]);
+    expect(result.counts).toEqual({ critical: 0, warning: 0, info: 0 });
   });
 });

@@ -182,6 +182,115 @@ function getRecentEvents(events, limit) {
     .slice(0, limit || 50);
 }
 
+/**
+ * Classify an error event's severity. Mirrors the dashboard's `toIssueSeverity`
+ * (no message or unknown -> critical, timeout/latency -> warning) and adds an
+ * `info` tier for low-signal notices so the severity legend has all three.
+ *
+ * @param {Object} ev - An error event.
+ * @returns {"critical"|"warning"|"info"}
+ */
+function severityForError(ev) {
+  const msg = safeString(ev && ev.data && ev.data.message).toLowerCase();
+  if (!msg) return "critical";
+  if (msg.indexOf("timeout") !== -1 || msg.indexOf("latency") !== -1) return "warning";
+  if (msg.indexOf("deprecat") !== -1 || msg.indexOf("notice") !== -1 || msg.indexOf("info:") !== -1) return "info";
+  return "critical";
+}
+
+/**
+ * Collapse an error event to a stable grouping signature (first line of the
+ * message, truncated), falling back to the event name.
+ *
+ * @param {Object} ev - An error event.
+ * @returns {string}
+ */
+function errorSignature(ev) {
+  const msg = safeString(ev && ev.data && ev.data.message).trim();
+  if (msg) return msg.split("\n")[0].slice(0, 140);
+  return safeString(ev && ev.eventName) || "Runtime error";
+}
+
+/**
+ * Build the current open ("active") issues by grouping error events by
+ * signature. There is no resolve workflow yet, so every group is `open`.
+ * Each issue carries a severity (highest seen in the group) and a status so
+ * the dashboard can render the critical/warning/info legend.
+ *
+ * @param {Array<Object>} events - Events; only `type === "error"` are grouped.
+ * @param {number} [limit] - Max issues returned (default 50). `total`/`counts`
+ *   always reflect all open issues, not just the returned slice.
+ * @returns {{ total: number, counts: Object, issues: Array<Object> }}
+ */
+function buildActiveIssues(events, limit) {
+  const cap = isFiniteNumber(limit) && limit > 0 ? limit : 50;
+  const rank = { critical: 3, warning: 2, info: 1 };
+  const groups = new Map();
+
+  (events || []).forEach(function (ev) {
+    if (!ev || ev.type !== "error") return;
+    const sig = errorSignature(ev);
+    const sev = severityForError(ev);
+    const ts = parseTimestamp(ev.timestamp);
+    let g = groups.get(sig);
+    if (!g) {
+      g = {
+        signature: sig,
+        severity: sev,
+        status: "open",
+        count: 0,
+        sessions: new Set(),
+        firstSeen: ev.timestamp || null,
+        lastSeen: ev.timestamp || null,
+        route: ev.route || "/",
+        message: safeString(ev.data && ev.data.message) || sig,
+        release: ev.deployVersion || "unknown",
+      };
+      groups.set(sig, g);
+    }
+    g.count += 1;
+    if (ev.sessionId) g.sessions.add(ev.sessionId);
+    if (rank[sev] > rank[g.severity]) g.severity = sev;
+    const firstMs = parseTimestamp(g.firstSeen);
+    const lastMs = parseTimestamp(g.lastSeen);
+    if (ts !== null) {
+      if (firstMs === null || ts < firstMs) g.firstSeen = ev.timestamp;
+      if (lastMs === null || ts > lastMs) {
+        g.lastSeen = ev.timestamp;
+        g.route = ev.route || g.route;
+        g.release = ev.deployVersion || g.release;
+      }
+    }
+  });
+
+  const issues = Array.from(groups.values())
+    .map(function (g) {
+      return {
+        signature: g.signature,
+        severity: g.severity,
+        status: g.status,
+        count: g.count,
+        affectedSessions: g.sessions.size,
+        firstSeen: g.firstSeen,
+        lastSeen: g.lastSeen,
+        route: g.route,
+        message: g.message,
+        release: g.release,
+      };
+    })
+    .sort(function (a, b) {
+      if (rank[b.severity] !== rank[a.severity]) return rank[b.severity] - rank[a.severity];
+      return b.count - a.count;
+    });
+
+  const counts = { critical: 0, warning: 0, info: 0 };
+  issues.forEach(function (issue) {
+    counts[issue.severity] = (counts[issue.severity] || 0) + 1;
+  });
+
+  return { total: issues.length, counts: counts, issues: issues.slice(0, cap) };
+}
+
 module.exports = {
   DEFAULT_STREAM_LIMIT,
   MAX_STREAM_LIMIT,
@@ -205,4 +314,7 @@ module.exports = {
   compareEventsByRecency,
   queryEventsWithFilters,
   getRecentEvents,
+  severityForError,
+  errorSignature,
+  buildActiveIssues,
 };
