@@ -238,28 +238,56 @@ a {
   background: var(--coral);
 }
 
-.mode-pill {
-  display: inline-flex;
-  align-items: center;
+.mode-toggle {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
   min-height: 38px;
-  padding: 0 12px;
+  padding: 3px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink-soft);
+  background: var(--surface-muted);
+  gap: 0;
+}
+
+.mode-toggle-option {
+  position: relative;
+  z-index: 1;
+  min-width: 90px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-}
-
-.mode-pill-button {
   cursor: pointer;
+  transition: color 200ms ease;
 }
 
-.mode-pill-button:hover {
-  border-color: rgba(44, 186, 215, 0.42);
-  background: var(--surface-muted);
+.mode-toggle-option.active {
+  color: #ffffff;
+}
+
+.mode-toggle-option:not(.active):hover {
+  color: var(--ink);
+}
+
+.mode-toggle-slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 6px;
+  background: var(--rail);
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.mode-toggle.mode-developer .mode-toggle-slider {
+  transform: translateX(100%);
 }
 
 
@@ -448,9 +476,19 @@ body.dark-mode .topbar {
   background: rgba(15, 20, 26, 0.92);
 }
 
+body.dark-mode .status-token.good {
+  background: #1d3d31;
+  color: #6ee7a8;
+}
+
 body.dark-mode .status-token.warning {
   background: #3a2f1a;
   color: #ffd37a;
+}
+
+body.dark-mode .status-token.critical {
+  background: #3a211f;
+  color: #ffb4a8;
 }
 
 body.dark-mode .status-token.danger {
@@ -797,7 +835,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   }
 
   .nav-button {
-    grid-template-columns: 22px minmax(0, 1fr);
+    grid-template-columns: 1fr;
     align-items: center;
     justify-items: center;
     min-height: 44px;
@@ -805,15 +843,12 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
   }
 
   .nav-button span {
-    opacity: 0;
-    max-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    transition: opacity 140ms ease, max-width 140ms ease;
+    display: none;
   }
 
   .sidebar:hover .nav-button,
   .sidebar:focus-within .nav-button {
+    grid-template-columns: 22px minmax(0, 1fr);
     justify-items: start;
     padding: 12px 14px;
     gap: 10px;
@@ -821,8 +856,7 @@ body.dark-mode .alert-pill.quiet #active-issues-count {
 
   .sidebar:hover .nav-button span,
   .sidebar:focus-within .nav-button span {
-    opacity: 1;
-    max-width: 140px;
+    display: block;
   }
 
   .nav-button.active {
@@ -1600,6 +1634,127 @@ code {
   color: var(--coral);
 }
 
+.dev-stat-value.status-green {
+  color: var(--green) !important;
+}
+
+.dev-stat-value.status-yellow {
+  color: var(--amber) !important;
+}
+
+.dev-stat-value.status-red {
+  color: var(--coral) !important;
+}
+
+.summary-chip strong.status-green,
+.metric-tile strong.status-green {
+  color: var(--green);
+}
+
+.summary-chip strong.status-yellow,
+.metric-tile strong.status-yellow {
+  color: var(--amber);
+}
+
+.summary-chip strong.status-red,
+.metric-tile strong.status-red {
+  color: var(--coral);
+}
+
+.dev-stat-card.frame-green,
+.metric-tile.frame-green {
+  border-color: var(--green);
+}
+
+.dev-stat-card.frame-yellow,
+.metric-tile.frame-yellow {
+  border-color: var(--amber);
+}
+
+.dev-stat-card.frame-red,
+.metric-tile.frame-red {
+  border-color: var(--coral);
+}
+
+.dev-stat-card.accent-green {
+  border-top: 3px solid var(--green);
+}
+
+.dev-stat-card.accent-green .dev-stat-icon,
+.dev-stat-card.accent-green .dev-stat-tag {
+  color: var(--green);
+}
+
+.dev-stat-card.accent-green .dev-stat-value {
+  color: var(--green);
+}
+
+.dev-stat-card.accent-amber {
+  border-top: 3px solid var(--amber);
+}
+
+.dev-stat-card.accent-amber .dev-stat-icon,
+.dev-stat-card.accent-amber .dev-stat-tag {
+  color: var(--amber);
+}
+
+.dev-stat-card.accent-amber .dev-stat-value {
+  color: var(--amber);
+}
+
+.dev-stat-card.accent-red {
+  border-top: 3px solid var(--coral);
+}
+
+.dev-stat-card.accent-red .dev-stat-icon,
+.dev-stat-card.accent-red .dev-stat-tag {
+  color: var(--coral);
+}
+
+.dev-stat-card.accent-red .dev-stat-value {
+  color: var(--coral);
+}
+
+.developer-insight-list li.latency-green {
+  border-left-color: var(--green);
+}
+
+.developer-insight-list li.latency-yellow {
+  border-left-color: var(--amber);
+}
+
+.developer-insight-list li.latency-red {
+  border-left-color: var(--coral);
+}
+
+.bundle-latency.bundle-lat-green {
+  border-top-color: var(--green);
+}
+
+.bundle-latency.bundle-lat-green .bundle-summary-bar {
+  border-left-color: var(--green);
+}
+
+.bundle-latency.bundle-lat-green .bundle-icon-mark {
+  color: var(--green);
+}
+
+.bundle-latency.bundle-lat-yellow {
+  border-top-color: var(--amber);
+}
+
+.bundle-latency.bundle-lat-red {
+  border-top-color: var(--coral);
+}
+
+.bundle-latency.bundle-lat-red .bundle-summary-bar {
+  border-left-color: var(--coral);
+}
+
+.bundle-latency.bundle-lat-red .bundle-icon-mark {
+  color: var(--coral);
+}
+
 .patch-version-list {
   margin: 0;
   padding: 0;
@@ -2017,14 +2172,15 @@ code {
 }
 
 .issue-toggle {
-  margin-top: 10px;
-  min-height: 36px;
+  min-height: 32px;
+  padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .issue-toggle:hover {
@@ -2452,8 +2608,20 @@ code {
   background: var(--teal);
 }
 
+.user-chart .bar-fill {
+  background: var(--blue);
+}
+
+.user-chart .bar.highlight .bar-fill {
+  background: #274f8f;
+}
+
 .purchase-chart .bar-fill {
-  background: var(--amber);
+  background: #7c3aed;
+}
+
+.purchase-chart .bar.highlight .bar-fill {
+  background: #5b21b6;
 }
 
 .bar.highlight .bar-fill {
@@ -2719,9 +2887,10 @@ code {
 
 .settings-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-columns: 1fr;
   gap: 18px;
   align-items: start;
+  max-width: 720px;
 }
 
 .profile-chip {
