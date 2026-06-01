@@ -6,6 +6,8 @@
   const stickyCta = document.querySelector(".sticky-cta");
   const workflowTabs = Array.from(document.querySelectorAll("[data-workflow-tab]"));
   const workflowPanels = Array.from(document.querySelectorAll("[data-workflow-panel]"));
+  const audienceTabs = Array.from(document.querySelectorAll("[data-audience-tab]"));
+  const audiencePanels = Array.from(document.querySelectorAll("[data-audience-panel]"));
 
   /**
    * Switches the workflow walkthrough to the requested step.
@@ -21,6 +23,23 @@
 
     workflowPanels.forEach(function (panel) {
       panel.hidden = panel.getAttribute("data-workflow-panel") !== stepName;
+    });
+  }
+
+  /**
+   * Switches the role-based showcase to the requested audience.
+   * @param {string} audienceName - The audience showcase to display.
+   */
+  function activateAudience(audienceName) {
+    audienceTabs.forEach(function (tab) {
+      const isActive = tab.getAttribute("data-audience-tab") === audienceName;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+      tab.setAttribute("tabindex", isActive ? "0" : "-1");
+    });
+
+    audiencePanels.forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-audience-panel") !== audienceName;
     });
   }
 
@@ -150,6 +169,18 @@
       return;
     }
 
+    const workflowTab = target.closest("[data-workflow-tab]");
+    if (workflowTab) {
+      activateWorkflowStep(workflowTab.getAttribute("data-workflow-tab") || "");
+      return;
+    }
+
+    const audienceTab = target.closest("[data-audience-tab]");
+    if (audienceTab) {
+      activateAudience(audienceTab.getAttribute("data-audience-tab") || "");
+      return;
+    }
+
     const actionElement = target.closest("[data-action]");
     if (!actionElement) {
       return;
@@ -191,10 +222,6 @@
 
   updateDashboardLinks();
   workflowTabs.forEach(function (tab, index) {
-    tab.addEventListener("click", function () {
-      activateWorkflowStep(tab.getAttribute("data-workflow-tab") || "");
-    });
-
     tab.addEventListener("keydown", function (event) {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
         return;
@@ -205,6 +232,21 @@
       const nextIndex = (index + direction + workflowTabs.length) % workflowTabs.length;
       const nextTab = workflowTabs[nextIndex];
       activateWorkflowStep(nextTab.getAttribute("data-workflow-tab") || "");
+      nextTab.focus();
+    });
+  });
+
+  audienceTabs.forEach(function (tab, index) {
+    tab.addEventListener("keydown", function (event) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return;
+      }
+
+      event.preventDefault();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex = (index + direction + audienceTabs.length) % audienceTabs.length;
+      const nextTab = audienceTabs[nextIndex];
+      activateAudience(nextTab.getAttribute("data-audience-tab") || "");
       nextTab.focus();
     });
   });
