@@ -55,6 +55,7 @@
   let developerLatencyThresholdInput = document.getElementById("dev-latency-threshold");
   let userDeltaBadge = document.getElementById("user-delta");
   let purchaseDeltaBadge = document.getElementById("purchase-delta");
+  let errorDeltaBadge = document.getElementById("error-delta");
   let latencyLine = document.getElementById("latency-line");
   let latencyLegend = document.getElementById("latency-legend");
   let latencyYAxis = document.getElementById("latency-y-axis");
@@ -2595,6 +2596,11 @@
     }
     if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " current bucket";
     if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
+    if (errorDeltaBadge) {
+      let totalErr = stats.totalErrors || 0;
+      errorDeltaBadge.textContent = formatNumber(totalErr) + " total";
+      errorDeltaBadge.className = "delta-badge " + (totalErr === 0 ? "positive" : "negative");
+    }
   }
 
   function updateDashboardStats(stats, events) {

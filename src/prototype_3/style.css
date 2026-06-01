@@ -2568,6 +2568,11 @@ code {
   color: var(--green);
 }
 
+.delta-badge.negative {
+  background: var(--coral-soft);
+  color: var(--coral);
+}
+
 .bar-chart {
   display: grid;
   grid-template-columns: repeat(var(--bar-count, 7), minmax(28px, 1fr));
