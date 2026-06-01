@@ -182,6 +182,44 @@ function getRecentEvents(events, limit) {
     .slice(0, limit || 50);
 }
 
+/**
+ * Peak number of distinct active sessions observed within any rolling
+ * `windowMs` span across the given events. This is the historical maximum
+ * of concurrent users; because it is derived from the persisted event
+ * history it never resets or decreases on restart (unlike a value held only
+ * in memory). Always >= the current active-user count for the same window.
+ *
+ * @param {Array<Object>} events - Events with `timestamp` and `sessionId`.
+ * @param {number} [windowMs] - Rolling window size in ms. Defaults to 30000.
+ * @returns {number} Peak concurrent distinct sessions.
+ */
+function computeMaxConcurrentUsers(events, windowMs) {
+  const span = isFiniteNumber(windowMs) && windowMs > 0 ? windowMs : 30000;
+  const points = [];
+  (events || []).forEach(function (ev) {
+    const ts = parseTimestamp(ev && ev.timestamp);
+    const sid = ev && ev.sessionId;
+    if (ts !== null && sid) points.push({ ts: ts, sid: sid });
+  });
+  points.sort(function (a, b) { return a.ts - b.ts; });
+
+  const counts = new Map();
+  let left = 0;
+  let max = 0;
+  for (let right = 0; right < points.length; right++) {
+    const sid = points[right].sid;
+    counts.set(sid, (counts.get(sid) || 0) + 1);
+    while (points[right].ts - points[left].ts > span) {
+      const leftSid = points[left].sid;
+      const remaining = counts.get(leftSid) - 1;
+      if (remaining <= 0) counts.delete(leftSid); else counts.set(leftSid, remaining);
+      left++;
+    }
+    if (counts.size > max) max = counts.size;
+  }
+  return max;
+}
+
 module.exports = {
   DEFAULT_STREAM_LIMIT,
   MAX_STREAM_LIMIT,
@@ -205,4 +243,5 @@ module.exports = {
   compareEventsByRecency,
   queryEventsWithFilters,
   getRecentEvents,
+  computeMaxConcurrentUsers,
 };
