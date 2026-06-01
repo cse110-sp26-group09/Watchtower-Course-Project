@@ -1848,7 +1848,9 @@
       let userKey = eventRecord.userId || eventRecord.sessionId;
       if (userKey) uniqueUsers.add(String(userKey));
     });
-    let maxUsers = Math.max(uniqueUsers.size, stats.activeUsers || 0);
+    let maxUsers = Number.isFinite(stats.maxUsers)
+      ? stats.maxUsers
+      : Math.max(uniqueUsers.size, stats.activeUsers || 0);
     let routeNames = Object.keys(stats.latencyByRoute || {});
     let averageLatency = 0;
 
