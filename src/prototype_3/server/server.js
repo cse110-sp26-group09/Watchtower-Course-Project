@@ -230,9 +230,17 @@ function broadcastEvents(batch) {
 function buildLatencySummary(events) {
   let routes = {};
   (events || []).forEach(function (e) {
-    if (e.type !== "pageload" || !e.data || e.data.duration == null) return;
-    if (!routes[e.route]) routes[e.route] = [];
-    routes[e.route].push(e.data.duration);
+    if (e.type === "pageload" && e.data && e.data.duration != null) {
+      if (!routes[e.route]) routes[e.route] = [];
+      routes[e.route].push(Number(e.data.duration));
+    } else if (e.type === "performance" && e.data) {
+      let val = Number(e.data.value || e.data.duration || e.data.latency);
+      if (Number.isFinite(val) && val > 0) {
+        let route = e.route || "/";
+        if (!routes[route]) routes[route] = [];
+        routes[route].push(val);
+      }
+    }
   });
   return Object.keys(routes).reduce(function (acc, r) {
     acc[r] = {
@@ -246,22 +254,23 @@ function buildLatencySummary(events) {
 
 function getDashboardStats(events) {
   const sourceEvents = events || [];
-  let activeSessions = new Set(), errorsByVersion = {}, recentErrors = [];
+  let activeSessions = new Set(), errorsByVersion = {}, recentErrors = [], totalErrors = 0;
   let cutoff = Date.now() - ACTIVE_USER_WINDOW;
 
   for (let i = sourceEvents.length - 1; i >= 0; i--) {
     let e = sourceEvents[i];
     if (parseTimestamp(e.timestamp) >= cutoff) activeSessions.add(e.sessionId);
     if (e.type === "error") {
+      totalErrors += 1;
       errorsByVersion[e.deployVersion] = (errorsByVersion[e.deployVersion] || 0) + 1;
-      if (recentErrors.length < 20) recentErrors.push(e);
+      if (recentErrors.length < 1000) recentErrors.push(e);
     }
   }
 
   return {
     activeUsers: activeSessions.size,
     totalEvents: sourceEvents.length,
-    totalErrors: recentErrors.length,
+    totalErrors: totalErrors,
     errorsByVersion: errorsByVersion,
     latencyByRoute: buildLatencySummary(sourceEvents),
     recentErrors: recentErrors,
