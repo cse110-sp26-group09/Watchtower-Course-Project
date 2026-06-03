@@ -1,7 +1,8 @@
 (function () {
   "use strict";
 
-  const overlay = document.querySelector(".modal-overlay");
+  const snippetOverlay = document.querySelector("[data-modal='snippet']");
+  const privacyOverlay = document.querySelector("[data-modal='privacy']");
   const snippetCode = document.getElementById("snippet-code");
   const stickyCta = document.querySelector(".sticky-cta");
   const workflowTabs = Array.from(document.querySelectorAll("[data-workflow-tab]"));
@@ -45,9 +46,10 @@
 
   /**
    * Sets the open state of the overlay.
+   * @param {HTMLElement|null} overlay - Overlay element to update.
    * @param {boolean} isOpen - Whether the overlay should be open.
    */
-  function setOverlayOpen(isOpen) {
+  function setOverlayOpen(overlay, isOpen) {
     if (!overlay) {
       return;
     }
@@ -59,8 +61,8 @@
    * Opens the code snippet overlay and focuses the close button.
    */
   function openSnippet() {
-    setOverlayOpen(true);
-    const closeButton = overlay?.querySelector("[data-action='close-snippet']");
+    setOverlayOpen(snippetOverlay, true);
+    const closeButton = snippetOverlay?.querySelector("[data-action='close-snippet']");
     if (closeButton) {
       closeButton.focus();
     }
@@ -70,7 +72,25 @@
    * Closes the code snippet overlay and restores body scroll.
    */
   function closeSnippet() {
-    setOverlayOpen(false);
+    setOverlayOpen(snippetOverlay, false);
+  }
+
+  /**
+   * Opens the privacy policy overlay and focuses the close button.
+   */
+  function openPrivacy() {
+    setOverlayOpen(privacyOverlay, true);
+    const closeButton = privacyOverlay?.querySelector("[data-action='close-privacy']");
+    if (closeButton) {
+      closeButton.focus();
+    }
+  }
+
+  /**
+   * Closes the privacy policy overlay and restores body scroll.
+   */
+  function closePrivacy() {
+    setOverlayOpen(privacyOverlay, false);
   }
 
   /**
@@ -201,21 +221,38 @@
       case "go-login":
         goLogin();
         break;
+      case "open-privacy":
+        openPrivacy();
+        break;
+      case "close-privacy":
+        closePrivacy();
+        break;
     }
   });
 
   // Keyboard Accessibility
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && overlay && !overlay.hidden) {
+    if (event.key === "Escape" && snippetOverlay && !snippetOverlay.hidden) {
       closeSnippet();
+    }
+    if (event.key === "Escape" && privacyOverlay && !privacyOverlay.hidden) {
+      closePrivacy();
     }
   });
 
   // Backdrop Click to Close
-  if (overlay) {
-    overlay.addEventListener("click", function (event) {
-      if (event.target === overlay) {
+  if (snippetOverlay) {
+    snippetOverlay.addEventListener("click", function (event) {
+      if (event.target === snippetOverlay) {
         closeSnippet();
+      }
+    });
+  }
+
+  if (privacyOverlay) {
+    privacyOverlay.addEventListener("click", function (event) {
+      if (event.target === privacyOverlay) {
+        closePrivacy();
       }
     });
   }

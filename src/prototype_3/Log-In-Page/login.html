@@ -33,11 +33,117 @@
            and passwords. No password form lives in our markup. -->
       <div id="clerk-sign-in"></div>
 
+      <p class="auth-footer auth-legal-links">
+        <button class="auth-link-button" type="button" data-action="open-privacy">
+          Privacy Policy
+        </button>
+      </p>
+
     </div>
   </main>
+
+  <div class="auth-modal-overlay" id="privacy-modal" hidden>
+    <article class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+      <div class="auth-modal-header">
+        <div>
+          <p class="auth-modal-label">Legal</p>
+          <h2 id="privacy-title">Privacy Policy</h2>
+        </div>
+        <button class="auth-modal-close" type="button" data-action="close-privacy" aria-label="Close privacy policy">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <p class="auth-subtitle">
+        WatchTower is a class prototype for monitoring web app errors,
+        performance, and user feedback from one dashboard.
+      </p>
+
+      <section class="legal-section">
+        <h3>What We Use</h3>
+        <p>
+          The prototype may use login information, dashboard events, error
+          reports, performance data, feedback entries, and alert contact details
+          to support the monitoring experience.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h3>Authentication</h3>
+        <p>
+          Sign-in is handled through Clerk. WatchTower does not store passwords
+          in the frontend.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h3>How It Is Used</h3>
+        <p>
+          Data is used for prototype testing, dashboard display, alerts, and
+          team development work. It should not be treated as a production
+          privacy system.
+        </p>
+      </section>
+    </article>
+  </div>
 
   <!-- Clerk publishable key (frontend-safe) must load before auth.js -->
   <script src="./clerk-config.js"></script>
   <script src="./auth.js"></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const modal = document.getElementById("privacy-modal");
+
+      function setPrivacyOpen(isOpen) {
+        if (!modal) {
+          return;
+        }
+        modal.hidden = !isOpen;
+        document.body.style.overflow = isOpen ? "hidden" : "";
+        if (isOpen) {
+          const closeButton = modal.querySelector("[data-action='close-privacy']");
+          if (closeButton) {
+            closeButton.focus();
+          }
+        }
+      }
+
+      document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof window.Element)) {
+          return;
+        }
+
+        const actionElement = target.closest("[data-action]");
+        if (!actionElement) {
+          return;
+        }
+
+        const action = actionElement.getAttribute("data-action");
+        if (action === "open-privacy") {
+          setPrivacyOpen(true);
+        }
+        if (action === "close-privacy") {
+          setPrivacyOpen(false);
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal && !modal.hidden) {
+          setPrivacyOpen(false);
+        }
+      });
+
+      if (modal) {
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) {
+            setPrivacyOpen(false);
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
