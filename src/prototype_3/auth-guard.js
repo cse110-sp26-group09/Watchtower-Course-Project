@@ -154,6 +154,22 @@
     });
   }
 
+  function userDisplayName(user) {
+    if (!user) return "";
+    const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+    return name || user.username || (user.primaryEmailAddress && user.primaryEmailAddress.emailAddress) || "";
+  }
+
+  function userInitials(user) {
+    if (!user) return "";
+    const first = (user.firstName || "").trim();
+    const last = (user.lastName || "").trim();
+    if (first && last) return (first[0] + last[0]).toUpperCase();
+    if (first) return first.slice(0, 2).toUpperCase();
+    const email = userPrimaryEmail(user);
+    return email ? email[0].toUpperCase() : "";
+  }
+
   /**
    * Populate the optional user label and wire all logout controls.
    * @param {object} clerk - Initialized Clerk instance.
@@ -164,6 +180,21 @@
       const label = document.getElementById("auth-user-label");
       if (label) {
         label.textContent = userLabel(clerk.user);
+      }
+
+      const displayName = userDisplayName(clerk.user);
+      if (displayName) {
+        const profileName = document.getElementById("profile-display-name");
+        const profileInput = document.getElementById("display-name");
+        const profileInitials = document.getElementById("profile-initials");
+        if (profileName) profileName.textContent = displayName;
+        if (profileInput && !profileInput.value) profileInput.value = displayName;
+        if (profileInitials && !profileInitials.textContent) profileInitials.textContent = userInitials(clerk.user);
+        try {
+          if (!localStorage.getItem("watchtower_profile_name")) {
+            localStorage.setItem("watchtower_profile_name", displayName);
+          }
+        } catch (_e) {}
       }
 
       const signOut = (event) => {
