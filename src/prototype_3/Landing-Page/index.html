@@ -230,7 +230,7 @@
         <div class="team-groups">
           <section class="team-group frontend-group" aria-labelledby="frontend-team-title">
             <h3 id="frontend-team-title">Frontend</h3>
-            <ul class="team-grid" aria-label="Frontend team members">
+            <ul class="team-grid">
               <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Hemendra.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Hemendra</span></li>
               <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Alex.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Alex</span></li>
               <li class="team-member frontend"><span class="member-avatar"><img src="../assets/team_pics/Josh.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Josh</span></li>
@@ -241,7 +241,7 @@
           </section>
           <section class="team-group backend-group" aria-labelledby="backend-team-title">
             <h3 id="backend-team-title">Backend</h3>
-            <ul class="team-grid" aria-label="Backend team members">
+            <ul class="team-grid">
               <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Daniel.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Daniel</span></li>
               <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Aditya.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Aditya</span></li>
               <li class="team-member backend"><span class="member-avatar"><img src="../assets/team_pics/Waleed.png" alt="" loading="lazy" decoding="async"></span><span class="member-name">Waleed</span></li>
@@ -276,7 +276,7 @@
       </nav>
       <div class="footer-column">
         <h2>Legal</h2>
-        <span class="footer-placeholder">Privacy policy <small>Coming soon</small></span>
+        <button class="footer-link-button" type="button" data-action="open-privacy">Privacy policy</button>
         <span class="footer-placeholder">Data notice <small>Coming soon</small></span>
       </div>
     </div>
@@ -285,11 +285,11 @@
     </div>
   </footer>
 
-  <div class="sticky-cta" role="region" aria-label="Sticky actions">
+  <section class="sticky-cta" aria-label="Sticky actions">
     <button class="primary-button primary-cta" type="button" data-action="go-login">Get started</button>
-  </div>
+  </section>
 
-  <div class="modal-overlay" hidden>
+  <div class="modal-overlay" data-modal="snippet" hidden>
     <div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="snippet-title">
       <div class="modal-header">
         <div>
@@ -310,6 +310,51 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="modal-overlay" data-modal="privacy" hidden>
+    <article class="modal panel privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Legal</p>
+          <h2 id="privacy-title">Privacy Policy</h2>
+        </div>
+        <button class="icon-button modal-close" type="button" data-action="close-privacy" aria-label="Close privacy policy">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <p class="modal-copy">
+        WatchTower is a class prototype for monitoring web app errors,
+        performance, and user feedback from one dashboard.
+      </p>
+
+      <section class="privacy-section">
+        <h3>What We Use</h3>
+        <p>
+          The prototype may use login information, dashboard events, error
+          reports, performance data, feedback entries, and alert contact details
+          to support the monitoring experience.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Authentication</h3>
+        <p>
+          Sign-in is handled through Clerk. WatchTower does not store passwords
+          in the frontend.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>How It Is Used</h3>
+        <p>
+          Data is used for prototype testing, dashboard display, alerts, and
+          team development work. It should not be treated as a production
+          privacy system.
+        </p>
+      </section>
+    </article>
   </div>
 
   <script src="./landing.js" defer></script>
