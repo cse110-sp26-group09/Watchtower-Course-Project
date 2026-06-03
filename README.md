@@ -41,14 +41,25 @@ WatchTower helps development teams understand what's happening in production. By
 │
 ├── docs/                     # Project documentation
 │   ├── adr/                  # Architecture decision records
+│   ├── architecture/         # Architecture of app 
+│   ├── back-end/             # Folder for Backend team to keep track of workflow
 │   ├── design/               # Wireframes, user flows, and design notes
-│   ├── media/                # Images, diagrams, screenshots, and other media
+│       └── media/                # Images, diagrams, screenshots, and other media
 │   ├── meetings/             # Standup notes, TA meetings, and team sync notes
+│        └── Sprint/                # Standup meeting notes for every week split up by Sprints
+│            ├── 0/                      # Standup meeting notes for Sprint 0
+│            ├── 1/                      # Standup meeting notes for Sprint 1
+│            ├── 2/                      # Standup meeting notes for Sprint 2
+│            ├── 3/                      # Standup meeting notes for Sprint 3
+│            └── 4/                      # Standup meeting notes for Sprint 4
 │   ├── planning/             # Sprint plans, backlog notes, and retrospectives
+│       └──Retrospectives          # Notes from Retrospective meetings
 │   ├── process/              # Workflow, Git process, and GenAI usage documentation
 │   ├── product/              # Project brief, MVP, requirements, and user stories
 │   ├── research/             # Research notes and technical investigations
 │   └── README.md             # Documentation index
+│
+├── scripts/                  # Scripts used for creating Clerk config
 │
 ├── src/                      # Source code and prototypes
 │   ├── README.md             # Source code overview

@@ -51,7 +51,7 @@ Visual and interactive design specifications.
 Images, diagrams, and visual assets for documentation and project materials.
 - Project logos, screenshots, and referenced images
 
-### 🏗️ Architecture ([adr/](adr/))
+### 🏗️ Architecture ([Architecture/](Architecture/))
 Record major technical decisions and trade-offs.
 - [Architectural Decision Records (ADRs)](adr/) – Documented reasoning for system design choices
 - [system-overview.md](architecture/system-overview.md) - overview of the system architecture
