@@ -14,20 +14,20 @@
 </head>
 <body>
   <!--
-    WatchTower Dashboard — Single-page monitoring app.
+    WatchTower Dashboard - Single-page monitoring app.
     All views live in the DOM; navigation shows/hides sections via data-view attributes.
     Data is populated at runtime by app.js. Two dashboard modes (manager / developer)
     toggle which panels are visible within each view.
 
     Structure:
-      1. Top bar    — branding, active-issues pill, mode pill, live-status indicator
-      2. Sidebar    — desktop icon navigation (Home, Issues, Health, Analytics, Settings)
-      3. Main       — five swappable views (home, issues, health, analytics, settings)
-      4. Toast stack — popup status notifications
-      5. Mobile nav — bottom navigation bar duplicating the sidebar for small screens
+      1. Top bar    - branding, active-issues pill, mode pill, live-status indicator
+      2. Sidebar    - desktop icon navigation (Home, Issues, Health, Analytics, Settings)
+      3. Main       - five swappable views (home, issues, health, analytics, settings)
+      4. Toast stack - popup status notifications
+      5. Mobile nav - bottom navigation bar duplicating the sidebar for small screens
   -->
   <div class="app-shell">
-    <!-- ===== 1. TOP BAR — brand, active-issues count, mode toggle pill ===== -->
+    <!-- ===== 1. TOP BAR - brand, active-issues count, mode toggle pill ===== -->
     <header class="topbar">
       <div class="topbar-left">
         <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
@@ -53,7 +53,7 @@
       </div>
     </header>
 
-    <!-- ===== 2. SIDEBAR — desktop icon navigation (hidden on mobile) ===== -->
+    <!-- ===== 2. SIDEBAR - desktop icon navigation (hidden on mobile) ===== -->
     <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
       <nav class="nav-stack">
         <div class="nav-main">
@@ -99,15 +99,15 @@
       </nav>
     </aside>
 
-    <!-- ===== 3. MAIN CONTENT — five views, one visible at a time ===== -->
+    <!-- ===== 3. MAIN CONTENT - five views, one visible at a time ===== -->
     <main class="content" id="main-content">
 
-      <!-- ——— 3a. HOME VIEW ———
+      <!-- --- 3a. HOME VIEW ---
            KPI tiles (users, events, errors, deploys) link to other views.
            Manager mode: most-clicked features, recent user signals, operational highlights.
            Developer mode: top issues, high-latency windows, peak traffic, health summary. -->
       <section class="view active" id="home-view" aria-label="Home dashboard">
-        <!-- KPI strip — clickable metric tiles that navigate to the relevant view -->
+        <!-- KPI strip - clickable metric tiles that navigate to the relevant view -->
         <section class="kpi-overview" aria-label="Key metrics">
           <div class="kpi-toolbar">
             <p class="eyebrow">Realtime operations</p>
@@ -204,7 +204,7 @@
           </div>
         </section>
 
-        <!-- Home grid — manager-only and developer-only panels swap based on dashboard mode -->
+        <!-- Home grid - manager-only and developer-only panels swap based on dashboard mode -->
         <div class="home-grid compact-home-grid">
           <!-- Manager mode panels -->
           <section class="panel build-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="build-title">
@@ -239,7 +239,7 @@
             </ul>
           </section>
 
-          <!-- Developer mode panels — colored bundle cards matching prototype 2 style.
+          <!-- Developer mode panels - colored bundle cards matching prototype 2 style.
                Three insight cards (errors/latency/traffic) each showing top-3 items.
                Clickable (bundle-clickable) to navigate to Issues or Analytics. -->
           <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
@@ -332,7 +332,7 @@
         </div>
       </section>
 
-      <!-- ——— 3b. ISSUES VIEW ———
+      <!-- --- 3b. ISSUES VIEW ---
            Triage queue with sort/filter controls (severity, version, app, route).
            Developer mode adds severity diagnostic chips, a search bar, and a mute-alerts toggle. -->
       <section class="view" id="issues-view" aria-labelledby="issues-page-title" hidden>
@@ -348,7 +348,7 @@
           </div>
         </div>
 
-        <!-- Mute status line — shown below heading when developer mode is active -->
+        <!-- Mute status line - shown below heading when developer mode is active -->
         <p class="inline-status developer-mute-line" id="developer-mute-status" data-dashboard-mode="developer" hidden>Live alerts are active.</p>
 
         <div class="issues-toolbar" role="group" aria-label="Issue sorting and filtering controls">
@@ -391,7 +391,7 @@
           <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
         </div>
 
-        <!-- Developer alerts panel — severity KPI chips + developer search input -->
+        <!-- Developer alerts panel - severity KPI chips + developer search input -->
         <section class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" aria-labelledby="developer-alerts-title" hidden>
           <div class="panel-header">
             <div>
@@ -439,7 +439,7 @@
         </div>
       </section>
 
-      <!-- ——— 3c. HEALTH VIEW ———
+      <!-- --- 3c. HEALTH VIEW ---
            Radar chart showing app health dimensions, service status stack, and incident feed. -->
       <section class="view" id="health-view" aria-labelledby="health-title" hidden>
         <div class="health-summary">
@@ -498,7 +498,7 @@
         </div>
       </section>
 
-      <!-- ——— 3d. ANALYTICS VIEW ———
+      <!-- --- 3d. ANALYTICS VIEW ---
            Time-range selector (24h / 7d / 30d), summary chips, bar charts (users, activity),
            latency line chart, star-rating feedback block, donut event breakdown.
            Developer mode adds event-type mix and route-pressure tables. -->
@@ -664,7 +664,7 @@
         </div>
       </section>
 
-      <!-- ——— 3e. SETTINGS VIEW ———
+      <!-- --- 3e. SETTINGS VIEW ---
            Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode, language,
            time zone, refresh rate), Notifications (on/off toggle, volume, type, schedule, threshold, snooze).
            Includes a notification preview card on the right. -->
@@ -675,9 +675,9 @@
             <h1 id="settings-title">Settings</h1>
           </div>
           <div class="profile-chip">
-            <span>AD</span>
+            <span id="profile-initials"></span>
             <div>
-              <strong id="profile-display-name">Aditya</strong>
+              <strong id="profile-display-name"></strong>
               <small>Admin</small>
             </div>
           </div>
@@ -704,7 +704,7 @@
               <div class="settings-content">
                 <div class="field-row">
                   <label for="display-name">Display name</label>
-                  <input id="display-name" type="text" value="Aditya">
+                  <input id="display-name" type="text" value="">
                 </div>
                 <div class="split-actions">
                   <button class="ghost-button" id="sign-out-button" type="button">Sign out</button>
@@ -854,10 +854,10 @@
       </section>
     </main>
 
-    <!-- ===== 4. TOAST STACK — popup status notifications (populated by app.js) ===== -->
+    <!-- ===== 4. TOAST STACK - popup status notifications (populated by app.js) ===== -->
     <div class="toast-stack" id="toast-stack" role="status" aria-live="polite" aria-label="Status updates"></div>
 
-    <!-- ===== 5. MOBILE NAV — bottom tab bar duplicating sidebar for small screens ===== -->
+    <!-- ===== 5. MOBILE NAV - bottom tab bar duplicating sidebar for small screens ===== -->
     <nav class="mobile-nav" aria-label="Mobile primary navigation">
       <button class="mobile-nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
         <svg viewBox="0 0 24 24" aria-hidden="true">

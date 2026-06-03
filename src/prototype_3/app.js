@@ -1499,7 +1499,7 @@
     }
 
     function commitDisplayName() {
-      let nextName = displayNameInput.value.trim() || "Aditya";
+      let nextName = displayNameInput.value.trim() || profileDisplayName.textContent.trim() || "User";
       displayNameInput.value = nextName;
       profileDisplayName.textContent = nextName;
       saveUiPreference(PROFILE_STORAGE_KEY, nextName);
