@@ -206,7 +206,7 @@
         authUserLabel.textContent = userLabel(clerk.user);
       }
 
-      document.dispatchEvent(new CustomEvent("watchtower:user-ready", {
+      document.dispatchEvent(new window.CustomEvent("watchtower:user-ready", {
         detail: window.WatchTowerCurrentUser
       }));
 
