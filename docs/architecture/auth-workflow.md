@@ -63,9 +63,86 @@ Back to Landing Page (public)
   3. `app.js` — the existing dashboard logic (unchanged).
 - `auth-guard.js` hides the dashboard shell until Clerk confirms a session.
   - **Signed in:** the shell is revealed, the user label
-    (`#auth-user-label`) is populated, and logout controls are wired.
+    (`#auth-user-label`) is populated, logout controls are wired, and the guard
+    upserts the user into Supabase via `POST /api/users/sync` (see below).
   - **Signed out / Clerk fails to load / key missing:** the guard *fails
     closed* and redirects to `./Log-In-Page/login.html`.
+- All dashboard data fetches in `app.js` (`/api/events`, `/api/stats`,
+  `/api/developer/stream`, `/api/developer/insights`, `/api/developer/query`)
+  send an `X-Clerk-User-Id` header so the backend returns only that user's data.
+
+---
+
+## Per-user data scoping
+
+WatchTower keeps **Clerk as the only authentication provider** and uses
+**Supabase purely as the application database** — there is no Supabase Auth and
+no password is ever stored.
+
+| Concern | Where it lives |
+| --- | --- |
+| Identity / sessions / sign-in | Clerk |
+| Application users | Supabase `public.app_users` (keyed by `clerk_user_id`) |
+| Telemetry events | Supabase `public.prototype3_events`, scoped by `user_id` |
+
+### How a user is recognized
+1. After Clerk confirms a session, `auth-guard.js` calls `POST /api/users/sync`
+   with `{ clerkUserId, email, displayName }` and an `X-Clerk-User-Id` header.
+2. The server calls `eventStore.syncUser(...)`, which **upserts** a row into
+   `app_users` (`clerk_user_id`, `email`, `display_name`, `last_seen_at`). No
+   password or credential is stored — Clerk owns those.
+
+### How data is scoped
+- Dashboard read routes (`GET /api/events`, `GET /api/stats`,
+  `GET /api/developer/stream`, `GET /api/developer/insights`,
+  `POST /api/developer/query`) call `requireCurrentUser(...)`. With no
+  `X-Clerk-User-Id` header they return **401**.
+- They load events with `eventStore.listEvents(limit, { userId })` /
+  `eventStore.allEvents(limit, { userId })`, which filter
+  `prototype3_events.user_id = <Clerk user id>`.
+- `POST /api/events` reads the same header and, when present, stamps each
+  incoming event with `user_id = <Clerk user id>` before insert.
+
+### Monitored ShopDemo bridge (`/demo/`)
+- The demo is a same-origin stand-in for an external monitored app. Its SDK
+  sends events to `POST /api/events` **without** the dashboard's Clerk header.
+- So the dashboard can show demo-generated events, `auth-guard.js` stores the
+  signed-in Clerk id in `localStorage` (`watchtower_clerk_user_id`), and
+  `demo/app.js` initializes the SDK with `userId = <that id>`. The id then rides
+  in the event payload and is persisted as `prototype3_events.user_id`.
+- Open `/demo/` **after** signing in to the dashboard (or refresh it) so the id
+  is present. A truly external app on another origin has no such id and ingests
+  as anonymous (`user_id = null`) — which is the intended future "needs a
+  project/app key" path.
+
+### Resulting behavior
+- **First-time user:** no rows yet, so stats and feeds start at **0**.
+- **Returning user:** the same `clerk_user_id` filters back the rows persisted
+  during earlier sessions, so they see their saved data after logging back in.
+- **Different user:** a different `clerk_user_id` never matches the first
+  user's `user_id`, so users cannot see each other's events.
+
+### Trust model & token verification
+The backend resolves the current user id with this preference order
+(`resolveCurrentUserId` in `server.js`):
+
+1. **Verified Clerk session JWT** — the browser sends
+   `Authorization: Bearer <Clerk.session.getToken()>`. The server verifies the
+   signature against Clerk's public **JWKS** (`<issuer>/.well-known/jwks.json`)
+   and the `iss` claim, then takes the user id from the signed `sub` claim.
+   This is cryptographically authoritative and cannot be spoofed.
+2. **`X-Clerk-User-Id` header fallback** — used **only** when token verification
+   is not configured (no real Clerk key, e.g. CI / local memory-store runs) or
+   when `WATCHTOWER_TRUST_USER_HEADER=true` is explicitly set.
+
+The Clerk **issuer** (Frontend API origin, e.g.
+`https://your-app.clerk.accounts.dev`) is derived from `CLERK_PUBLISHABLE_KEY`
+(base64-encoded inside the key) or set explicitly via `CLERK_JWT_ISSUER`.
+**No Clerk secret key is needed** — JWKS verification uses only public keys.
+
+When a real Clerk instance is configured, the dashboard routes **require** a
+valid token: a request with only a (forged) `X-Clerk-User-Id` header and no
+valid token is rejected with 401.
 
 ---
 
@@ -97,24 +174,29 @@ backend. The dashboard stores **telemetry events only** — no credentials.
 
 ---
 
-## Why frontend-only protection is acceptable for the prototype
-- Prototype 3's goal is to demonstrate the dashboard experience and the
-  landing → login → dashboard journey, not to harden a production deployment.
-- The guard meaningfully improves the demo: anonymous users are bounced to
-  login and never see dashboard content.
-- It is explicitly **not** a security boundary: a determined user could call the
-  open `/api/*` endpoints directly. That is an accepted, documented limitation.
+## Protection model
+- Prototype 3 demonstrates the dashboard experience, the
+  landing → login → dashboard journey, and **per-user data isolation**.
+- The client guard bounces anonymous users to login so they never see dashboard
+  content.
+- The dashboard read routes (`GET /api/events`, `GET /api/stats`,
+  `GET /api/developer/stream`, `GET /api/developer/insights`,
+  `POST /api/developer/query`) require an authenticated user (401 otherwise) and
+  scope all data to that user.
+- When a real Clerk instance is configured, the user id comes from a
+  **verified Clerk session JWT** (see "Trust model & token verification"), so it
+  cannot be spoofed. The `X-Clerk-User-Id` header is only a fallback for
+  unconfigured/test environments.
+- `POST /api/events`, `POST /api/beacon`, and `/api/events/stream` remain open so
+  external/SDK ingestion keeps working without a dashboard login.
 
-### Future backend verification plan
-- The Prototype 3 server (`src/prototype_3/server/server.js`) currently serves
-  static files and the `/api/events`, `/api/stats`, `/api/developer/*`, and
-  `/api/events/stream` endpoints **without** auth.
-- For production, protected dashboard API routes must verify the Clerk
-  **session token** server-side (e.g. via Clerk's backend SDK / JWKS
-  verification) before returning data. The browser would attach the token from
-  `Clerk.session.getToken()` as a `Bearer` header.
-- The event schema does not change for this — only an auth middleware is added
-  in front of the protected routes.
+### Remaining hardening (optional, defense-in-depth)
+- Token verification is enforced at the API layer. A further step is to push
+  scoping into the database via **Supabase RLS** using the Clerk Third-Party
+  Auth integration (policies on `auth.jwt() ->> 'sub'`), so even an API bug
+  cannot leak cross-user rows. This requires the DB client to carry the Clerk
+  token (the server currently uses the service-role key, which bypasses RLS).
+- The event schema does not change for any of this.
 
 ---
 
@@ -179,11 +261,25 @@ the Node server (not just the static file flow).
 15. Confirm the Clerk **sign-up** UI appears, and signing up redirects to the
     Prototype 3 dashboard.
 
-### Automated checks (unaffected by this work)
+### Per-user scoping verification (requires Supabase configured)
+1. Sign in as **User A**.
+2. In Supabase, confirm a row for User A appears in `app_users`
+   (`clerk_user_id` = User A's Clerk id, with `last_seen_at` set).
+3. Confirm User A's dashboard shows their own stats/events (a brand-new user
+   starts at **0**).
+4. Generate events as User A (the dashboard sends `X-Clerk-User-Id`, so new
+   `prototype3_events` rows get `user_id` = User A's Clerk id).
+5. Log out, then log back in as User A.
+6. Confirm User A still sees the same saved events/stats.
+7. Sign in as a different **User B**.
+8. Confirm User B starts at **0** and does **not** see any of User A's data.
+
+### Automated checks
 ```bash
 npm run test:unit   # event-store + shared utils
 npm run test:e2e    # Playwright
 npm run docs:js     # JSDoc generation
 ```
-These cover event tracking and are intentionally not weakened by the auth
-changes.
+The Playwright API specs send an `X-Clerk-User-Id` header so they post and read
+back events as a single synthetic user, validating the per-user scoping without
+weakening external SDK ingestion (which stays open).

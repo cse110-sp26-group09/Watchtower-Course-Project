@@ -10,10 +10,23 @@
   "use strict";
 
   let versionSelect = document.getElementById("version-select");
+
+  // Same-origin bridge: the dashboard's auth-guard stores the signed-in Clerk
+  // user id in localStorage. Tagging demo events with it lets them show up on
+  // that user's scoped Prototype 3 dashboard. Falls back to null (anonymous)
+  // when no one is signed in, which mirrors true external SDK ingestion.
+  let dashboardClerkUserId = null;
+  try {
+    dashboardClerkUserId = localStorage.getItem("watchtower_clerk_user_id") || null;
+  } catch (_error) {
+    dashboardClerkUserId = null;
+  }
+
   let watchTower = new WatchTower({
     endpoint: "/api/events",
     deployVersion: versionSelect.value,
     appName: "shopdemo",
+    userId: dashboardClerkUserId,
   });
 
   let appContainer = document.getElementById("app");
