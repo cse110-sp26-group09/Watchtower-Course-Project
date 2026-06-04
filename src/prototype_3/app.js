@@ -1,6 +1,58 @@
 (function () {
   "use strict";
 
+  // ─── Per-user dashboard scoping ───────────────────────────────────────────
+  // Every dashboard API request is scoped to the signed-in Clerk user via the
+  // X-Clerk-User-Id header. auth-guard.js loads Clerk and redirects anonymous
+  // visitors before this shell is shown, so window.Clerk.user is normally
+  // available by the time these fetches run.
+  function getClerkUserId() {
+    try {
+      return (window.Clerk && window.Clerk.user && window.Clerk.user.id) || "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  // Builds auth headers for scoped API calls. Async because obtaining a fresh
+  // Clerk session token (for backend JWT verification) is async. Delegates to
+  // auth-guard's window.getClerkUserHeaders when available.
+  function getClerkUserHeaders(extraHeaders) {
+    let base = Object.assign({}, extraHeaders || {});
+    if (typeof window.getClerkUserHeaders === "function") {
+      return Promise.resolve(window.getClerkUserHeaders()).then(function (clerkHeaders) {
+        return Object.assign(base, clerkHeaders || {});
+      });
+    }
+    let userId = getClerkUserId();
+    if (userId) base["X-Clerk-User-Id"] = userId;
+    try {
+      let session = window.Clerk && window.Clerk.session;
+      if (session && typeof session.getToken === "function") {
+        return Promise.resolve(session.getToken()).then(function (token) {
+          if (token) base["Authorization"] = "Bearer " + token;
+          return base;
+        }).catch(function () { return base; });
+      }
+    } catch (_error) {}
+    return Promise.resolve(base);
+  }
+
+  // auth-guard.js loads Clerk asynchronously in <head>; this script runs at the
+  // end of <body>, so window.Clerk.user may not exist yet on first paint.
+  // Resolve once the Clerk user id is available so scoped API calls always carry
+  // the X-Clerk-User-Id header (avoids initial 401s and "stuck at 0" data).
+  function waitForClerkUser(maxWaitMs) {
+    return new Promise(function (resolve) {
+      let deadline = Date.now() + (typeof maxWaitMs === "number" ? maxWaitMs : 15000);
+      (function check() {
+        if (getClerkUserId()) { resolve(true); return; }
+        if (Date.now() > deadline) { resolve(false); return; }
+        setTimeout(check, 150);
+      })();
+    });
+  }
+
   let POLL_INTERVAL = 3000;
   let availableViewNames = ["home", "issues", "health", "analytics", "settings"];
   let viewToggleElements = document.querySelectorAll("[data-view]");
@@ -55,6 +107,7 @@
   let developerLatencyThresholdInput = document.getElementById("dev-latency-threshold");
   let userDeltaBadge = document.getElementById("user-delta");
   let purchaseDeltaBadge = document.getElementById("purchase-delta");
+  let errorDeltaBadge = document.getElementById("error-delta");
   let latencyLine = document.getElementById("latency-line");
   let latencyLegend = document.getElementById("latency-legend");
   let latencyYAxis = document.getElementById("latency-y-axis");
@@ -69,6 +122,7 @@
   let analyticsRangeLatency = document.getElementById("analytics-range-latency");
   let displayNameInput = document.getElementById("display-name");
   let profileDisplayName = document.getElementById("profile-display-name");
+  let profileInitialsEl = document.getElementById("profile-initials");
   let profileStatusLine = document.getElementById("profile-status-line");
   let changePasswordButton = document.getElementById("change-password-button");
   let signOutButton = document.getElementById("sign-out-button");
@@ -226,6 +280,7 @@
     issueSearchText: "",
     developerAlertsMuted: false,
     issueAssignments: {},
+    expandedIssueIds: {},
     issueAssignees: ["Aditya", "Fahad", "James", "Hieu", "Daniel", "Jason", "Waleed", "Josh", "Woosik", "Alex", "Hemendra"],
     developerTab: "stream",
     developerInsights: null,
@@ -241,9 +296,17 @@
   let developerShortcutPrimedAt = 0;
 
   function escapeHtml(value) {
-    let el = document.createElement("span");
-    el.textContent = value == null ? "" : String(value);
-    return el.innerHTML;
+    // Escape all five HTML-significant characters, including quotes. The output
+    // is used both as element text and inside double-quoted attributes (e.g.
+    // data-* and value="..."), so quotes MUST be escaped to prevent attribute
+    // breakout / stored XSS from attacker-controlled event fields. The previous
+    // textContent->innerHTML approach left " and ' unescaped.
+    return (value == null ? "" : String(value))
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function getValidTimestamp(value) {
@@ -412,10 +475,10 @@
 
     if (dashboardModeSelect) dashboardModeSelect.value = resolvedMode;
     if (dashboardModePill) {
-      let nextModeLabel = resolvedMode === "developer" ? "Manager view" : "Developer view";
-      dashboardModePill.textContent = nextModeLabel;
-      dashboardModePill.setAttribute("aria-label", "Switch to " + nextModeLabel);
-      dashboardModePill.setAttribute("title", "Switch to " + nextModeLabel);
+      dashboardModePill.querySelectorAll(".mode-toggle-option").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-mode") === resolvedMode);
+      });
+      dashboardModePill.classList.toggle("mode-developer", resolvedMode === "developer");
     }
     if (modeCurrentViewLabel) {
       modeCurrentViewLabel.textContent = "Currently on: " + (resolvedMode === "developer" ? "Developer view" : "Manager view");
@@ -447,9 +510,13 @@
     }
 
     if (dashboardModePill) {
-      dashboardModePill.addEventListener("click", function () {
-        let nextMode = uiState.dashboardMode === "developer" ? "manager" : "developer";
-        syncMode(nextMode);
+      dashboardModePill.addEventListener("click", function (event) {
+        let btn = event.target.closest(".mode-toggle-option");
+        if (!btn) return;
+        let nextMode = btn.getAttribute("data-mode");
+        if (nextMode && nextMode !== uiState.dashboardMode) {
+          syncMode(nextMode);
+        }
       });
     }
   }
@@ -606,6 +673,21 @@
         uiState.issueAssignments[issueId] = selectedValue;
       }
     });
+
+    issueListContainer.addEventListener("click", function (event) {
+      if (event.target.closest("select") || event.target.closest("label")) return;
+      let row = event.target.closest(".issue-row");
+      if (!row) return;
+      let rowId = row.getAttribute("data-issue-id");
+      if (!rowId) return;
+      if (uiState.expandedIssueIds[rowId]) {
+        delete uiState.expandedIssueIds[rowId];
+        row.classList.remove("expanded");
+      } else {
+        uiState.expandedIssueIds[rowId] = true;
+        row.classList.add("expanded");
+      }
+    });
   }
 
   function initializeIssueExpansionControls() {
@@ -746,7 +828,10 @@
     params.set("limit", "80");
     params.set("cursor", String(appendOlder ? uiState.developerStreamCursor : 0));
 
-    return fetch("/api/developer/stream?" + params.toString())
+    return getClerkUserHeaders()
+      .then(function (headers) {
+        return fetch("/api/developer/stream?" + params.toString(), { headers: headers });
+      })
       .then(function (res) { return res.json(); })
       .then(function (payload) {
         let rows = Array.isArray(payload.events) ? payload.events : [];
@@ -959,11 +1044,14 @@
     if (!queryText) return Promise.resolve();
 
     if (devQueryMeta) devQueryMeta.textContent = "Running query...";
-    return fetch("/api/developer/query", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: queryText })
-    })
+    return getClerkUserHeaders({ "Content-Type": "application/json" })
+      .then(function (headers) {
+        return fetch("/api/developer/query", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ query: queryText })
+        });
+      })
       .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
       .then(function (result) {
         if (!result.ok || result.data.error) {
@@ -1471,18 +1559,32 @@
   function initializeProfileControls() {
     if (!displayNameInput || !profileDisplayName) return;
 
-    let savedName = loadUiPreference(PROFILE_STORAGE_KEY) || "";
-    if (savedName) {
-      displayNameInput.value = savedName;
-      profileDisplayName.textContent = savedName;
+    function applyUserProfile(displayName, initials) {
+      profileDisplayName.textContent = displayName;
+      displayNameInput.value = displayName;
+      if (profileInitialsEl) profileInitialsEl.textContent = initials;
     }
 
     function commitDisplayName() {
-      let nextName = displayNameInput.value.trim() || "Aditya";
+      const currentUser = window.WatchTowerCurrentUser;
+      const nextName = displayNameInput.value.trim() || profileDisplayName.textContent.trim() || "User";
       displayNameInput.value = nextName;
       profileDisplayName.textContent = nextName;
-      saveUiPreference(PROFILE_STORAGE_KEY, nextName);
+      if (currentUser) {
+        try {
+          localStorage.setItem(currentUser.profileStorageKey, nextName);
+        } catch (_e) {}
+      }
       setProfileStatus("Display name updated.");
+    }
+
+    const currentUser = window.WatchTowerCurrentUser;
+    if (currentUser) {
+      applyUserProfile(currentUser.displayName, currentUser.initials);
+    } else {
+      document.addEventListener("watchtower:user-ready", function (event) {
+        applyUserProfile(event.detail.displayName, event.detail.initials);
+      }, { once: true });
     }
 
     displayNameInput.addEventListener("change", commitDisplayName);
@@ -1640,8 +1742,20 @@
           return '<option value="' + escapeHtml(name) + '"' + sel + '>' + escapeHtml(name) + '</option>';
         })).join("");
 
+      let stack = eventRecord.data.stack || "";
+      let source = eventRecord.data.source || "unknown";
+      let line = eventRecord.data.line || 0;
+      let col = eventRecord.data.col || 0;
+      let environment = eventRecord.environment || "production";
+      let sessionId = eventRecord.sessionId || "unknown";
+      let userId = eventRecord.userId || "anonymous";
+      let sdkVersion = eventRecord.sdkVersion || "unknown";
+      let fullTimestamp = formatTimestamp(eventRecord.timestamp);
+
+      let isExpanded = uiState.expandedIssueIds[issueId] ? " expanded" : "";
+
       return (
-        '<article class="issue-row ' + (sev === "warning" ? "severity-warning" : "severity-critical") + '">' +
+        '<article class="issue-row ' + (sev === "warning" ? "severity-warning" : "severity-critical") + isExpanded + '" data-issue-id="' + escapeHtml(issueId) + '">' +
         '<div class="issue-main">' +
         '<span class="severity-pill">' + (sev === "warning" ? "Warning" : "Critical") + "</span>" +
         "<h3>" + escapeHtml(eventRecord.data.message || "Runtime core error") + "</h3>" +
@@ -1653,6 +1767,20 @@
         "</div>" +
         "</div>" +
         '<label class="assign-control"><span>Assign</span><select data-issue-id="' + escapeHtml(issueId) + '">' + options + "</select></label>" +
+        '<div class="issue-expand">' +
+        '<p class="issue-expand-title">Issue details</p>' +
+        '<div class="issue-expand-grid">' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">Timestamp</span><span class="issue-expand-value">' + escapeHtml(fullTimestamp) + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">Route</span><span class="issue-expand-value">' + escapeHtml(eventRecord.route || "/") + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">Environment</span><span class="issue-expand-value">' + escapeHtml(environment) + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">Session</span><span class="issue-expand-value">' + escapeHtml(sessionId) + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">User</span><span class="issue-expand-value">' + escapeHtml(userId) + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">Version</span><span class="issue-expand-value">' + escapeHtml(eventRecord.deployVersion || "unknown") + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">SDK</span><span class="issue-expand-value">' + escapeHtml(sdkVersion) + '</span></div>' +
+        '<div class="issue-expand-item"><span class="issue-expand-key">Source</span><span class="issue-expand-value">' + escapeHtml(source) + (line ? ":" + line : "") + (col ? ":" + col : "") + '</span></div>' +
+        (stack ? '<div class="issue-expand-stack"><span class="issue-expand-key">Stack trace</span><pre>' + escapeHtml(stack) + '</pre></div>' : '') +
+        '</div>' +
+        '</div>' +
         "</article>"
       );
     }).join("");
@@ -1727,11 +1855,11 @@
     let avgRating = feedbackRatings.length ? feedbackRatings.reduce(function (sum, rating) { return sum + rating; }, 0) / feedbackRatings.length : 0;
     let distinctRoutes = new Set(rangeEvents.map(function (eventRecord) { return eventRecord.route || "/"; })).size;
     let distinctTypes = new Set(rangeEvents.map(function (eventRecord) { return eventRecord.type || "custom"; })).size;
-    let availabilityScore = totalSignals === 0 ? 35 : Math.max(0, Math.round(100 - (errorRate * 220)));
-    let errorScore = totalSignals === 0 ? 35 : Math.max(0, Math.round(100 - (errorRate * 260)));
-    let latencyScore = peakLatency === 0 ? 35 : Math.max(0, Math.round(100 - (peakLatency / 22)));
+    let availabilityScore = totalSignals === 0 ? 75 : Math.max(0, Math.round(100 - (errorRate * 220)));
+    let errorScore = totalSignals === 0 ? 75 : Math.max(0, Math.round(100 - (errorRate * 260)));
+    let latencyScore = peakLatency === 0 ? 75 : Math.max(0, Math.round(100 - (peakLatency / 22)));
     let signalScore = Math.min(100, Math.round((distinctTypes * 15) + (distinctRoutes * 10) + Math.min(45, totalSignals * 0.8)));
-    let feedbackScore = feedbackRatings.length === 0 ? 20 : Math.round((avgRating / 5) * 100);
+    let feedbackScore = feedbackRatings.length === 0 ? 75 : Math.round((avgRating / 5) * 100);
     let dimensions = [
       { label: "Availability", value: availabilityScore, shortLabel: "Avail" },
       { label: "Errors", value: errorScore, shortLabel: "Err" },
@@ -1740,8 +1868,8 @@
       { label: "Feedback", value: feedbackScore, shortLabel: "Fb" }
     ];
     let average = Math.round(dimensions.reduce(function (sum, item) { return sum + item.value; }, 0) / dimensions.length);
-    let statusClass = average >= 82 ? "good" : (average >= 62 ? "warning" : "danger");
-    let statusText = average >= 82 ? "Healthy" : (average >= 62 ? "Watch" : "Action needed");
+    let statusClass = average >= 75 ? "good" : (average >= 55 ? "warning" : "danger");
+    let statusText = average >= 75 ? "Healthy" : (average >= 55 ? "Watch" : "Critical");
     return {
       dimensions: dimensions,
       average: average,
@@ -1752,6 +1880,48 @@
     };
   }
 
+  function getErrorStatusClass(count) {
+    if (count === 0) return "status-green";
+    if (count <= 10) return "status-yellow";
+    return "status-red";
+  }
+
+  function getLatencyStatusClass(ms) {
+    if (ms < 200) return "status-green";
+    if (ms <= 800) return "status-yellow";
+    return "status-red";
+  }
+
+  function getHealthStatusClass(score) {
+    if (score >= 75) return "status-green";
+    if (score >= 55) return "status-yellow";
+    return "status-red";
+  }
+
+  function applyStatusClass(element, statusClass) {
+    if (!element) return;
+    element.classList.remove("status-green", "status-yellow", "status-red");
+    element.classList.add(statusClass);
+  }
+
+  function applyFrameStatus(childElement, statusClass) {
+    if (!childElement) return;
+    let frame = childElement.closest(".dev-stat-card") || childElement.closest(".metric-tile");
+    if (!frame) return;
+    frame.classList.remove("frame-green", "frame-yellow", "frame-red");
+    frame.classList.add("frame-" + statusClass.replace("status-", ""));
+  }
+
+  function applyCardAccent(childElement, statusClass) {
+    if (!childElement) return;
+    let card = childElement.closest(".dev-stat-card");
+    if (!card) return;
+    card.classList.remove("accent-errors", "accent-latency", "accent-traffic", "accent-green", "accent-amber", "accent-red");
+    if (statusClass === "status-green") card.classList.add("accent-green");
+    else if (statusClass === "status-yellow") card.classList.add("accent-amber");
+    else card.classList.add("accent-red");
+  }
+
   function renderDeveloperHeroStats(stats, activityEvents) {
     let rangeEvents = getRangeEvents(activityEvents);
     let uniqueUsers = new Set();
@@ -1759,7 +1929,9 @@
       let userKey = eventRecord.userId || eventRecord.sessionId;
       if (userKey) uniqueUsers.add(String(userKey));
     });
-    let maxUsers = Math.max(uniqueUsers.size, stats.activeUsers || 0);
+    let maxUsers = Number.isFinite(stats.maxUsers)
+      ? stats.maxUsers
+      : Math.max(uniqueUsers.size, stats.activeUsers || 0);
     let routeNames = Object.keys(stats.latencyByRoute || {});
     let averageLatency = 0;
 
@@ -1783,9 +1955,21 @@
     if (devActiveUsersTrend) devActiveUsersTrend.textContent = "Current sessions";
     if (devMaxUsersValue) devMaxUsersValue.textContent = String(maxUsers || 0);
     if (devMaxUsersTrend) devMaxUsersTrend.textContent = "Peak in last 24h";
-    if (devActiveIssuesValue) devActiveIssuesValue.textContent = String(stats.totalErrors || 0);
+    if (devActiveIssuesValue) {
+      let errStatus = getErrorStatusClass(stats.totalErrors || 0);
+      devActiveIssuesValue.textContent = String(stats.totalErrors || 0);
+      applyStatusClass(devActiveIssuesValue, errStatus);
+      applyFrameStatus(devActiveIssuesValue, errStatus);
+      applyCardAccent(devActiveIssuesValue, errStatus);
+    }
     if (devActiveIssuesTrend) devActiveIssuesTrend.textContent = (stats.totalErrors || 0) > 0 ? "Needs review" : "No blockers";
-    if (devAverageLatencyValue) devAverageLatencyValue.textContent = String(averageLatency || 0) + " ms";
+    if (devAverageLatencyValue) {
+      let latStatus = getLatencyStatusClass(averageLatency || 0);
+      devAverageLatencyValue.textContent = String(averageLatency || 0) + " ms";
+      applyStatusClass(devAverageLatencyValue, latStatus);
+      applyFrameStatus(devAverageLatencyValue, latStatus);
+      applyCardAccent(devAverageLatencyValue, latStatus);
+    }
     if (devAverageLatencyTrend) devAverageLatencyTrend.textContent = routeNames.length > 0 ? "Across " + routeNames.length + " routes" : "Across all routes";
     if (devPeakTrafficValue) devPeakTrafficValue.textContent = String(trafficEvents) + "/min";
     if (devPeakTrafficTrend) devPeakTrafficTrend.textContent = "Requests per minute";
@@ -1847,8 +2031,17 @@
         developerInsightLatency.innerHTML = '<li class="severity-medium"><span class="rank">-</span><span>Waiting for route telemetry</span><strong>0 ms</strong></li>';
       } else {
         developerInsightLatency.innerHTML = routes.map(function (entry, idx) {
-          return '<li class="severity-medium"><span class="rank">' + (idx + 1) + '</span><span>' + escapeHtml(entry.route) + "</span><strong>" + entry.p95 + " ms</strong></li>";
+          let latClass = entry.p95 < 200 ? "latency-green" : (entry.p95 <= 800 ? "latency-yellow" : "latency-red");
+          return '<li class="' + latClass + '"><span class="rank">' + (idx + 1) + '</span><span>' + escapeHtml(entry.route) + "</span><strong>" + entry.p95 + " ms</strong></li>";
         }).join("");
+      }
+      let bundlePanel = developerInsightLatency.closest(".bundle-latency");
+      if (bundlePanel) {
+        let worstP95 = routes.length > 0 ? routes[0].p95 : 0;
+        bundlePanel.classList.remove("bundle-lat-green", "bundle-lat-yellow", "bundle-lat-red");
+        if (worstP95 < 200) bundlePanel.classList.add("bundle-lat-green");
+        else if (worstP95 <= 800) bundlePanel.classList.add("bundle-lat-yellow");
+        else bundlePanel.classList.add("bundle-lat-red");
       }
     }
 
@@ -1901,7 +2094,10 @@
       ? ("Highest p95 route latency is " + Math.round(healthModel.peakLatency) + " ms.")
       : "No pageload latency samples yet.";
 
-    if (devOverallScore) devOverallScore.textContent = healthModel.average + "%";
+    if (devOverallScore) {
+      devOverallScore.textContent = healthModel.average + "%";
+      applyStatusClass(devOverallScore, getHealthStatusClass(healthModel.average));
+    }
     if (devOverallLabel) devOverallLabel.textContent = healthModel.statusText;
     if (devHomeSummaryErrors) devHomeSummaryErrors.textContent = String(errorCount);
     if (devHealthToken) {
@@ -1991,6 +2187,20 @@
       let className = "bar" + (idx === highlightedIndex ? " highlight" : "") + (labels.length > 8 ? " dense" : "");
       return '<div class="' + className + '" style="--bar-height: ' + Math.max(pct, 8) + '%" data-value="' + escapeHtml(values[idx]) + '">' +
         '<i class="bar-fill" aria-hidden="true"></i><span>' + escapeHtml(l) + '</span></div>';
+    }).join("");
+  }
+
+  function renderErrorBarChart(chartContainer, labels, values) {
+    if (!chartContainer) return;
+    let max = Math.max.apply(null, values.concat([1]));
+    chartContainer.style.setProperty("--bar-count", String(Math.max(labels.length, 1)));
+    chartContainer.classList.toggle("is-empty", values.every(function (v) { return v === 0; }));
+    chartContainer.innerHTML = labels.map(function (l, idx) {
+      let v = values[idx];
+      let pct = Math.round((v / max) * 100);
+      let color = v === 0 ? "var(--green)" : (v <= 10 ? "var(--amber)" : "var(--coral)");
+      return '<div class="bar' + (labels.length > 8 ? " dense" : "") + '" style="--bar-height: ' + Math.max(pct, 8) + '%" data-value="' + v + '">' +
+        '<i class="bar-fill" style="background:' + color + '" aria-hidden="true"></i><span>' + escapeHtml(l) + '</span></div>';
     }).join("");
   }
 
@@ -2148,7 +2358,7 @@
       { key: "Performance", className: "teal", count: 0, detail: "Pageload + web vitals" },
       { key: "Errors", className: "coral", count: 0, detail: "Runtime + API failures" },
       { key: "Feedback", className: "amber", count: 0, detail: "Ratings + comments" },
-      { key: "Clicks", className: "blue", count: 0, detail: "Click + custom actions" }
+      { key: "Events", className: "blue", count: 0, detail: "Click + custom actions" }
     ];
 
     (events || []).forEach(function (eventRecord) {
@@ -2173,38 +2383,47 @@
   }
 
   function renderLatencyChart(stats) {
-    if (!latencyLine || !latencyLegend || !latencyYAxis || !latencyXAxis) return;
+    let chartSvg = document.getElementById("latency-chart");
+    let container = chartSvg ? chartSvg.parentNode : null;
+    if (!container) return;
+
     let routeEntries = Object.keys(stats.latencyByRoute || {}).map(function (route) {
       return { route: route, p95: Number(stats.latencyByRoute[route].p95) || 0, avg: Number(stats.latencyByRoute[route].avg) || 0 };
-    }).sort(function (left, right) { return right.p95 - left.p95; }).slice(0, 6);
+    }).sort(function (left, right) { return right.p95 - left.p95; }).slice(0, 8);
+
+    var barContainer = document.getElementById("latency-bar-chart");
+    if (!barContainer) {
+      chartSvg.style.display = "none";
+      barContainer = document.createElement("div");
+      barContainer.id = "latency-bar-chart";
+      barContainer.className = "bar-chart latency-route-chart";
+      container.insertBefore(barContainer, chartSvg);
+    }
+
+    if (!latencyLegend) return;
 
     if (routeEntries.length === 0) {
-      latencyLine.setAttribute("d", "M60 240 L610 240");
-      latencyYAxis.innerHTML = "";
-      latencyXAxis.innerHTML = "";
-      latencyLegend.innerHTML = '<span><i class="legend-swatch checkout"></i>Waiting for pageload samples</span>';
+      barContainer.style.setProperty("--bar-count", "1");
+      barContainer.classList.add("is-empty");
+      barContainer.innerHTML = '<div class="bar" style="--bar-height:8%" data-value="0"><i class="bar-fill" aria-hidden="true"></i><span>No routes</span></div>';
+      latencyLegend.innerHTML = '<span>Waiting for pageload samples</span>';
       return;
     }
 
-    let max = Math.max.apply(null, routeEntries.map(function (entry) { return entry.p95; }).concat([100]));
-    let points = routeEntries.map(function (entry, idx) {
-      let x = routeEntries.length === 1 ? 335 : 60 + (idx * (550 / (routeEntries.length - 1)));
-      let y = 240 - ((entry.p95 / max) * 200);
-      return { x: Math.round(x), y: Math.round(y), entry: entry };
-    });
+    barContainer.classList.remove("is-empty");
+    let max = Math.max.apply(null, routeEntries.map(function (e) { return e.p95; }).concat([100]));
+    barContainer.style.setProperty("--bar-count", String(routeEntries.length));
+    barContainer.innerHTML = routeEntries.map(function (entry) {
+      let pct = Math.round((entry.p95 / max) * 100);
+      let color = entry.p95 < 200 ? "var(--green)" : (entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
+      let label = entry.route.replace("/demo", "demo") || "/";
+      return '<div class="bar" style="--bar-height:' + Math.max(pct, 8) + '%" data-value="' + entry.p95 + 'ms">' +
+        '<i class="bar-fill" style="background:' + color + '" aria-hidden="true"></i><span>' + escapeHtml(label) + '</span></div>';
+    }).join("");
 
-    latencyLine.setAttribute("d", points.map(function (point, idx) {
-      return (idx === 0 ? "M" : "L") + point.x + " " + point.y;
-    }).join(" "));
-    latencyYAxis.innerHTML = [max, Math.round(max / 2), 0].map(function (value, idx) {
-      return '<text x="52" y="' + (44 + idx * 100) + '">' + Math.round(value) + 'ms</text>';
-    }).join("");
-    latencyXAxis.innerHTML = points.map(function (point) {
-      return '<text x="' + point.x + '" y="264">' + escapeHtml(point.entry.route.replace("/demo", "demo") || "/") + '</text>';
-    }).join("");
-    latencyLegend.innerHTML = routeEntries.slice(0, 3).map(function (entry, idx) {
-      let legendClass = idx === 0 ? "checkout" : (idx === 1 ? "search" : "products");
-      return '<span><i class="legend-swatch ' + legendClass + '"></i>' + escapeHtml(entry.route) + ' p95 ' + entry.p95 + 'ms</span>';
+    latencyLegend.innerHTML = routeEntries.slice(0, 4).map(function (entry) {
+      var color = entry.p95 < 200 ? "var(--green)" : (entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
+      return '<span><i class="legend-swatch" style="background:' + color + '"></i>' + escapeHtml(entry.route) + ' p95 ' + entry.p95 + 'ms</span>';
     }).join("");
   }
 
@@ -2283,6 +2502,7 @@
 
     context.strokeStyle = "rgba(140, 161, 182, 0.25)";
     context.lineWidth = 1;
+    let ySteps = [0, 0.25, 0.5, 0.75, 1];
     for (let gridIndex = 0; gridIndex <= 4; gridIndex += 1) {
       let y = padTop + (chartHeight * (gridIndex / 4));
       context.beginPath();
@@ -2290,6 +2510,16 @@
       context.lineTo(width - padRight, y);
       context.stroke();
     }
+
+    context.fillStyle = "rgba(197, 214, 235, 0.9)";
+    context.font = "10px Inter, system-ui, sans-serif";
+    context.textAlign = "right";
+    ySteps.forEach(function (frac, idx) {
+      let y = padTop + (chartHeight * (idx / 4));
+      let label = Math.round(maxValue * (1 - frac)) + "ms";
+      context.fillText(label, padLeft - 4, y + 4);
+    });
+    context.textAlign = "left";
 
     let thresholdY = padTop + chartHeight - ((threshold / maxValue) * chartHeight);
     context.setLineDash([6, 4]);
@@ -2437,15 +2667,23 @@
     renderBarChart(userChartContainer, userSeries.labels, userSeries.values, userSeries.values.length - 1);
     renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1);
     renderLatencyChart(stats);
-    renderBarChart(developerErrorChartContainer, errorSeries.labels, errorSeries.values, errorSeries.values.length - 1);
+    renderErrorBarChart(developerErrorChartContainer, errorSeries.labels, errorSeries.values);
     renderDeveloperLatencyCanvas(rangeEvents, bucketCount);
     renderRatingSummary(rangeEvents);
     renderEventBreakdown(rangeEvents);
     renderAnalyticsSummary(rangeEvents, stats.latencyByRoute || {});
 
-    if (analyticsRangeLatency) analyticsRangeLatency.textContent = peakLatency + " ms";
+    if (analyticsRangeLatency) {
+      analyticsRangeLatency.textContent = peakLatency + " ms";
+      applyStatusClass(analyticsRangeLatency, getLatencyStatusClass(peakLatency));
+    }
     if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " current bucket";
     if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
+    if (errorDeltaBadge) {
+      let totalErr = stats.totalErrors || 0;
+      errorDeltaBadge.textContent = formatNumber(totalErr) + " total";
+      errorDeltaBadge.className = "delta-badge " + (totalErr === 0 ? "positive" : "negative");
+    }
   }
 
   function updateDashboardStats(stats, events) {
@@ -2455,7 +2693,11 @@
 
     if (activeUsersValue) activeUsersValue.textContent = String(stats.activeUsers || 0);
     if (totalEventsValue) totalEventsValue.textContent = String(stats.totalEvents || 0);
-    if (totalErrorsValue) totalErrorsValue.textContent = String(stats.totalErrors || 0);
+    if (totalErrorsValue) {
+      totalErrorsValue.textContent = String(stats.totalErrors || 0);
+      applyStatusClass(totalErrorsValue, getErrorStatusClass(stats.totalErrors || 0));
+      applyFrameStatus(totalErrorsValue, getErrorStatusClass(stats.totalErrors || 0));
+    }
     if (versionCountValue) versionCountValue.textContent = String(Object.keys(stats.errorsByVersion || {}).length);
     if (sidebarUsersValue) sidebarUsersValue.textContent = String(stats.activeUsers || 0);
     if (sidebarEventsValue) sidebarEventsValue.textContent = String(stats.totalEvents || 0);
@@ -2464,6 +2706,19 @@
     if (alertPillButton) alertPillButton.classList.toggle("quiet", (stats.totalErrors || 0) === 0);
 
     renderIssueList(stats.recentErrors || []);
+
+    let criticalCount = 0, warningCount = 0, infoCount = 0;
+    (stats.recentErrors || []).forEach(function (err) {
+      let sev = toIssueSeverity(err);
+      if (sev === "critical") criticalCount += 1;
+      else if (sev === "warning") warningCount += 1;
+      else infoCount += 1;
+    });
+    if (developerCriticalCount) developerCriticalCount.textContent = String(criticalCount);
+    if (developerWarningCount) developerWarningCount.textContent = String(warningCount);
+    if (developerInfoCount) developerInfoCount.textContent = String(infoCount);
+    if (developerTotalCount) developerTotalCount.textContent = String(stats.totalErrors || 0);
+
     renderServiceStatus(stats);
     renderFeatureHotspots(resolved);
     renderManagerSummary(stats, resolved);
@@ -2477,11 +2732,18 @@
   }
 
   function fetchDashboardStats() {
-    return Promise.all([
-      fetch("/api/stats").then(function (r) { return r.json(); }),
-      fetch("/api/events?limit=600").then(function (r) { return r.json(); }).then(function (p) { return p.events || []; }),
-      fetch("/api/developer/insights").then(function (r) { return r.json(); })
-    ])
+    // Skip (rather than 401-spam) until Clerk has loaded a signed-in user.
+    if (!getClerkUserId()) {
+      return Promise.resolve();
+    }
+    return getClerkUserHeaders()
+      .then(function (userHeaders) {
+        return Promise.all([
+          fetch("/api/stats", { headers: userHeaders }).then(function (r) { return r.json(); }),
+          fetch("/api/events?limit=600", { headers: userHeaders }).then(function (r) { return r.json(); }).then(function (p) { return p.events || []; }),
+          fetch("/api/developer/insights", { headers: userHeaders }).then(function (r) { return r.json(); })
+        ]);
+      })
       .then(function (res) {
         updateDashboardStats(res[0], res[1]);
         renderDeveloperWorkbench(res[2]);
@@ -2534,7 +2796,11 @@
     initializeDeveloperAnalyticsControls();
     initializeLiveEventStream();
     activateView(availableViewNames.indexOf(hash) === -1 ? "home" : hash);
-    fetchDashboardStats();
+    // Wait for Clerk to confirm the signed-in user before the first scoped
+    // fetch, then poll. The interval still self-guards via getClerkUserId().
+    waitForClerkUser().then(function () {
+      fetchDashboardStats();
+    });
     setInterval(fetchDashboardStats, POLL_INTERVAL);
   }
 

@@ -154,22 +154,140 @@
     });
   }
 
+  const PROFILE_NAME_KEY_PREFIX = "watchtower_profile_";
   /**
-   * Populate the optional user label and wire all logout controls.
+   * Build the headers used to authenticate dashboard API calls.
+   *
+   * Sends a verifiable Clerk session token as `Authorization: Bearer <jwt>` so
+   * the backend can verify it and derive the user id from the signed `sub`
+   * claim. The `X-Clerk-User-Id` header is included only as a fallback for
+   * environments where backend verification is not configured (the backend
+   * ignores it when verification is enforced).
+   *
+   * @returns {Promise<Object<string,string>>} Header map (empty when signed out).
+   */
+  async function getClerkUserHeaders() {
+    const headers = {};
+    const user = window.Clerk && window.Clerk.user;
+    if (!user || !user.id) return headers;
+    headers["X-Clerk-User-Id"] = user.id;
+    try {
+      const session = window.Clerk.session;
+      const token = session && typeof session.getToken === "function" ? await session.getToken() : null;
+      if (token) headers["Authorization"] = "Bearer " + token;
+    } catch (_error) {
+      // No session token available (e.g. stubbed Clerk in tests); fall back to
+      // the id header only.
+    }
+    return headers;
+  }
+
+  /**
+   * Persist the Clerk user id (same-origin) so the monitored ShopDemo SDK can
+   * stamp the events it generates with the signed-in user, letting them appear
+   * on this user's scoped dashboard. Cleared on sign-out.
+   * @param {object} user - Clerk user resource.
+   * @returns {void}
+   */
+  function persistClerkUserId(user) {
+    try {
+      if (user && user.id) {
+        localStorage.setItem("watchtower_clerk_user_id", user.id);
+      }
+    } catch (_error) {}
+  }
+
+  /**
+   * Upsert the signed-in Clerk user into the WatchTower app_users table so the
+   * backend can scope events/stats to this Clerk user id. Fire-and-forget.
+   * @param {object} user - Clerk user resource.
+   * @returns {void}
+   */
+  function syncCurrentUser(user) {
+    if (!user || !user.id) return;
+
+    getClerkUserHeaders()
+      .then((authHeaders) => {
+        return fetch("/api/users/sync", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders),
+          body: JSON.stringify({
+            clerkUserId: user.id,
+            email: (user.primaryEmailAddress && user.primaryEmailAddress.emailAddress) || "",
+            displayName: user.fullName || user.username || "",
+          }),
+          keepalive: true,
+        });
+      })
+      .catch((error) => {
+        console.error("[auth-guard] Failed to sync user:", error);
+      });
+  }
+
+  // Expose the header helper so dashboard scripts can reuse it if needed.
+  window.getClerkUserHeaders = getClerkUserHeaders;
+
+  function userDisplayName(user) {
+    if (!user) return "";
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+    return fullName || user.username || (user.primaryEmailAddress && user.primaryEmailAddress.emailAddress) || "";
+  }
+
+  function userInitials(user) {
+    if (!user) return "";
+    const firstName = (user.firstName || "").trim();
+    const lastName = (user.lastName || "").trim();
+    if (firstName && lastName) return (firstName[0] + lastName[0]).toUpperCase();
+    if (firstName) return firstName.slice(0, 2).toUpperCase();
+    const primaryEmail = userPrimaryEmail(user);
+    return primaryEmail ? primaryEmail[0].toUpperCase() : "";
+  }
+
+  function resolveProfileDisplayName(user) {
+    const userScopedKey = PROFILE_NAME_KEY_PREFIX + user.id;
+    try {
+      const storedCustomName = localStorage.getItem(userScopedKey);
+      if (storedCustomName) return storedCustomName;
+    } catch (_e) {}
+    return userDisplayName(user);
+  }
+
+  /**
+   * Publish user identity for the dashboard UI and wire logout controls.
+   * Dispatches "watchtower:user-ready" so app.js can populate profile fields
+   * without auth-guard needing to know the DOM structure.
    * @param {object} clerk - Initialized Clerk instance.
    * @returns {void}
    */
   function wireUi(clerk) {
+    const resolvedDisplayName = resolveProfileDisplayName(clerk.user);
+    const resolvedInitials = userInitials(clerk.user);
+    const profileStorageKey = PROFILE_NAME_KEY_PREFIX + clerk.user.id;
+
+    window.WatchTowerCurrentUser = {
+      userId: clerk.user.id,
+      displayName: resolvedDisplayName,
+      initials: resolvedInitials,
+      profileStorageKey: profileStorageKey
+    };
+
     onReady(() => {
-      const label = document.getElementById("auth-user-label");
-      if (label) {
-        label.textContent = userLabel(clerk.user);
+      const authUserLabel = document.getElementById("auth-user-label");
+      if (authUserLabel) {
+        authUserLabel.textContent = userLabel(clerk.user);
       }
+
+      document.dispatchEvent(new window.CustomEvent("watchtower:user-ready", {
+        detail: window.WatchTowerCurrentUser
+      }));
 
       const signOut = (event) => {
         if (event) {
           event.preventDefault();
         }
+        try {
+          localStorage.removeItem("watchtower_clerk_user_id");
+        } catch (_error) {}
         clerk
           .signOut()
           .then(() => window.location.replace(LANDING_URL))
@@ -213,6 +331,10 @@
       revealApp();
       wireUi(clerk);
       registerAlertRecipient(clerk.user);
+      persistClerkUserId(clerk.user);
+      // Ensure an app_users row exists before the dashboard issues scoped
+      // API calls so a first-time user is recognized immediately.
+      syncCurrentUser(clerk.user);
 
       // If the session ends in another tab, bounce back to login.
       clerk.addListener((payload) => {
@@ -221,6 +343,8 @@
           return;
         }
         registerAlertRecipient(payload.user);
+        persistClerkUserId(payload.user);
+        syncCurrentUser(payload.user);
       });
     })
     .catch((error) => {

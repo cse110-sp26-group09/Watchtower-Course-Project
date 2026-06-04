@@ -18,6 +18,7 @@ const {
   normalizeStreamFilters,
   queryEventsWithFilters,
   getRecentEvents,
+  computeMaxConcurrentUsers,
 } = require("../../src/prototype_3/server/server-helpers");
 
 describe("isValidEvent (Prototype 3)", () => {
@@ -161,5 +162,31 @@ describe("parseTimestamp / clampNumber", () => {
     expect(clampNumber(5, 1, 10)).toBe(5);
     expect(clampNumber(99, 1, 10)).toBe(10);
     expect(clampNumber(-3, 0, 10)).toBe(0);
+  });
+});
+
+describe("computeMaxConcurrentUsers", () => {
+  test("returns the historical peak of concurrent sessions", () => {
+    const base = Date.parse("2026-06-01T00:00:00Z");
+    const events = [
+      { sessionId: "a", timestamp: new Date(base).toISOString() },
+      { sessionId: "b", timestamp: new Date(base + 5000).toISOString() },
+      { sessionId: "c", timestamp: new Date(base + 10000).toISOString() },
+      // Long after the burst only one session is active; the peak must not drop.
+      { sessionId: "d", timestamp: new Date(base + 600000).toISOString() },
+    ];
+    expect(computeMaxConcurrentUsers(events, 30000)).toBe(3);
+  });
+
+  test("counts a repeated session once and ignores invalid rows", () => {
+    const base = Date.parse("2026-06-01T00:00:00Z");
+    const events = [
+      { sessionId: "a", timestamp: new Date(base).toISOString() },
+      { sessionId: "a", timestamp: new Date(base + 1000).toISOString() },
+      { sessionId: null, timestamp: new Date(base + 2000).toISOString() },
+      { sessionId: "b", timestamp: "not-a-date" },
+    ];
+    expect(computeMaxConcurrentUsers(events, 30000)).toBe(1);
+    expect(computeMaxConcurrentUsers([], 30000)).toBe(0);
   });
 });
