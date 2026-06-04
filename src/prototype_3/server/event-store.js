@@ -17,6 +17,7 @@ const { normalizeIncomingEvent } = require("./server-helpers");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const DEFAULT_TABLE = "prototype3_events";
+const DEFAULT_USERS_TABLE = "app_users";
 const DEFAULT_MAX_EVENTS = 10000;
 
 loadEnv({ quiet: true });
@@ -144,14 +145,28 @@ function createMemoryEventStore(options) {
     return normalized;
   }
 
-  async function listEvents(limit) {
-    const resolvedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
-    return events.slice(-resolvedLimit);
+  function filterByOwner(source, filters) {
+    const owner = filters && filters.userId ? filters.userId : "";
+    if (!owner) return source;
+    return source.filter(function (event) {
+      return event.userId === owner;
+    });
   }
 
-  async function allEvents(limit) {
+  async function listEvents(limit, filters) {
+    const resolvedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
+    return filterByOwner(events, filters).slice(-resolvedLimit);
+  }
+
+  async function allEvents(limit, filters) {
     const resolvedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : maxEvents;
-    return events.slice(-resolvedLimit);
+    return filterByOwner(events, filters).slice(-resolvedLimit);
+  }
+
+  async function syncUser(user) {
+    // The in-memory store keeps no user table; return the input as a no-op so
+    // callers (and tests) get a consistent shape without persistence.
+    return user || null;
   }
 
   async function pruneOldest(maxRows) {
@@ -167,8 +182,10 @@ function createMemoryEventStore(options) {
   async function countErrors(options) {
     const o = options || {};
     const since = Number.isFinite(o.sinceMs) ? o.sinceMs : null;
+    const owner = o.userId || "";
     return events.filter(function (e) {
       if (e.type !== "error") return false;
+      if (owner && e.userId !== owner) return false;
       if (since === null) return true;
       const ts = Date.parse(e.receivedAt || e.timestamp);
       return Number.isFinite(ts) ? ts >= since : true;
@@ -181,6 +198,7 @@ function createMemoryEventStore(options) {
     insertEvents,
     listEvents,
     allEvents,
+    syncUser,
     pruneOldest,
     countErrors,
     _events: events,
@@ -190,6 +208,7 @@ function createMemoryEventStore(options) {
 function createSupabaseEventStore(client, options) {
   const opts = options || {};
   const tableName = opts.tableName || process.env.SUPABASE_P3_EVENTS_TABLE || DEFAULT_TABLE;
+  const usersTableName = opts.usersTableName || process.env.SUPABASE_P3_USERS_TABLE || DEFAULT_USERS_TABLE;
 
   async function insertEvents(rawEvents) {
     const normalized = (rawEvents || []).map(normalizeForStorage);
@@ -203,28 +222,52 @@ function createSupabaseEventStore(client, options) {
     return (result.data && result.data.length ? result.data.map(rowToEvent) : normalized);
   }
 
-  async function listEvents(limit) {
+  async function listEvents(limit, filters) {
     const resolvedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
-    const result = await client
+    let query = client
       .from(tableName)
       .select("*")
       .order("received_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(resolvedLimit);
+    if (filters && filters.userId) query = query.eq("user_id", filters.userId);
+    const result = await query;
     assertSupabaseResult(result, "Failed to list Prototype 3 events");
     return (result.data || []).map(rowToEvent).reverse();
   }
 
-  async function allEvents(limit) {
+  async function allEvents(limit, filters) {
     const resolvedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_MAX_EVENTS;
-    const result = await client
+    let query = client
       .from(tableName)
       .select("*")
       .order("received_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(resolvedLimit);
+    if (filters && filters.userId) query = query.eq("user_id", filters.userId);
+    const result = await query;
     assertSupabaseResult(result, "Failed to load Prototype 3 events");
     return (result.data || []).map(rowToEvent).reverse();
+  }
+
+  async function syncUser(user) {
+    const input = user || {};
+    const clerkUserId = input.clerkUserId;
+    if (!clerkUserId) {
+      throw new Error("Failed to sync app user: clerkUserId is required");
+    }
+    const row = {
+      clerk_user_id: clerkUserId,
+      email: input.email || "",
+      display_name: input.displayName || "",
+      last_seen_at: new Date().toISOString(),
+    };
+    const result = await client
+      .from(usersTableName)
+      .upsert(row, { onConflict: "clerk_user_id" })
+      .select("*");
+    assertSupabaseResult(result, "Failed to sync app user");
+    return (result.data && result.data.length ? result.data[0] : row);
   }
 
   async function countEvents() {
@@ -263,6 +306,9 @@ function createSupabaseEventStore(client, options) {
       .from(tableName)
       .select("id", { count: "exact", head: true })
       .eq("type", "error");
+    if (o.userId) {
+      query = query.eq("user_id", o.userId);
+    }
     if (Number.isFinite(o.sinceMs)) {
       query = query.gte("received_at", new Date(o.sinceMs).toISOString());
     }
@@ -274,9 +320,11 @@ function createSupabaseEventStore(client, options) {
   return {
     type: "supabase",
     tableName,
+    usersTableName,
     insertEvents,
     listEvents,
     allEvents,
+    syncUser,
     pruneOldest,
     countErrors,
     _client: client,
@@ -291,12 +339,14 @@ function createConfiguredEventStore(options) {
   if (opts.client) {
     return createSupabaseEventStore(opts.client, {
       tableName: opts.tableName || env.SUPABASE_P3_EVENTS_TABLE || DEFAULT_TABLE,
+      usersTableName: opts.usersTableName || env.SUPABASE_P3_USERS_TABLE || DEFAULT_USERS_TABLE,
     });
   }
 
   if (hasSupabaseConfig(env)) {
     return createSupabaseEventStore(createSupabaseClientFromEnv(env), {
       tableName: env.SUPABASE_P3_EVENTS_TABLE || DEFAULT_TABLE,
+      usersTableName: env.SUPABASE_P3_USERS_TABLE || DEFAULT_USERS_TABLE,
     });
   }
 
@@ -305,6 +355,7 @@ function createConfiguredEventStore(options) {
 
 module.exports = {
   DEFAULT_TABLE,
+  DEFAULT_USERS_TABLE,
   EVENTS_TABLE_SCHEMA_SQL,
   hasSupabaseConfig,
   generateEventId,
