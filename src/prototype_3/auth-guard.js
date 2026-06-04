@@ -25,7 +25,6 @@
   "use strict";
 
   const LOGIN_URL = new URL("./Log-In-Page/login.html", window.location.href).href;
-  const LANDING_URL = new URL("./Landing-Page/index.html", window.location.href).href;
 
   // Hide the protected shell immediately so signed-out users never see content
   // flash before the redirect resolves. Removed once the session is verified.
@@ -290,7 +289,7 @@
         } catch (_error) {}
         clerk
           .signOut()
-          .then(() => window.location.replace(LANDING_URL))
+          .then(() => window.location.replace(LOGIN_URL))
           .catch((error) => console.error("[auth-guard] Sign out failed:", error));
       };
 
