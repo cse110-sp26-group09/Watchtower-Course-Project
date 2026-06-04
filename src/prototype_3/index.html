@@ -665,7 +665,7 @@
       </section>
 
       <!-- --- 3e. SETTINGS VIEW ---
-           Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode, language,
+           Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode,
            time zone, refresh rate), Notifications (on/off toggle, volume, type, schedule, threshold, snooze).
            Includes a notification preview card on the right. -->
       <section class="view" id="settings-view" aria-labelledby="settings-title" hidden>
@@ -701,7 +701,7 @@
                   <path d="m9 18 6-6-6-6"></path>
                 </svg>
               </button>
-              <div class="settings-content">
+              <div class="settings-content profile-settings-content">
                 <div class="field-row">
                   <label for="display-name">Display name</label>
                   <input id="display-name" type="text" value="">
@@ -709,7 +709,6 @@
                 <div class="split-actions">
                   <button class="ghost-button" id="sign-out-button" type="button">Sign out</button>
                 </div>
-                <p class="inline-status" id="profile-status-line">Profile updates are saved locally for this demo.</p>
               </div>
             </div>
 
@@ -726,7 +725,7 @@
                 </span>
                 <span>
                   <strong>Accessibility</strong>
-                  <small>Theme, language, time zone, and refresh rate</small>
+                  <small>Theme, time zone, and refresh rate</small>
                 </span>
                 <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m9 18 6-6-6-6"></path>
@@ -739,14 +738,6 @@
                     <small>Switch the dashboard to a dark theme.</small>
                   </span>
                   <input class="toggle-input" id="dark-mode-toggle" type="checkbox">
-                </label>
-                <label class="field-row" for="language">
-                  <span>Language</span>
-                  <select id="language">
-                    <option>English</option>
-                    <option>Spanish</option>
-                    <option>French</option>
-                  </select>
                 </label>
                 <label class="field-row" for="timezone-select">
                   <span>Time zone</span>

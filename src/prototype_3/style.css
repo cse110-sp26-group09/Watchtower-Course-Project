@@ -2020,7 +2020,7 @@ code {
 
 .issues-toolbar {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 14px;
   align-items: end;
@@ -2035,6 +2035,7 @@ code {
 .issues-toolbar label {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .issues-toolbar label span {
@@ -2046,6 +2047,8 @@ code {
 
 .issues-toolbar select,
 .issues-toolbar input {
+  width: 100%;
+  min-width: 0;
   min-height: 36px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -2055,6 +2058,8 @@ code {
 }
 
 .issues-toolbar .ghost-button {
+  width: 100%;
+  min-width: 86px;
   min-height: 36px;
   padding: 0 12px;
 }
@@ -2895,7 +2900,13 @@ code {
   grid-template-columns: 1fr;
   gap: 18px;
   align-items: start;
-  max-width: 720px;
+  width: 100%;
+}
+
+.settings-list,
+.settings-section {
+  min-width: 0;
+  width: 100%;
 }
 
 .profile-chip {
@@ -3008,6 +3019,35 @@ code {
 
 .settings-section.open .settings-content {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  align-items: start;
+}
+
+.settings-section.open .settings-content > .inline-status,
+.settings-section.open .settings-content > .snooze-actions,
+.settings-section.open .settings-content > .time-grid {
+  grid-column: 1 / -1;
+}
+
+.settings-section.open .profile-settings-content {
+  grid-template-columns: minmax(0, min(520px, 100%));
+  justify-content: center;
+  justify-items: center;
+}
+
+.profile-settings-content .field-row,
+.profile-settings-content .split-actions,
+.profile-settings-content .inline-status {
+  width: 100%;
+  max-width: 520px;
+}
+
+.profile-settings-content .split-actions {
+  justify-content: center;
+}
+
+.profile-settings-content .inline-status {
+  text-align: center;
 }
 
 .field-row,
@@ -3022,6 +3062,10 @@ code {
 }
 
 .field-row input[type="text"] {
+  width: 100%;
+}
+
+.field-row select {
   width: 100%;
 }
 
