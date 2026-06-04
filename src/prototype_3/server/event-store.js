@@ -164,6 +164,17 @@ function createMemoryEventStore(options) {
     return removed;
   }
 
+  async function countErrors(options) {
+    const o = options || {};
+    const since = Number.isFinite(o.sinceMs) ? o.sinceMs : null;
+    return events.filter(function (e) {
+      if (e.type !== "error") return false;
+      if (since === null) return true;
+      const ts = Date.parse(e.receivedAt || e.timestamp);
+      return Number.isFinite(ts) ? ts >= since : true;
+    }).length;
+  }
+
   return {
     type: "memory",
     tableName: null,
@@ -171,6 +182,7 @@ function createMemoryEventStore(options) {
     listEvents,
     allEvents,
     pruneOldest,
+    countErrors,
     _events: events,
   };
 }
@@ -245,6 +257,20 @@ function createSupabaseEventStore(client, options) {
     return ids.length;
   }
 
+  async function countErrors(options) {
+    const o = options || {};
+    let query = client
+      .from(tableName)
+      .select("id", { count: "exact", head: true })
+      .eq("type", "error");
+    if (Number.isFinite(o.sinceMs)) {
+      query = query.gte("received_at", new Date(o.sinceMs).toISOString());
+    }
+    const result = await query;
+    assertSupabaseResult(result, "Failed to count Prototype 3 errors");
+    return result.count || 0;
+  }
+
   return {
     type: "supabase",
     tableName,
@@ -252,6 +278,7 @@ function createSupabaseEventStore(client, options) {
     listEvents,
     allEvents,
     pruneOldest,
+    countErrors,
     _client: client,
   };
 }
