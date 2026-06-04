@@ -15,6 +15,13 @@ const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 /** Unique session prefix so this file's events stay isolated in the shared buffer. */
 const RUN_TAG = `p3-stream-${Date.now()}`;
 
+/**
+ * Dashboard read APIs are scoped to the signed-in Clerk user via the
+ * X-Clerk-User-Id header. We seed and read as a single synthetic user so the
+ * seeded events are both owned by and visible to this spec.
+ */
+const CLERK_USER_ID = `clerk-${RUN_TAG}`;
+
 function seedEvent(type, route, seq) {
   const base = {
     type,
@@ -55,7 +62,10 @@ test.describe("Prototype 3 event APIs", () => {
   let api;
 
   test.beforeAll(async ({ playwright }) => {
-    api = await playwright.request.newContext({ baseURL: BASE_URL });
+    api = await playwright.request.newContext({
+      baseURL: BASE_URL,
+      extraHTTPHeaders: { "X-Clerk-User-Id": CLERK_USER_ID },
+    });
     const res = await api.post("/api/events", { data: { events: SEEDED } });
     expect(res.ok(), "seed POST /api/events should succeed").toBeTruthy();
     const body = await res.json();
@@ -63,7 +73,7 @@ test.describe("Prototype 3 event APIs", () => {
   });
 
   test.afterAll(async () => {
-    if (api) { await api.dispose(); }
+    if (api) {await api.dispose();}
   });
 
   test("GET /api/events response is shaped { events: [...] } and is JSON", async () => {
