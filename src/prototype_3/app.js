@@ -122,6 +122,7 @@
   let analyticsRangeLatency = document.getElementById("analytics-range-latency");
   let displayNameInput = document.getElementById("display-name");
   let profileDisplayName = document.getElementById("profile-display-name");
+  let profileInitialsEl = document.getElementById("profile-initials");
   let profileStatusLine = document.getElementById("profile-status-line");
   let changePasswordButton = document.getElementById("change-password-button");
   let signOutButton = document.getElementById("sign-out-button");
@@ -1550,18 +1551,32 @@
   function initializeProfileControls() {
     if (!displayNameInput || !profileDisplayName) return;
 
-    let savedName = loadUiPreference(PROFILE_STORAGE_KEY) || "";
-    if (savedName) {
-      displayNameInput.value = savedName;
-      profileDisplayName.textContent = savedName;
+    function applyUserProfile(displayName, initials) {
+      profileDisplayName.textContent = displayName;
+      displayNameInput.value = displayName;
+      if (profileInitialsEl) profileInitialsEl.textContent = initials;
     }
 
     function commitDisplayName() {
-      let nextName = displayNameInput.value.trim() || profileDisplayName.textContent.trim() || "User";
+      const currentUser = window.WatchTowerCurrentUser;
+      const nextName = displayNameInput.value.trim() || profileDisplayName.textContent.trim() || "User";
       displayNameInput.value = nextName;
       profileDisplayName.textContent = nextName;
-      saveUiPreference(PROFILE_STORAGE_KEY, nextName);
+      if (currentUser) {
+        try {
+          localStorage.setItem(currentUser.profileStorageKey, nextName);
+        } catch (_e) {}
+      }
       setProfileStatus("Display name updated.");
+    }
+
+    const currentUser = window.WatchTowerCurrentUser;
+    if (currentUser) {
+      applyUserProfile(currentUser.displayName, currentUser.initials);
+    } else {
+      document.addEventListener("watchtower:user-ready", function (event) {
+        applyUserProfile(event.detail.displayName, event.detail.initials);
+      }, { once: true });
     }
 
     displayNameInput.addEventListener("change", commitDisplayName);
