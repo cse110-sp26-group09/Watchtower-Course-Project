@@ -7,6 +7,8 @@
  */
 
 const { sendAlert } = require("./mailer");
+const { getClerkAlertRecipients } = require("./clerk-alert-recipients");
+const { evaluateErrorThreshold } = require("./alert-threshold");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -37,6 +39,15 @@ const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
 const ACTIVE_USER_WINDOW = Number.isFinite(parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10))
   ? parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10)
   : 30000;
+const ERROR_ALERT_THRESHOLD = Number.isFinite(parseInt(process.env.ERROR_ALERT_THRESHOLD, 10))
+  ? parseInt(process.env.ERROR_ALERT_THRESHOLD, 10)
+  : 5;
+const ERROR_ALERT_WINDOW_MS = Number.isFinite(parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10))
+  ? parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10)
+  : 300000;
+const ALERT_COOLDOWN_MS = Number.isFinite(parseInt(process.env.ALERT_COOLDOWN_MS, 10))
+  ? parseInt(process.env.ALERT_COOLDOWN_MS, 10)
+  : 900000;
 // Window for the "active issues" error count. Counted directly against the
 // store (not the capped event feed) so it does not shrink as non-error
 // traffic pushes errors out of the recent-events window. 0 = count all errors.
@@ -69,6 +80,10 @@ const GOVERNANCE_MASKING_RULES = [
 
 const sseClients = new Set();
 const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
+let lastErrorAlertSentAt = 0;
+// Manually registered alert recipient (POST /api/alert-recipient). Kept as a
+// first-class recipient source alongside the Clerk-sourced recipients so the
+// dashboard's "register my email" flow keeps working.
 let registeredAlertRecipient = "";
 
 // ─── Clerk session-token verification ─────────────────────────────────────────
@@ -293,13 +308,8 @@ function getCurrentUserIdHeader(request) {
  */
 function getBearerToken(request) {
   const raw = request && request.headers ? safeString(request.headers["authorization"]).trim() : "";
-  // Linear string parsing (no regex) to avoid ReDoS on the user-controlled
-  // Authorization header.
-  const prefix = "bearer ";
-  if (raw.length <= prefix.length || raw.slice(0, prefix.length).toLowerCase() !== prefix) {
-    return "";
-  }
-  return raw.slice(prefix.length).trim();
+  const match = raw.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
 }
 
 /**
@@ -970,25 +980,35 @@ function isEmailLike(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeString(value).trim());
 }
 
-function getAlertRecipientFromBody(body) {
-  if (!body || typeof body !== "object") {return "";}
+async function maybeSendErrorThresholdAlert() {
+  const now = Date.now();
+  const events = await eventStore.allEvents(MAX_EVENTS);
+  const evaluation = evaluateErrorThreshold(events, {
+    now: now,
+    threshold: ERROR_ALERT_THRESHOLD,
+    windowMs: ERROR_ALERT_WINDOW_MS,
+    cooldownMs: ALERT_COOLDOWN_MS,
+    lastSentAt: lastErrorAlertSentAt
+  });
 
-  if (typeof body.alertRecipient === "string" && body.alertRecipient.trim()) {
-    return body.alertRecipient.trim();
-  }
-  if (typeof body.recipient === "string" && body.recipient.trim()) {
-    return body.recipient.trim();
-  }
+  if (!evaluation.shouldSend) {return;}
 
-  if (body.alerts && typeof body.alerts.email === "string" && body.alerts.email.trim()) {
-    return body.alerts.email.trim();
+  // Combine the manually registered recipient with the Clerk-sourced ones so
+  // both the dashboard registration flow and the (future) Clerk rollout work.
+  const clerkRecipients = await getClerkAlertRecipients(now);
+  const recipients = [];
+  if (registeredAlertRecipient) {
+    recipients.push(registeredAlertRecipient);
   }
+  clerkRecipients.forEach(function (recipient) {
+    if (recipients.indexOf(recipient) === -1) {
+      recipients.push(recipient);
+    }
+  });
+  if (!recipients.length) {return;}
 
-  if (body.user && typeof body.user.email === "string" && body.user.email.trim()) {
-    return body.user.email.trim();
-  }
-
-  return registeredAlertRecipient;
+  lastErrorAlertSentAt = now;
+  sendAlert(evaluation.alert, recipients).catch(err => console.error("[mailer] Failed to send alert:", err));
 }
 
 async function ingestEventsBody(body, ownerUserId) {
@@ -1007,19 +1027,8 @@ async function ingestEventsBody(body, ownerUserId) {
   if (norm.length) {
     broadcastEvents(norm);
 
-    const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
-    const errorEvents = norm.filter(e => e.type === "error");
-    const alertRecipient = getAlertRecipientFromBody(body);
-
-    if (errorEvents.length >= threshold) {
-      const first = errorEvents[0];
-
-      sendAlert(
-        first.data && first.data.message ? first.data.message : "Unknown error",
-        first.route || "unknown",
-        first.deployVersion || "unknown",
-        alertRecipient
-      ).catch(err => console.error("[mailer] Failed to send alert:", err));
+    if (norm.some(function (eventRecord) { return eventRecord.type === "error"; })) {
+      maybeSendErrorThresholdAlert().catch(err => console.error("[mailer] Failed to evaluate alert threshold:", err));
     }
   }
 
