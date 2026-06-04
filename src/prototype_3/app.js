@@ -1,6 +1,58 @@
 (function () {
   "use strict";
 
+  // ─── Per-user dashboard scoping ───────────────────────────────────────────
+  // Every dashboard API request is scoped to the signed-in Clerk user via the
+  // X-Clerk-User-Id header. auth-guard.js loads Clerk and redirects anonymous
+  // visitors before this shell is shown, so window.Clerk.user is normally
+  // available by the time these fetches run.
+  function getClerkUserId() {
+    try {
+      return (window.Clerk && window.Clerk.user && window.Clerk.user.id) || "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  // Builds auth headers for scoped API calls. Async because obtaining a fresh
+  // Clerk session token (for backend JWT verification) is async. Delegates to
+  // auth-guard's window.getClerkUserHeaders when available.
+  function getClerkUserHeaders(extraHeaders) {
+    let base = Object.assign({}, extraHeaders || {});
+    if (typeof window.getClerkUserHeaders === "function") {
+      return Promise.resolve(window.getClerkUserHeaders()).then(function (clerkHeaders) {
+        return Object.assign(base, clerkHeaders || {});
+      });
+    }
+    let userId = getClerkUserId();
+    if (userId) base["X-Clerk-User-Id"] = userId;
+    try {
+      let session = window.Clerk && window.Clerk.session;
+      if (session && typeof session.getToken === "function") {
+        return Promise.resolve(session.getToken()).then(function (token) {
+          if (token) base["Authorization"] = "Bearer " + token;
+          return base;
+        }).catch(function () { return base; });
+      }
+    } catch (_error) {}
+    return Promise.resolve(base);
+  }
+
+  // auth-guard.js loads Clerk asynchronously in <head>; this script runs at the
+  // end of <body>, so window.Clerk.user may not exist yet on first paint.
+  // Resolve once the Clerk user id is available so scoped API calls always carry
+  // the X-Clerk-User-Id header (avoids initial 401s and "stuck at 0" data).
+  function waitForClerkUser(maxWaitMs) {
+    return new Promise(function (resolve) {
+      let deadline = Date.now() + (typeof maxWaitMs === "number" ? maxWaitMs : 15000);
+      (function check() {
+        if (getClerkUserId()) { resolve(true); return; }
+        if (Date.now() > deadline) { resolve(false); return; }
+        setTimeout(check, 150);
+      })();
+    });
+  }
+
   let POLL_INTERVAL = 3000;
   let availableViewNames = ["home", "issues", "health", "analytics", "settings"];
   let viewToggleElements = document.querySelectorAll("[data-view]");
@@ -768,7 +820,10 @@
     params.set("limit", "80");
     params.set("cursor", String(appendOlder ? uiState.developerStreamCursor : 0));
 
-    return fetch("/api/developer/stream?" + params.toString())
+    return getClerkUserHeaders()
+      .then(function (headers) {
+        return fetch("/api/developer/stream?" + params.toString(), { headers: headers });
+      })
       .then(function (res) { return res.json(); })
       .then(function (payload) {
         let rows = Array.isArray(payload.events) ? payload.events : [];
@@ -981,11 +1036,14 @@
     if (!queryText) return Promise.resolve();
 
     if (devQueryMeta) devQueryMeta.textContent = "Running query...";
-    return fetch("/api/developer/query", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: queryText })
-    })
+    return getClerkUserHeaders({ "Content-Type": "application/json" })
+      .then(function (headers) {
+        return fetch("/api/developer/query", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ query: queryText })
+        });
+      })
       .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
       .then(function (result) {
         if (!result.ok || result.data.error) {
@@ -2666,11 +2724,18 @@
   }
 
   function fetchDashboardStats() {
-    return Promise.all([
-      fetch("/api/stats").then(function (r) { return r.json(); }),
-      fetch("/api/events?limit=600").then(function (r) { return r.json(); }).then(function (p) { return p.events || []; }),
-      fetch("/api/developer/insights").then(function (r) { return r.json(); })
-    ])
+    // Skip (rather than 401-spam) until Clerk has loaded a signed-in user.
+    if (!getClerkUserId()) {
+      return Promise.resolve();
+    }
+    return getClerkUserHeaders()
+      .then(function (userHeaders) {
+        return Promise.all([
+          fetch("/api/stats", { headers: userHeaders }).then(function (r) { return r.json(); }),
+          fetch("/api/events?limit=600", { headers: userHeaders }).then(function (r) { return r.json(); }).then(function (p) { return p.events || []; }),
+          fetch("/api/developer/insights", { headers: userHeaders }).then(function (r) { return r.json(); })
+        ]);
+      })
       .then(function (res) {
         updateDashboardStats(res[0], res[1]);
         renderDeveloperWorkbench(res[2]);
@@ -2723,7 +2788,11 @@
     initializeDeveloperAnalyticsControls();
     initializeLiveEventStream();
     activateView(availableViewNames.indexOf(hash) === -1 ? "home" : hash);
-    fetchDashboardStats();
+    // Wait for Clerk to confirm the signed-in user before the first scoped
+    // fetch, then poll. The interval still self-guards via getClerkUserId().
+    waitForClerkUser().then(function () {
+      fetchDashboardStats();
+    });
     setInterval(fetchDashboardStats, POLL_INTERVAL);
   }
 

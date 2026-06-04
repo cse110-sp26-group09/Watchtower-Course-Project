@@ -15,6 +15,19 @@ const { test, expect } = require("@playwright/test");
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 /**
+ * Dashboard read APIs (GET /api/stats, /api/events, /api/developer/*) are scoped
+ * to the signed-in Clerk user via the X-Clerk-User-Id header. These smoke tests
+ * act as one synthetic user: events are posted and read back under the same id.
+ */
+const CLERK_USER_ID = `clerk-smoke-${Date.now()}`;
+
+/** Request context options that authenticate as the synthetic dashboard user. */
+const USER_CONTEXT = {
+  baseURL: BASE_URL,
+  extraHTTPHeaders: { "X-Clerk-User-Id": CLERK_USER_ID },
+};
+
+/**
  * Stub a signed-in Clerk session so the dashboard auth guard reveals the shell.
  *
  * The guard reads `window.CLERK_PUBLISHABLE_KEY` from the page-served
@@ -34,6 +47,7 @@ async function stubSignedInClerk(page) {
   await page.addInitScript(() => {
     window.Clerk = {
       user: {
+        id: "e2e-clerk-user",
         primaryEmailAddress: { emailAddress: "e2e@watchtower.test" },
         firstName: "E2E",
         lastName: "Tester",
@@ -119,7 +133,7 @@ test.describe("WatchTower ShopDemo (/demo/)", () => {
 
 test.describe("WatchTower JSON API", () => {
   test("GET /api/stats returns JSON with the documented shape", async ({ playwright }) => {
-    const api = await playwright.request.newContext({ baseURL: BASE_URL });
+    const api = await playwright.request.newContext(USER_CONTEXT);
     try {
       const res = await api.get("/api/stats");
       expect(res.ok()).toBeTruthy();
@@ -144,7 +158,7 @@ test.describe("WatchTower JSON API", () => {
   });
 
   test("POST /api/events accepts a batch and GET /api/events returns it", async ({ playwright }) => {
-    const api = await playwright.request.newContext({ baseURL: BASE_URL });
+    const api = await playwright.request.newContext(USER_CONTEXT);
     try {
       const payload = {
         events: [
@@ -179,7 +193,7 @@ test.describe("WatchTower JSON API", () => {
   });
 
   test("POST /api/beacon accepts pageload timing data without a response body", async ({ playwright }) => {
-    const api = await playwright.request.newContext({ baseURL: BASE_URL });
+    const api = await playwright.request.newContext(USER_CONTEXT);
     const marker = `playwright-beacon-${Date.now()}`;
     try {
       const beaconRes = await api.post("/api/beacon", {
@@ -237,7 +251,7 @@ test.describe("WatchTower JSON API", () => {
   });
 
   test("POST /api/events surfaces an error event through GET /api/stats", async ({ playwright }) => {
-    const api = await playwright.request.newContext({ baseURL: BASE_URL });
+    const api = await playwright.request.newContext(USER_CONTEXT);
     try {
       const payload = {
         events: [
