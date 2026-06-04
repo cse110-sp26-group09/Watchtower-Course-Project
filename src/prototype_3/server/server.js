@@ -308,8 +308,18 @@ function getCurrentUserIdHeader(request) {
  */
 function getBearerToken(request) {
   const raw = request && request.headers ? safeString(request.headers["authorization"]).trim() : "";
-  const match = raw.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1].trim() : "";
+  // Linear string parsing (no regex) to avoid polynomial-time ReDoS on the
+  // user-controlled Authorization header. Equivalent to /^Bearer\s+(.+)$/i.
+  const scheme = "bearer";
+  if (raw.length <= scheme.length || raw.slice(0, scheme.length).toLowerCase() !== scheme) {
+    return "";
+  }
+  const rest = raw.slice(scheme.length);
+  // Require at least one whitespace separator after the scheme.
+  if (rest[0] !== " " && rest[0] !== "\t") {
+    return "";
+  }
+  return rest.trim();
 }
 
 /**
