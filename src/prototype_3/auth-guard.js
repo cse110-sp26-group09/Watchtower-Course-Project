@@ -140,20 +140,6 @@
     return "";
   }
 
-  function registerAlertRecipient(user) {
-    const email = userPrimaryEmail(user);
-    if (!email) return;
-
-    fetch("/api/alert-recipient", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-      keepalive: true,
-    }).catch((error) => {
-      console.error("[auth-guard] Failed to register alert recipient:", error);
-    });
-  }
-
   function userDisplayName(user) {
     if (!user) return "";
     const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
@@ -243,7 +229,6 @@
       }
       revealApp();
       wireUi(clerk);
-      registerAlertRecipient(clerk.user);
 
       // If the session ends in another tab, bounce back to login.
       clerk.addListener((payload) => {
@@ -251,7 +236,6 @@
           redirectToLogin();
           return;
         }
-        registerAlertRecipient(payload.user);
       });
     })
     .catch((error) => {
