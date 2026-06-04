@@ -10,6 +10,7 @@ const { sendAlert } = require("./mailer");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { createRemoteJWKSet, jwtVerify } = require("jose");
 const eventStoreModule = require("./event-store");
 const {
   isFiniteNumber,
@@ -69,6 +70,60 @@ const GOVERNANCE_MASKING_RULES = [
 const sseClients = new Set();
 const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
 let registeredAlertRecipient = "";
+
+// ─── Clerk session-token verification ─────────────────────────────────────────
+// Production security: instead of trusting the X-Clerk-User-Id header, verify the
+// Clerk session JWT against Clerk's public JWKS and read the user id from the
+// signed `sub` claim. The issuer is the Clerk Frontend API origin, which is
+// base64-encoded inside the publishable key (or set explicitly via env).
+//
+// When no real Clerk instance is configured (placeholder/empty key, e.g. CI and
+// local memory-store runs), verification is disabled and we fall back to trusting
+// the header so the prototype/tests keep working. Set
+// WATCHTOWER_TRUST_USER_HEADER=true to force the header fallback even when a real
+// key is present (useful for header-only API tests).
+const TRUST_USER_HEADER = safeString(process.env.WATCHTOWER_TRUST_USER_HEADER).trim() === "true";
+
+function resolveClerkIssuer() {
+  const explicit = safeString(process.env.CLERK_JWT_ISSUER).trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+  const pk = safeString(process.env.CLERK_PUBLISHABLE_KEY).trim();
+  if (!pk || !/^pk_(test|live)_/.test(pk) || pk.indexOf("REPLACE_ME") !== -1) return "";
+  const encoded = pk.replace(/^pk_(test|live)_/, "");
+  try {
+    const host = Buffer.from(encoded, "base64").toString("utf8").replace(/\$+$/, "");
+    return host ? "https://" + host : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+const CLERK_ISSUER = resolveClerkIssuer();
+let clerkJwks = null;
+if (CLERK_ISSUER) {
+  try {
+    clerkJwks = createRemoteJWKSet(new URL(CLERK_ISSUER + "/.well-known/jwks.json"));
+  } catch (error) {
+    console.error("[prototype_3] Could not initialize Clerk JWKS:", error.message);
+  }
+}
+const CLERK_VERIFICATION_ENABLED = Boolean(clerkJwks);
+
+/**
+ * Verify a Clerk session JWT and return its subject (the Clerk user id).
+ * @param {string} token - Raw JWT from the Authorization header.
+ * @returns {Promise<string>} The verified `sub`, or "" if verification fails.
+ */
+async function verifyClerkToken(token) {
+  if (!clerkJwks || !token) return "";
+  try {
+    const { payload } = await jwtVerify(token, clerkJwks, { issuer: CLERK_ISSUER });
+    return safeString(payload && payload.sub).trim();
+  } catch (error) {
+    console.warn("[prototype_3] Clerk token verification failed:", error.message);
+    return "";
+  }
+}
 
 const MIME = {
   ".html": "text/html",
@@ -208,13 +263,79 @@ function applyCors(res, req) {
   if (allowedOrigin) res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   if (allowedOrigin && allowedOrigin !== "*") res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Clerk-User-Id, Authorization");
 }
 
 function sendJson(res, status, payload, req) {
   applyCors(res, req);
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(payload));
+}
+
+/**
+ * Read the raw `X-Clerk-User-Id` header (trusted only when JWT verification is
+ * not enforced — see resolveCurrentUserId).
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {string} Trimmed Clerk user id header value, or "" when absent.
+ */
+function getCurrentUserIdHeader(request) {
+  const raw = request && request.headers ? request.headers["x-clerk-user-id"] : "";
+  return safeString(raw).trim();
+}
+
+/**
+ * Extract a Bearer token from the Authorization header.
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {string} The token, or "" when absent.
+ */
+function getBearerToken(request) {
+  const raw = request && request.headers ? safeString(request.headers["authorization"]).trim() : "";
+  const match = raw.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+/**
+ * Resolve the current Clerk user id for a request.
+ *
+ * Preference order:
+ *   1. A verified Clerk session JWT (Authorization: Bearer ...) — authoritative.
+ *   2. The `X-Clerk-User-Id` header, but ONLY when JWT verification is not
+ *      enforced (no real Clerk instance configured, or the header-trust escape
+ *      hatch is enabled). This keeps the prototype/tests working.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {Promise<string>} The Clerk user id, or "" when unauthenticated.
+ */
+async function resolveCurrentUserId(request) {
+  if (CLERK_VERIFICATION_ENABLED) {
+    const token = getBearerToken(request);
+    if (token) {
+      const verified = await verifyClerkToken(token);
+      if (verified) return verified;
+    }
+    // A real Clerk instance is configured: do not trust the raw header unless
+    // the explicit escape hatch is on.
+    return TRUST_USER_HEADER ? getCurrentUserIdHeader(request) : "";
+  }
+  // No verifiable Clerk instance configured (prototype/CI): trust the header.
+  return getCurrentUserIdHeader(request);
+}
+
+/**
+ * Resolve the current Clerk user or fail the request with a 401.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @param {http.ServerResponse} response - HTTP response (used to send 401).
+ * @returns {Promise<string>} The Clerk user id, or "" after a 401 has been sent.
+ */
+async function requireCurrentUser(request, response) {
+  const userId = await resolveCurrentUserId(request);
+  if (!userId) {
+    sendJson(response, 401, { error: "Authentication required" }, request);
+    return "";
+  }
+  return userId;
 }
 
 function readJsonBody(req) {
@@ -860,9 +981,17 @@ function getAlertRecipientFromBody(body) {
   return registeredAlertRecipient;
 }
 
-async function ingestEventsBody(body) {
-  let arr = getIncomingEvents(body);
-  let norm = await eventStore.insertEvents(arr.filter(isValidEvent));
+async function ingestEventsBody(body, ownerUserId) {
+  let arr = getIncomingEvents(body).filter(isValidEvent);
+  // When an authenticated dashboard user owns this ingest call, stamp every
+  // event with their Clerk user id so it is scoped to them. External/SDK
+  // events arrive without an owner and keep whatever userId they carry.
+  if (ownerUserId) {
+    arr = arr.map(function (event) {
+      return Object.assign({}, event, { userId: ownerUserId });
+    });
+  }
+  let norm = await eventStore.insertEvents(arr);
   await eventStore.pruneOldest(MAX_EVENTS);
 
   if (norm.length) {
@@ -915,10 +1044,35 @@ const server = http.createServer(async function (request, response) {
     }
     return;
   }
+  if (request.method === "POST" && pathname === "/api/users/sync") {
+    try {
+      let body = await readJsonBody(request);
+      // Prefer the verified token subject; fall back to the body/header id when
+      // verification is not enforced (prototype/tests).
+      let clerkUserId = (await resolveCurrentUserId(request)) || safeString(body && body.clerkUserId).trim();
+      if (!clerkUserId) {
+        sendJson(response, 400, { error: "clerkUserId is required" }, request);
+        return;
+      }
+      let user = await eventStore.syncUser({
+        clerkUserId: clerkUserId,
+        email: safeString(body && body.email).trim(),
+        displayName: safeString(body && body.displayName).trim(),
+      });
+      sendJson(response, 200, { ok: true, user: user }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to sync user:", error);
+      sendJson(response, 500, { error: "Failed to sync user" }, request);
+    }
+    return;
+  }
   if (request.method === "POST" && pathname === "/api/events") {
     try {
       let body = await readJsonBody(request);
-      let norm = await ingestEventsBody(body);
+      // External SDK events may be unauthenticated for now, so we never reject
+      // a missing user id here; we just stamp ownership when it is present.
+      let userId = await resolveCurrentUserId(request);
+      let norm = await ingestEventsBody(body, userId || null);
       sendJson(response, 200, { accepted: norm.length }, request);
     } catch (error) {
       console.error("[prototype_3] Failed to ingest events:", error);
@@ -929,7 +1083,8 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "POST" && pathname === "/api/beacon") {
     try {
       let body = await readJsonBody(request);
-      await ingestEventsBody(body);
+      let userId = await resolveCurrentUserId(request);
+      await ingestEventsBody(body, userId || null);
     } catch (_error) {
       // Beacon callers ignore response bodies, so keep this endpoint fail-closed.
     }
@@ -940,7 +1095,9 @@ const server = http.createServer(async function (request, response) {
   }
   if (request.method === "GET" && pathname === "/api/events") {
     try {
-      let events = await eventStore.listEvents(100);
+      let userId = await requireCurrentUser(request, response);
+      if (!userId) return;
+      let events = await eventStore.listEvents(100, { userId: userId });
       sendJson(response, 200, { events: events }, request);
     } catch (error) {
       console.error("[prototype_3] Failed to list events:", error);
@@ -950,7 +1107,9 @@ const server = http.createServer(async function (request, response) {
   }
   if (request.method === "GET" && pathname === "/api/developer/stream") {
     try {
-      let events = await eventStore.allEvents(MAX_EVENTS);
+      let userId = await requireCurrentUser(request, response);
+      if (!userId) return;
+      let events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
       let f = normalizeStreamFilters(parsedUrl.searchParams);
       sendJson(response, 200, queryEventsWithFilters(events, f), request);
     } catch (error) {
@@ -961,7 +1120,9 @@ const server = http.createServer(async function (request, response) {
   }
   if (request.method === "GET" && pathname === "/api/developer/insights") {
     try {
-      let events = await eventStore.allEvents(MAX_EVENTS);
+      let userId = await requireCurrentUser(request, response);
+      if (!userId) return;
+      let events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
       sendJson(response, 200, buildDeveloperInsights(events), request);
     } catch (error) {
       console.error("[prototype_3] Failed to build developer insights:", error);
@@ -971,8 +1132,10 @@ const server = http.createServer(async function (request, response) {
   }
   if (request.method === "POST" && pathname === "/api/developer/query") {
     try {
+      let userId = await requireCurrentUser(request, response);
+      if (!userId) return;
       let body = await readJsonBody(request);
-      let events = await eventStore.allEvents(MAX_EVENTS);
+      let events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
       sendJson(response, 200, executeDeveloperQuery(body.query, events), request);
     } catch (error) {
       console.error("[prototype_3] Failed to execute developer query:", error);
@@ -992,14 +1155,16 @@ const server = http.createServer(async function (request, response) {
   }
   if (request.method === "GET" && pathname === "/api/stats") {
     try {
-      let events = await eventStore.allEvents(MAX_EVENTS);
+      let userId = await requireCurrentUser(request, response);
+      if (!userId) return;
+      let events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
       let stats = getDashboardStats(events);
       // Override the window-bound error count with a real count from the store
       // so "active issues" reflects actual errors, not just errors that happen
-      // to remain in the recent-events window.
+      // to remain in the recent-events window. Scoped to the current user.
       if (typeof eventStore.countErrors === "function") {
         let since = ERROR_WINDOW_MS > 0 ? Date.now() - ERROR_WINDOW_MS : null;
-        stats.totalErrors = await eventStore.countErrors({ sinceMs: since });
+        stats.totalErrors = await eventStore.countErrors({ sinceMs: since, userId: userId });
       }
       sendJson(response, 200, stats, request);
     } catch (error) {
@@ -1122,4 +1287,9 @@ const server = http.createServer(async function (request, response) {
 server.listen(PORT, function () {
   console.log("Observability dashboard shell active at http://localhost:" + PORT);
   console.log("Prototype 3 event storage: " + eventStore.type + (eventStore.tableName ? " (" + eventStore.tableName + ")" : ""));
+  if (CLERK_VERIFICATION_ENABLED) {
+    console.log("Clerk session verification: ENABLED (issuer " + CLERK_ISSUER + ")" + (TRUST_USER_HEADER ? " + header escape hatch" : ""));
+  } else {
+    console.log("Clerk session verification: DISABLED (trusting X-Clerk-User-Id header — prototype/test mode)");
+  }
 });
