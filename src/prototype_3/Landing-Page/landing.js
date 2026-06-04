@@ -175,7 +175,7 @@
 
   function updateDashboardLinks() {
     const inPrototypeServer = window.location.port === "3000" && !window.location.pathname.includes("/src/");
-    const hrefValue = inPrototypeServer ? "/dashboard" : "../prototype_3/index.html";
+    const hrefValue = inPrototypeServer ? "/dashboard-demo/" : "../dashboard-demo/index.html";
     document.querySelectorAll(".dashboard-demo-link").forEach(function (linkElement) {
       linkElement.setAttribute("href", hrefValue);
     });

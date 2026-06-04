@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WatchTower Dashboard Demo</title>
+  <link rel="icon" type="image/png" href="../assets/fav.png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Clerk auth: publishable key config + client-side route guard.
+       Loaded in <head> so anonymous users never see protected content flash. -->
+</head>
+<body>
+  <!--
+    WatchTower Dashboard — Single-page monitoring app.
+    All views live in the DOM; navigation shows/hides sections via data-view attributes.
+    Data is populated at runtime by app.js. Two dashboard modes (manager / developer)
+    toggle which panels are visible within each view.
+
+    Structure:
+      1. Top bar    — branding, active-issues pill, mode pill, live-status indicator
+      2. Sidebar    — desktop icon navigation (Home, Issues, Health, Analytics, Settings)
+      3. Main       — five swappable views (home, issues, health, analytics, settings)
+      4. Toast stack — popup status notifications
+      5. Mobile nav — bottom navigation bar duplicating the sidebar for small screens
+  -->
+  <div class="app-shell">
+    <!-- ===== 1. TOP BAR — brand, active-issues count, mode toggle pill ===== -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
+          <span class="brand-mark" aria-hidden="true">
+            <img class="brand-logo" src="../assets/watchtower-transparent.png" alt="" loading="eager" decoding="async">
+          </span>
+          <span class="brand-label">WatchTower</span>
+        </a>
+      </div>
+
+      <p class="mode-current-view topbar-current-view" id="mode-current-view">Currently on: Manager view</p>
+
+      <div class="topbar-actions">
+        <button class="alert-pill" type="button" data-view="issues">
+          <span class="alert-dot" aria-hidden="true"></span>
+          <span id="active-issues-count">0 active issues</span>
+        </button>
+        <button class="mode-pill mode-pill-button" id="dashboard-mode-pill" type="button" aria-label="Toggle dashboard mode" title="Toggle dashboard mode">Manager view</button>
+      </div>
+    </header>
+
+    <!-- ===== 2. SIDEBAR — desktop icon navigation (hidden on mobile) ===== -->
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <nav class="nav-stack">
+        <div class="nav-main">
+          <button class="nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
+            </svg>
+            <span>Home</span>
+          </button>
+          <button class="nav-button" type="button" data-view="issues" title="Issues" aria-label="Issues">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 7h14"></path>
+              <path d="M5 12h14"></path>
+              <path d="M5 17h10"></path>
+            </svg>
+            <span>Issues</span>
+          </button>
+          <button class="nav-button" type="button" data-view="health" title="Health" aria-label="Health">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"></path>
+            </svg>
+            <span>Health</span>
+          </button>
+          <button class="nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 19V12"></path>
+              <path d="M10 19V8"></path>
+              <path d="M15 19v-5"></path>
+              <path d="M20 19V5"></path>
+            </svg>
+            <span>Analytics</span>
+          </button>
+        </div>
+        <div class="nav-footer">
+          <button class="nav-button" type="button" data-view="settings" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"></path>
+              <path d="M19.2 13.2a7.8 7.8 0 0 0 .1-1.2 7.8 7.8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.1-1.2L14.4 3h-4.8l-.4 2.7a8.4 8.4 0 0 0-2.1 1.2l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.2c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.1 1.2l.4 2.7h4.8l.4-2.7a8.4 8.4 0 0 0 2.1-1.2l2.4 1 2-3.4-2.1-1.5Z"></path>
+            </svg>
+            <span>Settings</span>
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ===== 3. MAIN CONTENT — five views, one visible at a time ===== -->
+    <main class="content" id="main-content">
+
+      <!-- ——— 3a. HOME VIEW ———
+           KPI tiles (users, events, errors, deploys) link to other views.
+           Manager mode: most-clicked features, recent user signals, operational highlights.
+           Developer mode: top issues, high-latency windows, peak traffic, health summary. -->
+      <section class="view active" id="home-view" aria-label="Home dashboard">
+        <!-- KPI strip — clickable metric tiles that navigate to the relevant view -->
+        <section class="kpi-overview" aria-label="Key metrics">
+          <div class="kpi-toolbar">
+            <p class="eyebrow">Realtime operations</p>
+            <div class="refresh-note">
+              <span id="last-updated">Waiting for data</span>
+              <button class="icon-button" id="refresh-dashboard" type="button" title="Refresh dashboard" aria-label="Refresh dashboard">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 12a8 8 0 1 1-2.3-5.7"></path>
+                  <path d="M20 4v6h-6"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <!-- Manager KPI tiles -->
+          <div class="summary-metrics" data-dashboard-mode="manager" role="group" aria-label="Key metrics">
+            <button class="metric-tile metric-link" type="button" data-view="analytics" data-scroll-target="user-chart-title">
+              <span class="metric-label"><i class="metric-icon users" aria-hidden="true"></i>Active users</span>
+              <strong id="active-users">0</strong>
+              <span class="metric-trend positive">Current sessions</span>
+            </button>
+            <button class="metric-tile metric-link" type="button" data-view="analytics" data-scroll-target="purchase-chart-title">
+              <span class="metric-label"><i class="metric-icon events" aria-hidden="true"></i>Events ingested</span>
+              <strong id="total-events">0</strong>
+              <span class="metric-trend neutral">Stable</span>
+            </button>
+            <button class="metric-tile metric-link warning" type="button" data-view="issues" data-scroll-target="issues-title">
+              <span class="metric-label"><i class="metric-icon errors" aria-hidden="true"></i>Open errors</span>
+              <strong id="total-errors">0</strong>
+              <span class="metric-trend negative">Needs review</span>
+            </button>
+            <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-title">
+              <span class="metric-label"><i class="metric-icon deploys" aria-hidden="true"></i>Deploy versions</span>
+              <strong id="version-count">0</strong>
+              <span class="metric-trend neutral">Deploys seen</span>
+            </button>
+          </div>
+
+          <!-- Developer stat cards (prototype 2 style)
+               6-card hero row replacing manager KPI tiles. Each card is clickable
+               (data-view + data-scroll-target) to navigate to the relevant view.
+               Color accents: accent-errors (coral), accent-latency (amber), accent-traffic (green). -->
+          <div class="dev-hero-stats" data-dashboard-mode="developer" role="group" aria-label="Developer metrics" hidden>
+            <div class="dev-stat-card" data-view="analytics" data-scroll-target="user-chart-title" role="button" tabindex="0">
+              <div class="dev-stat-head">
+                <span class="dev-stat-icon">&#128101;</span>
+                <span class="dev-stat-tag">Users</span>
+              </div>
+              <div class="dev-stat-value" id="dev-active-users">0</div>
+              <div class="dev-stat-label">Active Users</div>
+              <p class="dev-stat-trend up" id="dev-active-users-trend">Current sessions</p>
+            </div>
+            <div class="dev-stat-card" data-view="analytics" data-scroll-target="user-chart-title" role="button" tabindex="0">
+              <div class="dev-stat-head">
+                <span class="dev-stat-icon">&#128200;</span>
+                <span class="dev-stat-tag">24h Peak</span>
+              </div>
+              <div class="dev-stat-value" id="dev-max-users">0</div>
+              <div class="dev-stat-label">Max Users (24h)</div>
+              <p class="dev-stat-trend up" id="dev-max-users-trend">Peak in last 24h</p>
+            </div>
+            <div class="dev-stat-card accent-errors" data-view="issues" data-scroll-target="issues-title" role="button" tabindex="0">
+              <div class="dev-stat-head">
+                <span class="dev-stat-icon">&#9888;</span>
+                <span class="dev-stat-tag">Issues</span>
+              </div>
+              <div class="dev-stat-value" id="dev-active-issues">0</div>
+              <div class="dev-stat-label">Active Issues</div>
+              <p class="dev-stat-trend down" id="dev-active-issues-trend">Needs review</p>
+            </div>
+            <div class="dev-stat-card accent-latency" data-view="analytics" data-scroll-target="latency-chart-title" role="button" tabindex="0">
+              <div class="dev-stat-head">
+                <span class="dev-stat-icon">&#9201;</span>
+                <span class="dev-stat-tag">Latency</span>
+              </div>
+              <div class="dev-stat-value" id="dev-avg-latency">0 ms</div>
+              <div class="dev-stat-label">Avg Latency (24h)</div>
+              <p class="dev-stat-trend" id="dev-avg-latency-trend">Across all routes</p>
+            </div>
+            <div class="dev-stat-card accent-traffic" data-view="analytics" data-scroll-target="purchase-chart-title" role="button" tabindex="0">
+              <div class="dev-stat-head">
+                <span class="dev-stat-icon">&#128640;</span>
+                <span class="dev-stat-tag">Traffic</span>
+              </div>
+              <div class="dev-stat-value" id="dev-peak-traffic">0/min</div>
+              <div class="dev-stat-label">Peak Traffic</div>
+              <p class="dev-stat-trend up" id="dev-peak-traffic-trend">Requests per minute</p>
+            </div>
+            <div class="dev-stat-card" data-view="health" data-scroll-target="health-title" role="button" tabindex="0">
+              <div class="dev-stat-head">
+                <span class="dev-stat-icon">&#128230;</span>
+                <span class="dev-stat-tag">Deploys</span>
+              </div>
+              <div class="dev-stat-value" id="dev-patch-deployed">0</div>
+              <div class="dev-stat-label">Patch Deployed</div>
+              <p class="dev-stat-trend" id="dev-patch-deployed-trend">Versions seen</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Home grid — manager-only and developer-only panels swap based on dashboard mode -->
+        <div class="home-grid compact-home-grid">
+          <!-- Manager mode panels -->
+          <section class="panel build-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="build-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">User behavior</p>
+                <h2 id="build-title">Most-clicked features</h2>
+              </div>
+            </div>
+            <div class="metadata-grid" id="build-metadata"></div>
+          </section>
+
+          <section class="panel activity-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="activity-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Stream</p>
+                <h2 id="activity-title">Recent user signals</h2>
+              </div>
+            </div>
+            <ol class="event-timeline" id="activity-feed"></ol>
+          </section>
+
+          <section class="panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="manager-summary-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Summary</p>
+                <h2 id="manager-summary-title">Operational highlights</h2>
+              </div>
+            </div>
+            <ul class="priority-list" id="manager-summary-list">
+              <li><span aria-hidden="true">!</span> Waiting for live trends from shop demo.</li>
+            </ul>
+          </section>
+
+          <!-- Developer mode panels — colored bundle cards matching prototype 2 style.
+               Three insight cards (errors/latency/traffic) each showing top-3 items.
+               Clickable (bundle-clickable) to navigate to Issues or Analytics. -->
+          <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
+            <div class="panel developer-insight-panel bundle-errors bundle-clickable" data-view="issues" data-scroll-target="issues-title" tabindex="0" role="button" aria-label="View issues">
+              <div class="bundle-summary-bar accent-errors">
+                <span class="bundle-icon-mark">&#9888;</span>
+                <div>
+                  <p class="eyebrow">Current Issues</p>
+                  <p class="bundle-title" id="developer-home-insights-title">Top 3 issues</p>
+                  <p class="bundle-desc">Most urgent failures affecting active sessions.</p>
+                </div>
+              </div>
+              <ol class="developer-insight-list" id="developer-insight-issues">
+                <li><span>Waiting for issues</span><strong>0</strong></li>
+              </ol>
+            </div>
+
+            <div class="panel developer-insight-panel bundle-latency bundle-clickable" data-view="analytics" data-scroll-target="latency-chart-title" tabindex="0" role="button" aria-label="View latency analytics">
+              <div class="bundle-summary-bar accent-latency">
+                <span class="bundle-icon-mark">&#9201;</span>
+                <div>
+                  <p class="eyebrow">Latency</p>
+                  <p class="bundle-title">High latency windows</p>
+                  <p class="bundle-desc">Routes with p95 latency above the watch threshold.</p>
+                </div>
+              </div>
+              <ol class="developer-insight-list" id="developer-insight-latency">
+                <li><span>Waiting for route telemetry</span><strong>0 ms</strong></li>
+              </ol>
+            </div>
+
+            <div class="panel developer-insight-panel bundle-traffic bundle-clickable" data-view="analytics" data-scroll-target="user-chart-title" tabindex="0" role="button" aria-label="View traffic analytics">
+              <div class="bundle-summary-bar accent-traffic">
+                <span class="bundle-icon-mark">&#9652;</span>
+                <div>
+                  <p class="eyebrow">Traffic</p>
+                  <p class="bundle-title">Peak traffic</p>
+                  <p class="bundle-desc">Top request windows and load shifts.</p>
+                </div>
+              </div>
+              <ol class="developer-insight-list" id="developer-insight-traffic">
+                <li><span>Waiting for activity samples</span><strong>0/min</strong></li>
+              </ol>
+            </div>
+          </section>
+
+          <!-- Developer home bottom row: summary + patch notes. -->
+          <div class="dev-home-bottom-row" data-dashboard-mode="developer" hidden>
+            <a class="panel developer-summary-panel" href="#health" data-view="health" data-scroll-target="health-title" aria-label="Open health page">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Summary</p>
+                  <h2>Developer summary</h2>
+                </div>
+              </div>
+              <p class="developer-summary-copy" id="dev-home-summary-copy">Waiting for telemetry from the demo app.</p>
+              <ul class="priority-list developer-summary-list" id="dev-home-summary-list">
+                <li><span aria-hidden="true">!</span> Trigger demo actions to populate this summary.</li>
+              </ul>
+              <div class="developer-summary-metrics" id="dev-home-summary-metrics">
+                <div class="summary-chip">
+                  <p>Reliability</p>
+                  <strong id="dev-overall-score">0%</strong>
+                </div>
+                <div class="summary-chip">
+                  <p>Status</p>
+                  <strong id="dev-overall-label">Healthy</strong>
+                </div>
+                <div class="summary-chip">
+                  <p>Open errors</p>
+                  <strong id="dev-home-summary-errors">0</strong>
+                </div>
+              </div>
+            </a>
+            <section class="panel dev-home-patches-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Deployments</p>
+                  <h2>Current Patch Notes</h2>
+                </div>
+              </div>
+              <ul class="patch-version-list" id="developer-patch-list">
+                <li class="patch-version-item">
+                  <span class="patch-version-name">Waiting for deploy data</span>
+                  <span class="patch-version-count">0 errors</span>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ——— 3b. ISSUES VIEW ———
+           Triage queue with sort/filter controls (severity, version, app, route).
+           Developer mode adds severity diagnostic chips, a search bar, and a mute-alerts toggle. -->
+      <section class="view" id="issues-view" aria-labelledby="issues-page-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Incident response</p>
+            <h1 id="issues-page-title">Triage queue</h1>
+          </div>
+          <!-- Mute alerts (developer-only, toggled by data-dashboard-mode) + Export CSV -->
+          <div class="page-heading-actions">
+            <button class="ghost-button" id="developer-mute-toggle" data-dashboard-mode="developer" type="button" hidden>Mute alerts</button>
+            <button class="ghost-button" id="issue-export-csv" type="button">Export CSV</button>
+          </div>
+        </div>
+
+        <!-- Mute status line — shown below heading when developer mode is active -->
+        <p class="inline-status developer-mute-line" id="developer-mute-status" data-dashboard-mode="developer" hidden>Live alerts are active.</p>
+
+        <div class="issues-toolbar" role="group" aria-label="Issue sorting and filtering controls">
+          <label>
+            <span>Sort</span>
+            <select id="issue-sort-field">
+              <option value="timestamp">Timestamp</option>
+              <option value="version">Version</option>
+              <option value="severity">Severity</option>
+              <option value="route">Route</option>
+            </select>
+          </label>
+          <label>
+            <span>Direction</span>
+            <select id="issue-sort-direction">
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </label>
+          <label>
+            <span>Severity</span>
+            <select id="issue-filter-severity">
+              <option value="all">All</option>
+              <option value="critical">Critical</option>
+              <option value="warning">Warning</option>
+            </select>
+          </label>
+          <label>
+            <span>Version</span>
+            <input id="issue-filter-version" type="text" placeholder="v1.2.0-beta">
+          </label>
+          <label>
+            <span>App</span>
+            <input id="issue-filter-app" type="text" placeholder="shopdemo">
+          </label>
+          <label>
+            <span>Route</span>
+            <input id="issue-filter-route" type="text" placeholder="/demo">
+          </label>
+          <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
+        </div>
+
+        <!-- Developer alerts panel — severity KPI chips + developer search input -->
+        <section class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" aria-labelledby="developer-alerts-title" hidden>
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Developer alerts</p>
+              <h2 id="developer-alerts-title">Severity diagnostics and signal controls</h2>
+            </div>
+          </div>
+          <div class="developer-kpi-grid">
+            <div class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></div>
+            <div class="summary-chip"><p>Warning</p><strong id="dev-warning-count">0</strong></div>
+            <div class="summary-chip"><p>Info/Other</p><strong id="dev-info-count">0</strong></div>
+            <div class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></div>
+          </div>
+          <div class="developer-issue-tools">
+            <label class="field-row" for="developer-issue-search">
+              <span>Developer search</span>
+              <input id="developer-issue-search" type="text" placeholder="Search title, route, app, version...">
+            </label>
+          </div>
+        </section>
+
+        <!-- Issue list + activity feed. Issue rows are clickable to expand detail panels. -->
+        <div class="issues-layout">
+          <section class="panel issue-panel" aria-labelledby="issues-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Triage</p>
+                <h2 id="issues-title">Errors needing triage</h2>
+              </div>
+            </div>
+
+            <div class="issue-list" id="issue-list"></div>
+            <button class="issue-toggle" id="issue-expand-toggle" type="button" hidden>Show more</button>
+          </section>
+
+          <section class="panel" aria-labelledby="incident-feed-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Stream</p>
+                <h2 id="incident-feed-title">Latest issue activity</h2>
+              </div>
+            </div>
+            <ol class="event-timeline" id="issues-activity-feed"></ol>
+          </section>
+        </div>
+      </section>
+
+      <!-- ——— 3c. HEALTH VIEW ———
+           Radar chart showing app health dimensions, service status stack, and incident feed. -->
+      <section class="view" id="health-view" aria-labelledby="health-title" hidden>
+        <div class="health-summary">
+          <div class="health-summary-head">
+            <div>
+              <p class="eyebrow">Production reliability</p>
+              <h1 id="health-title">Production health</h1>
+            </div>
+            <div class="health-head-stats">
+              <p class="status-token good" id="health-status-token">Healthy</p>
+              <strong id="health-summary-text">Waiting for health telemetry</strong>
+            </div>
+          </div>
+          <div class="health-radar-card">
+            <div class="health-score-column">
+              <ul class="health-legend" id="health-legend"></ul>
+              <section class="health-status-key" aria-labelledby="health-status-key-title">
+                <h2 id="health-status-key-title">Status key</h2>
+                <ul class="health-status-list">
+                  <li><span class="status-token good">Healthy</span><strong>75-100</strong></li>
+                  <li><span class="status-token warning">Watch</span><strong>55-74</strong></li>
+                  <li><span class="status-token critical">Critical</span><strong>0-54</strong></li>
+                </ul>
+                <p>Score is determined by availability, error rate, latency, ingestion quality, feedback, and coverage.</p>
+              </section>
+            </div>
+            <svg class="health-radar" id="health-radar-chart" viewBox="0 0 520 340" role="img" aria-labelledby="health-radar-svg-title">
+              <title id="health-radar-svg-title">Radar chart of app health dimensions</title>
+              <g class="health-radar-grid" id="health-radar-grid"></g>
+              <g class="health-radar-axis" id="health-radar-axis"></g>
+              <polygon class="health-radar-shape" id="health-radar-shape" points=""></polygon>
+            </svg>
+          </div>
+        </div>
+
+        <div class="health-grid">
+          <section class="panel health-services-panel" aria-labelledby="health-services-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Infrastructure</p>
+                <h2 id="health-services-title">Service health details</h2>
+              </div>
+            </div>
+            <div class="service-stack" id="service-stack"></div>
+          </section>
+
+          <section class="panel health-issues-panel" aria-labelledby="health-issues-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Incidents</p>
+                <h2 id="health-issues-title">Recent reliability incidents</h2>
+              </div>
+            </div>
+            <ol class="event-timeline" id="health-incident-feed"></ol>
+          </section>
+        </div>
+      </section>
+
+      <!-- ——— 3d. ANALYTICS VIEW ———
+           Time-range selector (24h / 7d / 30d), summary chips, bar charts (users, activity),
+           latency line chart, star-rating feedback block, donut event breakdown.
+           Developer mode adds event-type mix and route-pressure tables. -->
+      <section class="view" id="analytics-view" aria-labelledby="analytics-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Long term trends</p>
+            <h1 id="analytics-title">Analytics</h1>
+          </div>
+          <div class="segmented-control" role="group" aria-label="Time range">
+            <button class="active" type="button" data-range="24h">24h</button>
+            <button type="button" data-range="7d">7d</button>
+            <button type="button" data-range="30d">30d</button>
+          </div>
+        </div>
+
+        <section class="analytics-summary" aria-label="Analytics summary">
+          <div class="summary-chip">
+            <p>Range active users</p>
+            <strong id="analytics-range-users">0</strong>
+          </div>
+          <div class="summary-chip">
+            <p>Range actions</p>
+            <strong id="analytics-range-actions">0</strong>
+          </div>
+          <div class="summary-chip">
+            <p>Latency peak</p>
+            <strong id="analytics-range-latency">0 ms</strong>
+          </div>
+        </section>
+
+        <div class="analytics-grid">
+          <section class="panel wide-panel" aria-labelledby="user-chart-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Users</p>
+                <h2 id="user-chart-title">User count over time</h2>
+              </div>
+              <span class="delta-badge positive" id="user-delta">0 active</span>
+            </div>
+            <div class="bar-chart" id="user-chart" role="img" aria-label="User count over time"></div>
+          </section>
+
+          <section class="panel wide-panel" aria-labelledby="purchase-chart-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Tracked actions</p>
+                <h2 id="purchase-chart-title">Custom activity over time</h2>
+              </div>
+              <span class="delta-badge positive" id="purchase-delta">0 actions</span>
+            </div>
+            <div class="bar-chart purchase-chart" id="purchase-chart" role="img" aria-label="Custom and checkout event activity"></div>
+          </section>
+
+          <!-- Developer: Errors over time bar chart (same dimensions as User count) -->
+          <section class="panel wide-panel" data-dashboard-mode="developer" aria-labelledby="dev-error-chart-title" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Errors</p>
+                <h2 id="dev-error-chart-title">Errors over time</h2>
+              </div>
+            </div>
+            <div class="bar-chart error-chart" id="dev-error-chart" role="img" aria-label="Error count over time"></div>
+          </section>
+
+          <!-- Developer: 24h response latency canvas line chart with manual threshold -->
+          <section class="panel wide-panel" data-dashboard-mode="developer" aria-labelledby="dev-latency-24h-title" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Performance</p>
+                <h2 id="dev-latency-24h-title">Response latency — 24h</h2>
+              </div>
+              <label class="dev-threshold-control">
+                <span>Threshold</span>
+                <input id="dev-latency-threshold" type="number" value="250" min="0" max="1000" step="10">
+                <span>ms</span>
+              </label>
+            </div>
+            <div class="dev-latency-canvas-wrap">
+              <canvas id="dev-latency-canvas"></canvas>
+            </div>
+          </section>
+
+          <section class="panel line-panel" aria-labelledby="latency-chart-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Performance</p>
+                <h2 id="latency-chart-title">Latency by route</h2>
+              </div>
+            </div>
+            <svg class="line-chart" id="latency-chart" viewBox="0 0 640 280" role="img" aria-labelledby="latency-svg-title">
+              <title id="latency-svg-title">Latency line chart showing checkout above other routes</title>
+              <g class="grid-lines">
+                <path d="M60 40H610"></path>
+                <path d="M60 90H610"></path>
+                <path d="M60 140H610"></path>
+                <path d="M60 190H610"></path>
+                <path d="M60 240H610"></path>
+              </g>
+              <g class="axis-labels y-axis" id="latency-y-axis"></g>
+              <g class="axis-labels x-axis" id="latency-x-axis"></g>
+              <path class="line checkout" id="latency-line" d="M60 240 L610 240"></path>
+            </svg>
+            <div class="chart-legend" id="latency-legend">
+              <span><i class="legend-swatch checkout"></i>Waiting for pageload samples</span>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="feedback-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Sentiment</p>
+                <h2 id="feedback-title">Feedback counts</h2>
+              </div>
+            </div>
+            <div class="rating-block">
+              <strong id="rating-average">0.0</strong>
+              <span id="rating-caption">average rating</span>
+              <div class="rating-bars" id="rating-bars">
+                <span style="--rating-width: 0%">5 stars</span>
+                <span style="--rating-width: 0%">4 stars</span>
+                <span style="--rating-width: 0%">3 stars</span>
+                <span style="--rating-width: 0%">2 stars</span>
+                <span style="--rating-width: 0%">1 star</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="breakdown-title">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Activity mix</p>
+                <h2 id="breakdown-title">Event breakdown</h2>
+              </div>
+            </div>
+            <div class="donut-wrap" role="img" aria-label="Event breakdown chart">
+              <div class="donut" id="breakdown-donut" aria-hidden="true"></div>
+              <ul class="breakdown-list" id="breakdown-list">
+                <li class="breakdown-item teal">
+                  <span class="breakdown-main"><span class="legend-dot teal"></span><span class="breakdown-label">Performance</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Pageload + web vitals</small>
+                </li>
+                <li class="breakdown-item coral">
+                  <span class="breakdown-main"><span class="legend-dot coral"></span><span class="breakdown-label">Errors</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Runtime + API failures</small>
+                </li>
+                <li class="breakdown-item amber">
+                  <span class="breakdown-main"><span class="legend-dot amber"></span><span class="breakdown-label">Feedback</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Ratings + comments</small>
+                </li>
+                <li class="breakdown-item blue">
+                  <span class="breakdown-main"><span class="legend-dot blue"></span><span class="breakdown-label">Clicks</span></span>
+                  <strong>0%</strong>
+                  <small class="breakdown-detail">Click + custom actions</small>
+                </li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ——— 3e. SETTINGS VIEW ———
+           Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode, language,
+           time zone, refresh rate), Notifications (on/off toggle, volume, type, schedule, threshold, snooze).
+           Includes a notification preview card on the right. -->
+      <section class="view" id="settings-view" aria-labelledby="settings-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Workspace controls</p>
+            <h1 id="settings-title">Settings</h1>
+          </div>
+          <div class="profile-chip">
+            <span>AD</span>
+            <div>
+              <strong id="profile-display-name">Aditya</strong>
+              <small>Admin</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-layout">
+          <section class="settings-list" aria-label="Settings sections">
+            <div class="settings-section open">
+              <button class="settings-trigger" type="button" aria-expanded="true">
+                <span class="settings-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
+                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path>
+                  </svg>
+                </span>
+                <span>
+                  <strong>Profile</strong>
+                  <small>Login, password, and 2FA</small>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <div class="settings-content">
+                <div class="field-row">
+                  <label for="display-name">Display name</label>
+                  <input id="display-name" type="text" value="Aditya">
+                </div>
+                <div class="split-actions">
+                  <button class="primary-button" id="change-password-button" type="button">Change password</button>
+                  <button class="ghost-button" id="sign-out-button" type="button">Sign out</button>
+                </div>
+                <p class="inline-status" id="profile-status-line">Profile updates are saved locally for this demo.</p>
+                <label class="toggle-row">
+                  <span>
+                    <strong>Two-factor authentication</strong>
+                    <small>Require a code when signing in.</small>
+                  </span>
+                  <input class="toggle-input" type="checkbox" checked>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <button class="settings-trigger" type="button" aria-expanded="false">
+                <span class="settings-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 4v16"></path>
+                    <path d="M4 8h16"></path>
+                    <path d="M6 20h12"></path>
+                    <path d="M8 8l-3 7h6L8 8Z"></path>
+                    <path d="M16 8l-3 7h6l-3-7Z"></path>
+                  </svg>
+                </span>
+                <span>
+                  <strong>Accessibility</strong>
+                  <small>Theme, language, time zone, and refresh rate</small>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <div class="settings-content">
+                <label class="toggle-row">
+                  <span>
+                    <strong>Dark mode</strong>
+                    <small>Switch the dashboard to a dark theme.</small>
+                  </span>
+                  <input class="toggle-input" id="dark-mode-toggle" type="checkbox">
+                </label>
+                <label class="field-row" for="language">
+                  <span>Language</span>
+                  <select id="language">
+                    <option>English</option>
+                    <option>Spanish</option>
+                    <option>French</option>
+                  </select>
+                </label>
+                <label class="field-row" for="timezone-select">
+                  <span>Time zone</span>
+                  <select id="timezone-select">
+                    <option value="auto" selected>Auto-detect</option>
+                    <option value="America/Los_Angeles">Pacific (PT)</option>
+                    <option value="America/Denver">Mountain (MT)</option>
+                    <option value="America/Chicago">Central (CT)</option>
+                    <option value="America/New_York">Eastern (ET)</option>
+                    <option value="Europe/London">London (GMT)</option>
+                    <option value="Europe/Berlin">Central Europe (CET)</option>
+                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </label>
+                <label class="field-row" for="refresh-rate-select">
+                  <span>Refresh rate</span>
+                  <select id="refresh-rate-select">
+                    <option value="1000">1 second</option>
+                    <option value="3000" selected>3 seconds</option>
+                    <option value="5000">5 seconds</option>
+                    <option value="10000">10 seconds</option>
+                    <option value="30000">30 seconds</option>
+                    <option value="60000">1 minute</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <button class="settings-trigger" type="button" aria-expanded="false">
+                <span class="settings-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"></path>
+                    <path d="M10 21h4"></path>
+                  </svg>
+                </span>
+                <span>
+                  <strong>Notifications</strong>
+                  <small>Alerts, pauses, and thresholds</small>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"></path>
+                </svg>
+              </button>
+              <div class="settings-content">
+                <label class="toggle-row">
+                  <span>
+                    <strong>Enable notifications</strong>
+                    <small>Turn all notifications on or off.</small>
+                  </span>
+                  <input class="toggle-input" id="notification-enabled-toggle" type="checkbox" checked>
+                </label>
+                <label class="range-row" for="notification-volume">
+                  <span>
+                    <strong>Notification volume</strong>
+                    <small>Adjust alert sound level.</small>
+                  </span>
+                  <input id="notification-volume" type="range" min="0" max="100" value="70">
+                </label>
+                <label class="field-row" for="notification-mode">
+                  <span>Notification type</span>
+                  <select id="notification-mode">
+                    <option>Critical only</option>
+                    <option>Critical and warnings</option>
+                    <option selected>All activity</option>
+                  </select>
+                </label>
+                <label class="field-row" for="notification-schedule">
+                  <span>Notification schedule</span>
+                  <select id="notification-schedule">
+                    <option value="always" selected>24 hours (always active)</option>
+                    <option value="custom">Custom hours</option>
+                  </select>
+                </label>
+                <div class="time-grid" id="custom-hours-grid" hidden>
+                  <label class="field-row" for="notification-start">
+                    <span>Notify after</span>
+                    <select id="notification-start"></select>
+                  </label>
+                  <label class="field-row" for="notification-end">
+                    <span>Notify until</span>
+                    <select id="notification-end"></select>
+                  </label>
+                </div>
+                <label class="field-row" for="error-threshold">
+                  <span>Error rate threshold</span>
+                  <select id="error-threshold">
+                    <option>1%</option>
+                    <option selected>2%</option>
+                    <option>5%</option>
+                  </select>
+                </label>
+                <div class="snooze-actions" role="group" aria-label="Quick mute controls">
+                  <button class="ghost-button snooze-action" type="button" data-snooze="30">Mute 30m</button>
+                  <button class="ghost-button snooze-action" type="button" data-snooze="120">Mute 2h</button>
+                  <button class="ghost-button snooze-action" type="button" data-snooze="0">Resume now</button>
+                </div>
+                <p class="inline-status" id="notification-status-line">Notifications are active.</p>
+              </div>
+            </div>
+          </section>
+
+          <aside class="settings-preview" aria-label="Notification preview">
+            <p class="eyebrow">Preview</p>
+            <h2>Critical condition</h2>
+            <p class="preview-copy">Checkout error rate exceeded 2% on <code>v1.2.0-beta</code>. Priya has been assigned.</p>
+            <div class="preview-actions">
+              <button class="primary-button" type="button">Acknowledge</button>
+              <button class="ghost-button" type="button">Pause</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===== 4. TOAST STACK — popup status notifications (populated by app.js) ===== -->
+    <div class="toast-stack" id="toast-stack" role="status" aria-live="polite" aria-label="Status updates"></div>
+
+    <!-- ===== 5. MOBILE NAV — bottom tab bar duplicating sidebar for small screens ===== -->
+    <nav class="mobile-nav" aria-label="Mobile primary navigation">
+      <button class="mobile-nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 10.6 12 4l8 6.6v8.9a.5.5 0 0 1-.5.5h-5.1v-5.5H9.6V20H4.5a.5.5 0 0 1-.5-.5v-8.9Z"></path>
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="issues" title="Issues" aria-label="Issues">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 7h14"></path>
+          <path d="M5 12h14"></path>
+          <path d="M5 17h10"></path>
+        </svg>
+        <span>Issues</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="health" title="Health" aria-label="Health">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"></path>
+        </svg>
+        <span>Health</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="analytics" title="Analytics" aria-label="Analytics">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19V12"></path>
+          <path d="M10 19V8"></path>
+          <path d="M15 19v-5"></path>
+          <path d="M20 19V5"></path>
+        </svg>
+        <span>Analytics</span>
+      </button>
+      <button class="mobile-nav-button" type="button" data-view="settings" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"></path>
+          <path d="M19.2 13.2a7.8 7.8 0 0 0 .1-1.2 7.8 7.8 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.1-1.2L14.4 3h-4.8l-.4 2.7a8.4 8.4 0 0 0-2.1 1.2l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0-.1 1.2c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.1 1.2l.4 2.7h4.8l.4-2.7a8.4 8.4 0 0 0 2.1-1.2l2.4 1 2-3.4-2.1-1.5Z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- app.js runs a static, auth-free dashboard showroom for landing-page visitors. -->
+  <script src="app.js"></script>
+</body>
+</html>

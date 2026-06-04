@@ -26,19 +26,19 @@
     </nav>
 
     <div class="topbar-actions landing-topbar-actions">
-      <button class="primary-button landing-cta primary-cta" type="button" data-action="go-login">Get Started</button>
+      <button class="primary-button landing-cta primary-cta" type="button" data-action="go-login">Sign up / Sign in</button>
     </div>
   </header>
 
   <main class="landing-main" id="home">
     <section class="landing-section hero" aria-label="Hero">
       <div class="hero-copy">
-        <!-- <p class="hero-overline">Production clarity in seconds</p> -->
+        <h2 class="hero-overline">WatchTower</h2>
         <h1>Let the Data Come to You</h1>
         <p class="hero-subtitle">Track errors, speed, and user feedback-connected to every release, in one simple dashboard.</p>
         <div class="hero-actions">
           <button class="primary-button primary-cta" type="button" data-action="go-login">Get Started</button>
-          <button class="ghost-button dashboard-demo-link" type="button" data-action="go-dashboard-demo">View dashboard demo</button>
+          <a class="ghost-button dashboard-demo-link" href="/dashboard-demo/">View dashboard demo</a>
         </div>
         <div class="signal-strip" role="group" aria-label="WatchTower signal types">
           <span>Errors</span>
@@ -158,41 +158,17 @@
           <h2 id="audience-title">A clearer handoff between the people shipping the product.</h2>
         </div>
         <div class="personas-grid" role="tablist" aria-label="Perspectives by audience">
-          <button class="panel persona-card active" id="audience-tab-developers" type="button" role="tab" aria-controls="audience-panel-developers" aria-selected="true" data-audience-tab="developers">
-            <span class="persona-title">Developers</span>
-            <span class="persona-copy">Get actionable stack traces and timings without wiring custom tooling.</span>
-          </button>
-          <button class="panel persona-card" id="audience-tab-leads" type="button" role="tab" aria-controls="audience-panel-leads" aria-selected="false" tabindex="-1" data-audience-tab="leads">
-            <span class="persona-title">Technical Leads</span>
-            <span class="persona-copy">Monitor stability and performance across releases to protect velocity.</span>
-          </button>
-          <button class="panel persona-card" id="audience-tab-managers" type="button" role="tab" aria-controls="audience-panel-managers" aria-selected="false" tabindex="-1" data-audience-tab="managers">
+          <button class="panel persona-card active" id="audience-tab-managers" type="button" role="tab" aria-controls="audience-panel-managers" aria-selected="true" data-audience-tab="managers">
             <span class="persona-title">Product Managers</span>
             <span class="persona-copy">See user-reported issues and impact to prioritize the next fix.</span>
           </button>
+          <button class="panel persona-card" id="audience-tab-developers" type="button" role="tab" aria-controls="audience-panel-developers" aria-selected="false" tabindex="-1" data-audience-tab="developers">
+            <span class="persona-title">Developers</span>
+            <span class="persona-copy">Get actionable stack traces and timings without wiring custom tooling.</span>
+          </button>
         </div>
         <div class="audience-stage">
-          <div class="audience-panel" id="audience-panel-developers" role="tabpanel" aria-labelledby="audience-tab-developers" data-audience-panel="developers">
-            <div class="audience-placeholder">
-              <span class="audience-placeholder-label">Video placeholder</span>
-              <span class="audience-play" aria-hidden="true">▶</span>
-              <div>
-                <h3>Developer investigation view</h3>
-                <p>Replace this area with a short clip showing stack traces, timings, and the path to a focused fix.</p>
-              </div>
-            </div>
-          </div>
-          <div class="audience-panel" id="audience-panel-leads" role="tabpanel" aria-labelledby="audience-tab-leads" data-audience-panel="leads" hidden>
-            <div class="audience-placeholder">
-              <span class="audience-placeholder-label">Video placeholder</span>
-              <span class="audience-play" aria-hidden="true">▶</span>
-              <div>
-                <h3>Technical lead stability view</h3>
-                <p>Replace this area with a short clip showing release health, regressions, and team-wide operational context.</p>
-              </div>
-            </div>
-          </div>
-          <div class="audience-panel" id="audience-panel-managers" role="tabpanel" aria-labelledby="audience-tab-managers" data-audience-panel="managers" hidden>
+          <div class="audience-panel" id="audience-panel-managers" role="tabpanel" aria-labelledby="audience-tab-managers" data-audience-panel="managers">
             <div class="audience-placeholder">
               <span class="audience-placeholder-label">Video placeholder</span>
               <span class="audience-play" aria-hidden="true">▶</span>
@@ -202,20 +178,16 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="landing-section cta-section" id="get-started" aria-label="Get started">
-      <div class="panel cta-panel">
-        <div>
-          <p class="chapter-label">Next step</p>
-          <h2>Start with a clearer view of production.</h2>
-          <p class="lead">Bring your most important signals into one workspace and give every issue a more useful starting point.</p>
-        </div>
-        <div class="cta-actions">
-          <button class="primary-button primary-cta" type="button" data-action="go-login">Get started free</button>
-          <a class="ghost-button dashboard-demo-link" href="/dashboard">View dashboard demo</a>
+          <div class="audience-panel" id="audience-panel-developers" role="tabpanel" aria-labelledby="audience-tab-developers" data-audience-panel="developers" hidden>
+            <div class="audience-placeholder">
+              <span class="audience-placeholder-label">Video placeholder</span>
+              <span class="audience-play" aria-hidden="true">▶</span>
+              <div>
+                <h3>Developer investigation view</h3>
+                <p>Replace this area with a short clip showing stack traces, timings, and the path to a focused fix.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -267,7 +239,7 @@
         <h2>Product</h2>
         <a href="#capabilities">Features</a>
         <a href="#how-it-works">How it works</a>
-        <a href="/dashboard">Dashboard demo</a>
+        <a href="/dashboard-demo/">Dashboard demo</a>
       </nav>
       <nav class="footer-column" aria-label="Project links">
         <h2>Project</h2>
