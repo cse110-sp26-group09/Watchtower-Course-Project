@@ -73,7 +73,7 @@ test.describe("Prototype 3 event APIs", () => {
   });
 
   test.afterAll(async () => {
-    if (api) await api.dispose();
+    if (api) {await api.dispose();}
   });
 
   test("GET /api/events response is shaped { events: [...] } and is JSON", async () => {
