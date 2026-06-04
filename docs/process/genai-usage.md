@@ -113,6 +113,7 @@
 - **LOC:** 3549
 - **Scale:** `Course-Project/src/Landing-Page/`
 - **Description:** Used Gemini to generate a landing page based off of a wire frame then tweaked that inital page
+- **Prompt:** Create a Landing page based off of the wireframe in `design/media/Landing Page.png`, In the whitespace below the get started button, create a meet the team section using this picture in `src/Landing-Page/assets`
 
 - **Name:** Hieu Le
 - **Date:** 05/26/26

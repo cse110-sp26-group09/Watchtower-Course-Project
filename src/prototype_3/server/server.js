@@ -7,6 +7,8 @@
  */
 
 const { sendAlert } = require("./mailer");
+const { getClerkAlertRecipients } = require("./clerk-alert-recipients");
+const { evaluateErrorThreshold } = require("./alert-threshold");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -36,6 +38,21 @@ const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
 const ACTIVE_USER_WINDOW = Number.isFinite(parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10))
   ? parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10)
   : 30000;
+const ERROR_ALERT_THRESHOLD = Number.isFinite(parseInt(process.env.ERROR_ALERT_THRESHOLD, 10))
+  ? parseInt(process.env.ERROR_ALERT_THRESHOLD, 10)
+  : 5;
+const ERROR_ALERT_WINDOW_MS = Number.isFinite(parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10))
+  ? parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10)
+  : 300000;
+const ALERT_COOLDOWN_MS = Number.isFinite(parseInt(process.env.ALERT_COOLDOWN_MS, 10))
+  ? parseInt(process.env.ALERT_COOLDOWN_MS, 10)
+  : 900000;
+// Window for the "active issues" error count. Counted directly against the
+// store (not the capped event feed) so it does not shrink as non-error
+// traffic pushes errors out of the recent-events window. 0 = count all errors.
+const ERROR_WINDOW_MS = Number.isFinite(parseInt(process.env.ERROR_WINDOW_MS, 10))
+  ? parseInt(process.env.ERROR_WINDOW_MS, 10)
+  : 24 * 60 * 60 * 1000;
 const FEATURE_FLAG_DEFINITIONS = [
   {
     key: "new-checkout-ui",
@@ -62,7 +79,7 @@ const GOVERNANCE_MASKING_RULES = [
 
 const sseClients = new Set();
 const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
-let registeredAlertRecipient = "";
+let lastErrorAlertSentAt = 0;
 
 const MIME = {
   ".html": "text/html",
@@ -829,29 +846,24 @@ function getIncomingEvents(body) {
   return [body];
 }
 
-function isEmailLike(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeString(value).trim());
-}
+async function maybeSendErrorThresholdAlert() {
+  let now = Date.now();
+  let events = await eventStore.allEvents(MAX_EVENTS);
+  let evaluation = evaluateErrorThreshold(events, {
+    now: now,
+    threshold: ERROR_ALERT_THRESHOLD,
+    windowMs: ERROR_ALERT_WINDOW_MS,
+    cooldownMs: ALERT_COOLDOWN_MS,
+    lastSentAt: lastErrorAlertSentAt
+  });
 
-function getAlertRecipientFromBody(body) {
-  if (!body || typeof body !== "object") return "";
+  if (!evaluation.shouldSend) return;
 
-  if (typeof body.alertRecipient === "string" && body.alertRecipient.trim()) {
-    return body.alertRecipient.trim();
-  }
-  if (typeof body.recipient === "string" && body.recipient.trim()) {
-    return body.recipient.trim();
-  }
+  let recipients = await getClerkAlertRecipients(now);
+  if (!recipients.length) return;
 
-  if (body.alerts && typeof body.alerts.email === "string" && body.alerts.email.trim()) {
-    return body.alerts.email.trim();
-  }
-
-  if (body.user && typeof body.user.email === "string" && body.user.email.trim()) {
-    return body.user.email.trim();
-  }
-
-  return registeredAlertRecipient;
+  lastErrorAlertSentAt = now;
+  sendAlert(evaluation.alert, recipients).catch(err => console.error("[mailer] Failed to send alert:", err));
 }
 
 async function ingestEventsBody(body) {
@@ -862,19 +874,8 @@ async function ingestEventsBody(body) {
   if (norm.length) {
     broadcastEvents(norm);
 
-    const threshold = parseInt(process.env.ERROR_ALERT_THRESHOLD || "5", 10);
-    const errorEvents = norm.filter(e => e.type === "error");
-    const alertRecipient = getAlertRecipientFromBody(body);
-
-    if (errorEvents.length >= threshold) {
-      const first = errorEvents[0];
-
-      sendAlert(
-        first.data && first.data.message ? first.data.message : "Unknown error",
-        first.route || "unknown",
-        first.deployVersion || "unknown",
-        alertRecipient
-      ).catch(err => console.error("[mailer] Failed to send alert:", err));
+    if (norm.some(function (eventRecord) { return eventRecord.type === "error"; })) {
+      maybeSendErrorThresholdAlert().catch(err => console.error("[mailer] Failed to evaluate alert threshold:", err));
     }
   }
 
@@ -891,23 +892,6 @@ const server = http.createServer(async function (request, response) {
 
   if (request.method === "OPTIONS") {
     applyCors(response, request); response.writeHead(204); response.end(); return;
-  }
-  if (request.method === "POST" && pathname === "/api/alert-recipient") {
-    try {
-      let body = await readJsonBody(request);
-      let email = safeString(body && body.email).trim();
-      if (!isEmailLike(email)) {
-        sendJson(response, 400, { error: "Valid email is required" }, request);
-        return;
-      }
-      registeredAlertRecipient = email;
-      console.log("[mailer] Registered alert recipient " + registeredAlertRecipient);
-      sendJson(response, 200, { ok: true }, request);
-    } catch (error) {
-      console.error("[prototype_3] Failed to register alert recipient:", error);
-      sendJson(response, 500, { error: "Failed to register alert recipient" }, request);
-    }
-    return;
   }
   if (request.method === "POST" && pathname === "/api/events") {
     try {
@@ -987,7 +971,15 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "GET" && pathname === "/api/stats") {
     try {
       let events = await eventStore.allEvents(MAX_EVENTS);
-      sendJson(response, 200, getDashboardStats(events), request);
+      let stats = getDashboardStats(events);
+      // Override the window-bound error count with a real count from the store
+      // so "active issues" reflects actual errors, not just errors that happen
+      // to remain in the recent-events window.
+      if (typeof eventStore.countErrors === "function") {
+        let since = ERROR_WINDOW_MS > 0 ? Date.now() - ERROR_WINDOW_MS : null;
+        stats.totalErrors = await eventStore.countErrors({ sinceMs: since });
+      }
+      sendJson(response, 200, stats, request);
     } catch (error) {
       console.error("[prototype_3] Failed to fetch stats:", error);
       sendJson(response, 500, { error: "Failed to fetch stats" }, request);

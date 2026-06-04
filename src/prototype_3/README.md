@@ -73,6 +73,32 @@ grant select, insert, update, delete on public.prototype3_events to service_role
 
 Prototype 1 remains separate and can continue using its own `events` table.
 
+## Alert emails
+
+Prototype 3 sends threshold alert emails from server-side WatchTower telemetry
+only. Demo pages and browser telemetry payloads do not provide recipient email
+addresses.
+
+Alert recipients are intentionally disabled for now. The threshold and mailer
+template remain in place, but `getClerkAlertRecipients()` returns an empty list
+until Clerk-backed delivery is restored.
+
+Configure Gmail OAuth and alert controls:
+
+```env
+GMAIL_ADDRESS=akatsuki.watchtower@gmail.com
+GMAIL_CLIENT_ID=your_client_id_here
+GMAIL_CLIENT_SECRET=your_client_secret_here
+GMAIL_REFRESH_TOKEN=your_refresh_token_here
+ERROR_ALERT_THRESHOLD=5
+ERROR_ALERT_WINDOW_MS=300000
+ALERT_COOLDOWN_MS=900000
+```
+
+The default alert condition is 5 stored error events in 5 minutes, with one
+email at most every 15 minutes. Later, restore recipient selection with Clerk's
+Backend API for every registered WatchTower user with a verified primary email.
+
 ## CORS
 
 The API defaults to permissive CORS for prototype work. Set

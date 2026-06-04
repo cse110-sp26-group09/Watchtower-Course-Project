@@ -862,6 +862,7 @@
 .sticky-cta .primary-button {
   width: 100%;
   justify-content: center;
+  text-align: center;
 }
 
 .modal-overlay {
@@ -891,6 +892,23 @@
 .modal-copy {
   margin-bottom: 12px;
   max-width: 62ch;
+}
+
+.privacy-section {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.privacy-section h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.privacy-section p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
 }
 
 .modal-close {
@@ -943,6 +961,7 @@
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.06);
   color: #e7f2ef;
+  text-align: center;
 }
 
 .code-actions .ghost-button:hover {
@@ -1007,7 +1026,7 @@
   color: #ffffff;
   font-size: clamp(62px, 7vw, 102px);
   line-height: 0.93;
-  letter-spacing: -0.08em;
+  letter-spacing: -0.06em;
   text-wrap: balance;
 }
 
@@ -1520,6 +1539,7 @@
   .hero-actions .ghost-button {
     width: 100%;
     justify-content: center;
+    text-align: center;
   }
 
   .workflow-chapter .landing-section,
@@ -1656,14 +1676,24 @@
 }
 
 .footer-column a,
+.footer-link-button,
 .footer-placeholder {
   color: rgba(255, 255, 255, 0.76);
   font-size: 13px;
   font-weight: 700;
 }
 
-.footer-column a:hover {
+.footer-column a:hover,
+.footer-link-button:hover {
   color: #ffffff;
+}
+
+.footer-link-button {
+  width: fit-content;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
 }
 
 .footer-placeholder {

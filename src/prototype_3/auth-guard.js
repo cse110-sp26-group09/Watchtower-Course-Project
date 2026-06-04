@@ -256,7 +256,6 @@
       }
       revealApp();
       wireUi(clerk);
-      registerAlertRecipient(clerk.user);
 
       // If the session ends in another tab, bounce back to login.
       clerk.addListener((payload) => {
@@ -264,7 +263,6 @@
           redirectToLogin();
           return;
         }
-        registerAlertRecipient(payload.user);
       });
     })
     .catch((error) => {
