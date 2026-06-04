@@ -522,6 +522,110 @@ a:hover { text-decoration: underline; }
   font-size: 14px;
 }
 
+.auth-legal-links {
+  margin-top: 16px;
+}
+
+.auth-link-button {
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-link-button:hover {
+  text-decoration: underline;
+}
+
+.auth-modal-overlay {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 34, 31, 0.52);
+}
+
+.auth-modal {
+  width: min(620px, 100%);
+  max-height: min(640px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.auth-modal-label {
+  margin: 0 0 4px;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.auth-modal h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.auth-modal-close {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.auth-modal-close:hover {
+  background: var(--surface-alt);
+}
+
+.auth-modal-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.legal-section {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.legal-section h3 {
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.legal-section p {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
 
 /* ── RESPONSIVE ───────────────────────────── */
 

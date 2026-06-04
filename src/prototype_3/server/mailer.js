@@ -30,10 +30,42 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-async function sendAlert(errorMessage, route, version, recipient) {
-  const to = recipient || process.env.ALERT_RECIPIENT;
+function normalizeRecipients(recipients) {
+  if (Array.isArray(recipients)) return recipients.map(String).map(r => r.trim()).filter(Boolean);
+  return recipients ? [String(recipients).trim()].filter(Boolean) : [];
+}
 
-  if (!to) {
+function buildAlertEmail(alert) {
+  const count = alert && alert.count ? alert.count : 0;
+  const threshold = alert && alert.threshold ? alert.threshold : 0;
+  const windowMinutes = alert && alert.windowMs ? Math.round(alert.windowMs / 60000) : 0;
+  const route = alert && alert.route ? alert.route : "unknown";
+  const version = alert && alert.deployVersion ? alert.deployVersion : "unknown";
+  const message = alert && alert.message ? alert.message : "Unknown error";
+  const timestamp = alert && alert.timestamp ? alert.timestamp : new Date().toISOString();
+
+  return {
+    subject: "WatchTower Alert: Error threshold reached",
+    html:
+      "<h2>WatchTower error threshold reached</h2>" +
+      "<p>WatchTower detected an error volume above the configured alert threshold.</p>" +
+      "<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\">" +
+      "<tr><td><strong>Error count</strong></td><td>" + escapeHtml(count) + "</td></tr>" +
+      "<tr><td><strong>Threshold</strong></td><td>" + escapeHtml(threshold) + "</td></tr>" +
+      "<tr><td><strong>Window</strong></td><td>" + escapeHtml(windowMinutes) + " minutes</td></tr>" +
+      "<tr><td><strong>Route</strong></td><td>" + escapeHtml(route) + "</td></tr>" +
+      "<tr><td><strong>Deploy version</strong></td><td>" + escapeHtml(version) + "</td></tr>" +
+      "<tr><td><strong>Latest error</strong></td><td>" + escapeHtml(message) + "</td></tr>" +
+      "<tr><td><strong>Timestamp</strong></td><td>" + escapeHtml(timestamp) + "</td></tr>" +
+      "</table>" +
+      "<p>Please review the WatchTower dashboard for the full event stream and affected sessions.</p>"
+  };
+}
+
+async function sendAlert(alert, recipients) {
+  const to = normalizeRecipients(recipients);
+
+  if (!to.length) {
     console.warn("[mailer] No alert recipient configured");
     return;
   }
@@ -58,19 +90,19 @@ async function sendAlert(errorMessage, route, version, recipient) {
       },
     });
 
+    const email = buildAlertEmail(alert);
+
     await transporter.sendMail({
       from: `WatchTower Alerts <${GMAIL_ADDRESS}>`,
-      to,
-      subject: "WatchTower Alert: Error spike detected",
-      html: `<p>High error rate on <strong>${escapeHtml(version)}</strong>.<br>
-             Route: ${escapeHtml(route)}<br>
-             Error: ${escapeHtml(errorMessage)}</p>`,
+      to: to.join(","),
+      subject: email.subject,
+      html: email.html,
     });
 
-    console.log("[mailer] Alert email sent successfully to " + to);
+    console.log("[mailer] Alert email sent successfully to " + to.join(", "));
   } catch (error) {
     console.error("[mailer] Error sending alert email:", error);
   }
 }
 
-module.exports = { sendAlert };
+module.exports = { buildAlertEmail, normalizeRecipients, sendAlert };

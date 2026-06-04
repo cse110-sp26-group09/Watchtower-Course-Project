@@ -14,20 +14,20 @@
 </head>
 <body>
   <!--
-    WatchTower Dashboard — Single-page monitoring app.
+    WatchTower Dashboard - Single-page monitoring app.
     All views live in the DOM; navigation shows/hides sections via data-view attributes.
     Data is populated at runtime by app.js. Two dashboard modes (manager / developer)
     toggle which panels are visible within each view.
 
     Structure:
-      1. Top bar    — branding, active-issues pill, mode pill, live-status indicator
-      2. Sidebar    — desktop icon navigation (Home, Issues, Health, Analytics, Settings)
-      3. Main       — five swappable views (home, issues, health, analytics, settings)
-      4. Toast stack — popup status notifications
-      5. Mobile nav — bottom navigation bar duplicating the sidebar for small screens
+      1. Top bar    - branding, active-issues pill, mode pill, live-status indicator
+      2. Sidebar    - desktop icon navigation (Home, Issues, Health, Analytics, Settings)
+      3. Main       - five swappable views (home, issues, health, analytics, settings)
+      4. Toast stack - popup status notifications
+      5. Mobile nav - bottom navigation bar duplicating the sidebar for small screens
   -->
   <div class="app-shell">
-    <!-- ===== 1. TOP BAR — brand, active-issues count, mode toggle pill ===== -->
+    <!-- ===== 1. TOP BAR - brand, active-issues count, mode toggle pill ===== -->
     <header class="topbar">
       <div class="topbar-left">
         <a class="brand" href="#home" data-view="home" aria-label="WatchTower home">
@@ -38,20 +38,22 @@
         </a>
       </div>
 
-      <p class="mode-current-view topbar-current-view" id="mode-current-view">Currently on: Manager view</p>
-
       <div class="topbar-actions">
         <button class="alert-pill" type="button" data-view="issues">
           <span class="alert-dot" aria-hidden="true"></span>
           <span id="active-issues-count">0 active issues</span>
         </button>
-        <button class="mode-pill mode-pill-button" id="dashboard-mode-pill" type="button" aria-label="Toggle dashboard mode" title="Toggle dashboard mode">Manager view</button>
+        <div class="mode-toggle" id="dashboard-mode-pill" role="group" aria-label="Dashboard mode">
+          <button class="mode-toggle-option active" type="button" data-mode="manager">Manager</button>
+          <button class="mode-toggle-option" type="button" data-mode="developer">Developer</button>
+          <span class="mode-toggle-slider" aria-hidden="true"></span>
+        </div>
         <span id="auth-user-label" class="auth-user-label" aria-live="polite"></span>
         <button id="logout-button" class="ghost-button" type="button">Logout</button>
       </div>
     </header>
 
-    <!-- ===== 2. SIDEBAR — desktop icon navigation (hidden on mobile) ===== -->
+    <!-- ===== 2. SIDEBAR - desktop icon navigation (hidden on mobile) ===== -->
     <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
       <nav class="nav-stack">
         <div class="nav-main">
@@ -97,15 +99,15 @@
       </nav>
     </aside>
 
-    <!-- ===== 3. MAIN CONTENT — five views, one visible at a time ===== -->
+    <!-- ===== 3. MAIN CONTENT - five views, one visible at a time ===== -->
     <main class="content" id="main-content">
 
-      <!-- ——— 3a. HOME VIEW ———
+      <!-- --- 3a. HOME VIEW ---
            KPI tiles (users, events, errors, deploys) link to other views.
            Manager mode: most-clicked features, recent user signals, operational highlights.
            Developer mode: top issues, high-latency windows, peak traffic, health summary. -->
       <section class="view active" id="home-view" aria-label="Home dashboard">
-        <!-- KPI strip — clickable metric tiles that navigate to the relevant view -->
+        <!-- KPI strip - clickable metric tiles that navigate to the relevant view -->
         <section class="kpi-overview" aria-label="Key metrics">
           <div class="kpi-toolbar">
             <p class="eyebrow">Realtime operations</p>
@@ -150,7 +152,6 @@
           <div class="dev-hero-stats" data-dashboard-mode="developer" role="group" aria-label="Developer metrics" hidden>
             <div class="dev-stat-card" data-view="analytics" data-scroll-target="user-chart-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#128101;</span>
                 <span class="dev-stat-tag">Users</span>
               </div>
               <div class="dev-stat-value" id="dev-active-users">0</div>
@@ -159,7 +160,6 @@
             </div>
             <div class="dev-stat-card" data-view="analytics" data-scroll-target="user-chart-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#128200;</span>
                 <span class="dev-stat-tag">24h Peak</span>
               </div>
               <div class="dev-stat-value" id="dev-max-users">0</div>
@@ -186,7 +186,7 @@
             </div>
             <div class="dev-stat-card accent-traffic" data-view="analytics" data-scroll-target="purchase-chart-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#128640;</span>
+                <span class="dev-stat-icon">&#9652;</span>
                 <span class="dev-stat-tag">Traffic</span>
               </div>
               <div class="dev-stat-value" id="dev-peak-traffic">0/min</div>
@@ -195,7 +195,6 @@
             </div>
             <div class="dev-stat-card" data-view="health" data-scroll-target="health-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#128230;</span>
                 <span class="dev-stat-tag">Deploys</span>
               </div>
               <div class="dev-stat-value" id="dev-patch-deployed">0</div>
@@ -205,7 +204,7 @@
           </div>
         </section>
 
-        <!-- Home grid — manager-only and developer-only panels swap based on dashboard mode -->
+        <!-- Home grid - manager-only and developer-only panels swap based on dashboard mode -->
         <div class="home-grid compact-home-grid">
           <!-- Manager mode panels -->
           <section class="panel build-panel manager-only-panel" data-dashboard-mode="manager" aria-labelledby="build-title">
@@ -240,7 +239,7 @@
             </ul>
           </section>
 
-          <!-- Developer mode panels — colored bundle cards matching prototype 2 style.
+          <!-- Developer mode panels - colored bundle cards matching prototype 2 style.
                Three insight cards (errors/latency/traffic) each showing top-3 items.
                Clickable (bundle-clickable) to navigate to Issues or Analytics. -->
           <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
@@ -249,7 +248,7 @@
                 <span class="bundle-icon-mark">&#9888;</span>
                 <div>
                   <p class="eyebrow">Current Issues</p>
-                  <p class="bundle-title" id="developer-home-insights-title">Top 3 issues</p>
+                  <p class="bundle-title" id="developer-home-insights-title">Latest Issues</p>
                   <p class="bundle-desc">Most urgent failures affecting active sessions.</p>
                 </div>
               </div>
@@ -333,7 +332,7 @@
         </div>
       </section>
 
-      <!-- ——— 3b. ISSUES VIEW ———
+      <!-- --- 3b. ISSUES VIEW ---
            Triage queue with sort/filter controls (severity, version, app, route).
            Developer mode adds severity diagnostic chips, a search bar, and a mute-alerts toggle. -->
       <section class="view" id="issues-view" aria-labelledby="issues-page-title" hidden>
@@ -349,7 +348,7 @@
           </div>
         </div>
 
-        <!-- Mute status line — shown below heading when developer mode is active -->
+        <!-- Mute status line - shown below heading when developer mode is active -->
         <p class="inline-status developer-mute-line" id="developer-mute-status" data-dashboard-mode="developer" hidden>Live alerts are active.</p>
 
         <div class="issues-toolbar" role="group" aria-label="Issue sorting and filtering controls">
@@ -392,7 +391,7 @@
           <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
         </div>
 
-        <!-- Developer alerts panel — severity KPI chips + developer search input -->
+        <!-- Developer alerts panel - severity KPI chips + developer search input -->
         <section class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" aria-labelledby="developer-alerts-title" hidden>
           <div class="panel-header">
             <div>
@@ -422,10 +421,10 @@
                 <p class="eyebrow">Triage</p>
                 <h2 id="issues-title">Errors needing triage</h2>
               </div>
+              <button class="issue-toggle" id="issue-expand-toggle" type="button" hidden>Show more</button>
             </div>
 
             <div class="issue-list" id="issue-list"></div>
-            <button class="issue-toggle" id="issue-expand-toggle" type="button" hidden>Show more</button>
           </section>
 
           <section class="panel" aria-labelledby="incident-feed-title">
@@ -440,7 +439,7 @@
         </div>
       </section>
 
-      <!-- ——— 3c. HEALTH VIEW ———
+      <!-- --- 3c. HEALTH VIEW ---
            Radar chart showing app health dimensions, service status stack, and incident feed. -->
       <section class="view" id="health-view" aria-labelledby="health-title" hidden>
         <div class="health-summary">
@@ -460,11 +459,11 @@
               <section class="health-status-key" aria-labelledby="health-status-key-title">
                 <h2 id="health-status-key-title">Status key</h2>
                 <ul class="health-status-list">
-                  <li><span class="status-token good">Healthy</span><strong>75-100</strong></li>
-                  <li><span class="status-token warning">Watch</span><strong>55-74</strong></li>
-                  <li><span class="status-token critical">Critical</span><strong>0-54</strong></li>
+                  <li><span class="status-token good">Healthy</span><strong>75–100%</strong></li>
+                  <li><span class="status-token warning">Watch</span><strong>55–74%</strong></li>
+                  <li><span class="status-token critical">Critical</span><strong>0–54%</strong></li>
                 </ul>
-                <p>Score is determined by availability, error rate, latency, ingestion quality, feedback, and coverage.</p>
+                <p>Score is the average of 5 dimensions: Availability (error-free ratio), Errors (inverse error rate), Latency (inverse p95 latency), Signal (event type and route diversity), and Feedback (user rating average). Each dimension is 0–100%.</p>
               </section>
             </div>
             <svg class="health-radar" id="health-radar-chart" viewBox="0 0 520 340" role="img" aria-labelledby="health-radar-svg-title">
@@ -499,7 +498,7 @@
         </div>
       </section>
 
-      <!-- ——— 3d. ANALYTICS VIEW ———
+      <!-- --- 3d. ANALYTICS VIEW ---
            Time-range selector (24h / 7d / 30d), summary chips, bar charts (users, activity),
            latency line chart, star-rating feedback block, donut event breakdown.
            Developer mode adds event-type mix and route-pressure tables. -->
@@ -536,18 +535,18 @@
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Users</p>
-                <h2 id="user-chart-title">User count over time</h2>
+                <h2 id="user-chart-title">User Count</h2>
               </div>
               <span class="delta-badge positive" id="user-delta">0 active</span>
             </div>
-            <div class="bar-chart" id="user-chart" role="img" aria-label="User count over time"></div>
+            <div class="bar-chart user-chart" id="user-chart" role="img" aria-label="User count over time"></div>
           </section>
 
           <section class="panel wide-panel" aria-labelledby="purchase-chart-title">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Tracked actions</p>
-                <h2 id="purchase-chart-title">Custom activity over time</h2>
+                <p class="eyebrow">Activity</p>
+                <h2 id="purchase-chart-title">User Activity</h2>
               </div>
               <span class="delta-badge positive" id="purchase-delta">0 actions</span>
             </div>
@@ -558,9 +557,10 @@
           <section class="panel wide-panel" data-dashboard-mode="developer" aria-labelledby="dev-error-chart-title" hidden>
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Errors</p>
-                <h2 id="dev-error-chart-title">Errors over time</h2>
+                <p class="eyebrow">Issues</p>
+                <h2 id="dev-error-chart-title">Issues</h2>
               </div>
+              <span class="delta-badge negative" id="error-delta">0 errors</span>
             </div>
             <div class="bar-chart error-chart" id="dev-error-chart" role="img" aria-label="Error count over time"></div>
           </section>
@@ -569,8 +569,8 @@
           <section class="panel wide-panel" data-dashboard-mode="developer" aria-labelledby="dev-latency-24h-title" hidden>
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Performance</p>
-                <h2 id="dev-latency-24h-title">Response latency — 24h</h2>
+                <p class="eyebrow">Response Latency</p>
+                <h2 id="dev-latency-24h-title">Response Latency</h2>
               </div>
               <label class="dev-threshold-control">
                 <span>Threshold</span>
@@ -654,7 +654,7 @@
                   <small class="breakdown-detail">Ratings + comments</small>
                 </li>
                 <li class="breakdown-item blue">
-                  <span class="breakdown-main"><span class="legend-dot blue"></span><span class="breakdown-label">Clicks</span></span>
+                  <span class="breakdown-main"><span class="legend-dot blue"></span><span class="breakdown-label">Events</span></span>
                   <strong>0%</strong>
                   <small class="breakdown-detail">Click + custom actions</small>
                 </li>
@@ -664,8 +664,8 @@
         </div>
       </section>
 
-      <!-- ——— 3e. SETTINGS VIEW ———
-           Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode, language,
+      <!-- --- 3e. SETTINGS VIEW ---
+           Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode,
            time zone, refresh rate), Notifications (on/off toggle, volume, type, schedule, threshold, snooze).
            Includes a notification preview card on the right. -->
       <section class="view" id="settings-view" aria-labelledby="settings-title" hidden>
@@ -675,9 +675,9 @@
             <h1 id="settings-title">Settings</h1>
           </div>
           <div class="profile-chip">
-            <span>AD</span>
+            <span id="profile-initials"></span>
             <div>
-              <strong id="profile-display-name">Aditya</strong>
+              <strong id="profile-display-name"></strong>
               <small>Admin</small>
             </div>
           </div>
@@ -695,29 +695,20 @@
                 </span>
                 <span>
                   <strong>Profile</strong>
-                  <small>Login, password, and 2FA</small>
+                  <small>Display name and sign out</small>
                 </span>
                 <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m9 18 6-6-6-6"></path>
                 </svg>
               </button>
-              <div class="settings-content">
+              <div class="settings-content profile-settings-content">
                 <div class="field-row">
                   <label for="display-name">Display name</label>
-                  <input id="display-name" type="text" value="Aditya">
+                  <input id="display-name" type="text" value="">
                 </div>
                 <div class="split-actions">
-                  <button class="primary-button" id="change-password-button" type="button">Change password</button>
                   <button class="ghost-button" id="sign-out-button" type="button">Sign out</button>
                 </div>
-                <p class="inline-status" id="profile-status-line">Profile updates are saved locally for this demo.</p>
-                <label class="toggle-row">
-                  <span>
-                    <strong>Two-factor authentication</strong>
-                    <small>Require a code when signing in.</small>
-                  </span>
-                  <input class="toggle-input" type="checkbox" checked>
-                </label>
               </div>
             </div>
 
@@ -734,7 +725,7 @@
                 </span>
                 <span>
                   <strong>Accessibility</strong>
-                  <small>Theme, language, time zone, and refresh rate</small>
+                  <small>Theme, time zone, and refresh rate</small>
                 </span>
                 <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m9 18 6-6-6-6"></path>
@@ -747,14 +738,6 @@
                     <small>Switch the dashboard to a dark theme.</small>
                   </span>
                   <input class="toggle-input" id="dark-mode-toggle" type="checkbox">
-                </label>
-                <label class="field-row" for="language">
-                  <span>Language</span>
-                  <select id="language">
-                    <option>English</option>
-                    <option>Spanish</option>
-                    <option>French</option>
-                  </select>
                 </label>
                 <label class="field-row" for="timezone-select">
                   <span>Time zone</span>
@@ -858,23 +841,14 @@
             </div>
           </section>
 
-          <aside class="settings-preview" aria-label="Notification preview">
-            <p class="eyebrow">Preview</p>
-            <h2>Critical condition</h2>
-            <p class="preview-copy">Checkout error rate exceeded 2% on <code>v1.2.0-beta</code>. Priya has been assigned.</p>
-            <div class="preview-actions">
-              <button class="primary-button" type="button">Acknowledge</button>
-              <button class="ghost-button" type="button">Pause</button>
-            </div>
-          </aside>
         </div>
       </section>
     </main>
 
-    <!-- ===== 4. TOAST STACK — popup status notifications (populated by app.js) ===== -->
+    <!-- ===== 4. TOAST STACK - popup status notifications (populated by app.js) ===== -->
     <div class="toast-stack" id="toast-stack" role="status" aria-live="polite" aria-label="Status updates"></div>
 
-    <!-- ===== 5. MOBILE NAV — bottom tab bar duplicating sidebar for small screens ===== -->
+    <!-- ===== 5. MOBILE NAV - bottom tab bar duplicating sidebar for small screens ===== -->
     <nav class="mobile-nav" aria-label="Mobile primary navigation">
       <button class="mobile-nav-button active" type="button" data-view="home" title="Home" aria-label="Home">
         <svg viewBox="0 0 24 24" aria-hidden="true">
