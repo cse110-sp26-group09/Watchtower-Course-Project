@@ -296,9 +296,17 @@
   let developerShortcutPrimedAt = 0;
 
   function escapeHtml(value) {
-    let el = document.createElement("span");
-    el.textContent = value == null ? "" : String(value);
-    return el.innerHTML;
+    // Escape all five HTML-significant characters, including quotes. The output
+    // is used both as element text and inside double-quoted attributes (e.g.
+    // data-* and value="..."), so quotes MUST be escaped to prevent attribute
+    // breakout / stored XSS from attacker-controlled event fields. The previous
+    // textContent->innerHTML approach left " and ' unescaped.
+    return (value == null ? "" : String(value))
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function getValidTimestamp(value) {
