@@ -43,7 +43,7 @@
 }
 
 .landing-main {
-  padding-top: 118px;
+  padding-top: 76px;
   padding-bottom: 90px;
   background:
     radial-gradient(circle at 92% 8%, rgba(15, 139, 141, 0.12), transparent 31rem),
@@ -147,12 +147,13 @@
 .hero {
   position: relative;
   display: grid;
-  min-height: 640px;
+  width: 100%;
+  min-height: calc(100vh - 76px);
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(101, 217, 218, 0.18);
-  border-radius: 24px;
-  padding: 86px 28px;
+  border: 0;
+  border-radius: 0;
+  padding: 98px max(28px, calc((100vw - var(--landing-max)) / 2)) 92px;
   background:
     radial-gradient(circle at 16% 20%, rgba(55, 190, 194, 0.34), transparent 22rem),
     radial-gradient(circle at 82% 72%, rgba(51, 102, 184, 0.28), transparent 24rem),
@@ -647,11 +648,14 @@
 .personas-grid {
   display: grid;
   gap: 16px;
+  max-width: 860px;
+  margin-right: auto;
+  margin-left: auto;
 }
 
 @media (min-width: 820px) {
   .personas-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1290,7 +1294,7 @@
 }
 
 .team-section {
-  padding-top: 10px;
+  padding-top: 84px;
 }
 
 .team-card {
@@ -1434,7 +1438,7 @@
 
 @media (max-width: 860px) {
   .landing-main {
-    padding-top: 96px;
+    padding-top: 76px;
   }
 
   .workflow-shell {
@@ -1501,7 +1505,7 @@
 
 @media (max-width: 540px) {
   .landing-main {
-    padding-top: 92px;
+    padding-top: 76px;
   }
 
   .landing-section h1 {
