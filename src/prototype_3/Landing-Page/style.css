@@ -1104,10 +1104,14 @@ code {
 
 .ghost-button,
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 38px;
   border-radius: var(--radius);
   padding: 0 14px;
   font-weight: 800;
+  text-align: center;
 }
 
 .ghost-button {
