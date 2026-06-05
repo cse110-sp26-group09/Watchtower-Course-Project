@@ -33,11 +33,13 @@ Prototype 3 pointed at its own table:
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_P3_EVENTS_TABLE=prototype3_events
+SUPABASE_P3_USERS_TABLE=app_users
 ACTIVE_USER_WINDOW_MS=30000
 ```
 
-The `SUPABASE_P3_EVENTS_TABLE` value defaults to `prototype3_events`. The table
-should already exist in Supabase with this shape:
+The `SUPABASE_P3_EVENTS_TABLE` value defaults to `prototype3_events`, and
+`SUPABASE_P3_USERS_TABLE` defaults to `app_users`. The tables should already
+exist in Supabase with this shape:
 
 ```sql
 create table if not exists public.prototype3_events (
@@ -66,9 +68,26 @@ create index if not exists idx_prototype3_events_environment
   on public.prototype3_events(environment);
 create index if not exists idx_prototype3_events_received_at
   on public.prototype3_events(received_at);
+create index if not exists idx_prototype3_events_user_received_at
+  on public.prototype3_events(user_id, received_at);
+create index if not exists idx_prototype3_events_user_type_received_at
+  on public.prototype3_events(user_id, type, received_at);
+create index if not exists idx_prototype3_events_user_route_received_at
+  on public.prototype3_events(user_id, route, received_at);
+
+create table if not exists public.app_users (
+  clerk_user_id text primary key,
+  email text default '',
+  display_name text default '',
+  last_seen_at timestamptz not null
+);
+
+create index if not exists idx_app_users_last_seen_at
+  on public.app_users(last_seen_at);
 
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.prototype3_events to service_role;
+grant select, insert, update, delete on public.app_users to service_role;
 ```
 
 Prototype 1 remains separate and can continue using its own `events` table.
