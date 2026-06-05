@@ -100,8 +100,12 @@ no password is ever stored.
 - They load events with `eventStore.listEvents(limit, { userId })` /
   `eventStore.allEvents(limit, { userId })`, which filter
   `prototype3_events.user_id = <Clerk user id>`.
-- `POST /api/events` reads the same header and, when present, stamps each
-  incoming event with `user_id = <Clerk user id>` before insert.
+- `POST /api/events` (and `POST /api/beacon`) resolve an ingest owner with
+  `getIngestOwnerUserId(...)` and, when present, stamp each incoming event with
+  `user_id = <owner>` before insert. The owner is the authenticated dashboard
+  user when present, otherwise the temporary `DEFAULT_INGEST_OWNER_USER_ID`
+  fallback (see "External GitHub Pages test app ownership" below), otherwise
+  none (the event stays anonymous with `user_id = null`).
 
 ### Monitored ShopDemo bridge (`/demo/`)
 - The demo is a same-origin stand-in for an external monitored app. Its SDK
@@ -114,6 +118,33 @@ no password is ever stored.
   is present. A truly external app on another origin has no such id and ingests
   as anonymous (`user_id = null`) — which is the intended future "needs a
   project/app key" path.
+
+### External GitHub Pages test app ownership (temporary)
+- The separate, GitHub Pages–hosted test app
+  (`https://cse110-sp26-group09.github.io/Watchtower-test-app/`) is a *real*
+  external monitored app. It loads its own copy of the WatchTower SDK, points at
+  the absolute Render endpoint
+  (`https://watchtower-course-project-g8dv.onrender.com/api/events`), and sends
+  the same `{ events: [...] }` batches as the local demo.
+- It has **no Clerk session**: it does not (and should not) send an
+  `Authorization: Bearer` token or an `X-Clerk-User-Id` header, and its SDK does
+  not set a `userId` on events. The backend therefore accepts the events
+  (`200 OK`) but stores them with **`user_id = NULL`** — so, now that the
+  dashboard is scoped per Clerk user, those events do not appear for any
+  logged-in user.
+- To make these external events visible during a live demo, set
+  **`DEFAULT_INGEST_OWNER_USER_ID`** (Render env, or local `.env`) to the demo
+  owner's Clerk user id. On ingest, when there is no authenticated user, the
+  backend stamps anonymous events with this id so they land on that owner's
+  scoped dashboard.
+- This is applied as a **fallback only**: it fills `user_id` for events that
+  arrive *without* one. Authenticated dashboard ingests still win and override
+  it, and the same-origin demo's own per-user tagging is preserved.
+- **This is temporary, for the prototype/live demo only.** It hard-codes the
+  entire external app's traffic to one owner. The long-term solution is a
+  per-app/project key system so each monitored app maps to the correct owner
+  without a human login and without a single global default. Never hard-code the
+  Clerk user id in source — it lives only in the environment variable.
 
 ### Resulting behavior
 - **First-time user:** no rows yet, so stats and feeds start at **0**.
@@ -273,6 +304,37 @@ the Node server (not just the static file flow).
 6. Confirm User A still sees the same saved events/stats.
 7. Sign in as a different **User B**.
 8. Confirm User B starts at **0** and does **not** see any of User A's data.
+
+### External test app ownership verification (`DEFAULT_INGEST_OWNER_USER_ID`)
+1. Set `DEFAULT_INGEST_OWNER_USER_ID` to the demo owner's Clerk user id in the
+   local `.env` (or in Render → Environment for the hosted backend).
+2. Restart the local server, or redeploy the Render backend, so the new env var
+   is loaded.
+3. Open the GitHub Pages test app
+   (`https://cse110-sp26-group09.github.io/Watchtower-test-app/`).
+4. Trigger page view / click / error / custom events from the test app.
+5. In the browser **Network** tab, confirm `POST /api/events → 200 OK`.
+6. In Supabase, run the verification query below and confirm the newest rows now
+   have `user_id` populated with `DEFAULT_INGEST_OWNER_USER_ID` instead of
+   `NULL`.
+7. Log into the WatchTower dashboard as **that** Clerk user and confirm the
+   test app events appear.
+8. Log into the dashboard as a **different** Clerk user and confirm those events
+   do **not** appear for them (per-user scoping is preserved).
+
+```sql
+select
+  id,
+  user_id,
+  type,
+  event_name,
+  route,
+  app_name,
+  received_at
+from public.prototype3_events
+order by received_at desc
+limit 20;
+```
 
 ### Automated checks
 ```bash
