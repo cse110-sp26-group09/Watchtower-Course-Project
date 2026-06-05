@@ -33,6 +33,7 @@
   let userBadge = document.getElementById("user-badge");
   let loggedInUser = null;
   let cartItems = [];
+  let selectedFeedbackRating = 4;
 
   let PRODUCTS = [
     { id: 1, name: "Synthetic Monitor", price: 79.99, desc: "Automated checks, route coverage" },
@@ -40,6 +41,53 @@
     { id: 3, name: "Build Overlay", price: 49.99, desc: "Commit and deploy correlation" },
     { id: 4, name: "Error Digest", price: 59.99, desc: "Stack traces with assignment" },
   ];
+
+  function buildFeedbackModal() {
+    let modal = document.createElement("div");
+    modal.id = "feedback-modal";
+    modal.className = "feedback-modal hidden";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "feedback-title");
+    modal.innerHTML =
+      '<div class="feedback-dialog">' +
+      '<h3 id="feedback-title">Send feedback</h3>' +
+      '<p>Rate the current experience.</p>' +
+      '<div class="star-rating" role="radiogroup" aria-label="Feedback rating">' +
+      '<button type="button" class="feedback-star" data-rating="1" role="radio" aria-label="1 star">&#9733;</button>' +
+      '<button type="button" class="feedback-star" data-rating="2" role="radio" aria-label="2 stars">&#9733;</button>' +
+      '<button type="button" class="feedback-star" data-rating="3" role="radio" aria-label="3 stars">&#9733;</button>' +
+      '<button type="button" class="feedback-star" data-rating="4" role="radio" aria-label="4 stars">&#9733;</button>' +
+      '<button type="button" class="feedback-star" data-rating="5" role="radio" aria-label="5 stars">&#9733;</button>' +
+      "</div>" +
+      '<div class="feedback-actions">' +
+      '<button type="button" class="btn outline" onclick="window.__closeFeedback()">Cancel</button>' +
+      '<button type="button" class="btn" onclick="window.__sendFeedback()">Send</button>' +
+      "</div>" +
+      "</div>";
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal) {
+        window.__closeFeedback();
+        return;
+      }
+
+      if (event.target.classList.contains("feedback-star")) {
+        selectedFeedbackRating = Number(event.target.getAttribute("data-rating"));
+        updateFeedbackStars();
+      }
+    });
+  }
+
+  function updateFeedbackStars() {
+    document.querySelectorAll(".feedback-star").forEach(function (starButton) {
+      let rating = Number(starButton.getAttribute("data-rating"));
+      let isSelected = rating <= selectedFeedbackRating;
+      starButton.classList.toggle("selected", isSelected);
+      starButton.setAttribute("aria-checked", String(rating === selectedFeedbackRating));
+    });
+  }
 
   versionSelect.addEventListener("change", function () {
     watchTower.deployVersion = versionSelect.value;
@@ -187,11 +235,22 @@
   };
 
   window.__triggerFeedback = function () {
+    document.getElementById("feedback-modal").classList.remove("hidden");
+    updateFeedbackStars();
+    document.querySelector(".feedback-star.selected").focus();
+  };
+
+  window.__closeFeedback = function () {
+    document.getElementById("feedback-modal").classList.add("hidden");
+  };
+
+  window.__sendFeedback = function () {
     watchTower._enqueue("feedback", {
-      rating: 4,
+      rating: selectedFeedbackRating,
       message: "Checkout feels slow after the latest deploy.",
       category: "ux",
     });
+    window.__closeFeedback();
     alert("Feedback event sent to Prototype 3.");
   };
 
@@ -258,5 +317,12 @@
     renderAccount();
   };
 
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      window.__closeFeedback();
+    }
+  });
+
+  buildFeedbackModal();
   renderPage("home");
 })();
