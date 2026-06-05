@@ -398,55 +398,37 @@ a {
 }
 
 .metric-icon {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
   margin-right: 6px;
-  border: 2px solid currentColor;
-  border-radius: 3px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
   vertical-align: -2px;
   opacity: 0.9;
 }
 
-.metric-icon.users {
-  border-radius: 50%;
-}
-
-.metric-icon.events {
-  border-radius: 2px;
-  transform: rotate(45deg);
+.metric-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .metric-icon.errors {
-  border-color: var(--coral);
-  border-radius: 50%;
+  color: var(--coral);
 }
 
+.metric-icon.users,
+.metric-icon.events,
 .metric-icon.deploys {
-  border: 0;
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-bottom: 14px solid currentColor;
-  border-radius: 0;
-  margin-right: 8px;
-  vertical-align: -1px;
-}
-
-.metric-icon.latency {
-  border-radius: 50%;
-  position: relative;
-}
-
-.metric-icon.latency::after {
-  content: "";
-  position: absolute;
-  top: 1px;
-  left: 5px;
-  width: 2px;
-  height: 5px;
-  background: currentColor;
+  color: var(--teal);
 }
 
 body.dark-mode {
@@ -1469,6 +1451,17 @@ code {
   border: 1px solid var(--line);
   background: var(--surface);
   font-size: 14px;
+}
+
+.bundle-icon-mark svg,
+.dev-stat-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .accent-errors .bundle-icon-mark {
