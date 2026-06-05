@@ -60,16 +60,6 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(240, 248, 246, 0.7));
 }
 
-.landing-chapter::before {
-  position: absolute;
-  top: -1px;
-  left: max(20px, calc((100vw - var(--landing-max)) / 2));
-  width: 104px;
-  height: 3px;
-  background: var(--teal);
-  content: "";
-}
-
 .landing-section {
   width: min(var(--landing-max), calc(100% - 40px));
   margin: 0 auto;
@@ -663,10 +653,6 @@
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 72px 72px,
     #0f1917;
-}
-
-.audience-chapter::before {
-  background: var(--blue);
 }
 
 .audience-section {
