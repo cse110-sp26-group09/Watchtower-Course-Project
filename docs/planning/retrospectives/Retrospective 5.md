@@ -1,47 +1,31 @@
+# Sprint Retrospective 5
+
+
+### What Went Well ✨
+- Positive aspects of the sprint
+- Successes and achievements
+- Effective processes or decisions
+- Great team moments or collaboration
+
+### What Didn't Go Well 🚧
+- Challenges encountered
+- Blockers or frustrations
+- Process breakdowns
+- Incomplete work or scope issues
+
+### Action Items 🎯
+| Specific Improvement | Owner  | Success Metric / Connection |
+| :--- | :--- | :--- |
+
+### Lessons Learned 💡
+- Key takeaways for the team
+- Technical insights or discoveries
+- Process improvements to try
+- Dependencies or constraints to remember
+
+---
+
 # Decision Logs
-
-## Sprint 1
-- [x]  Create a project brief on what a WatchTower is, who it serves, and what problems we are solving first. [#1]
-- [x] Finalize Sprint 1 MVP definition with strict feature boundaries to avoid overbuilding. [#2] 
-- [x] Draft functional and non-functional requirements for WatchTower MVP. [#3]
-- [x] Create user stories for Sprint 1 and near-term backlog aligned to personas and MVP. [#4]
-- [x] Document Sprint 1 planning and workflow in one place. [#5]
-- [x] Set up research docs structure and collect individual research notes. [#6]
-- [x] Prepare Sprint 1 design artifacts for dashboard structure and core incident flow. [#7] 
-- [x] Create initial GitHub backlog for Sprint 1 and future-ready placeholders for Sprint 2+. [#8]
-- [x] Set up and populate Sprint 1 meeting/process evidence required by the course. [#9]
-
-## Sprint 2
-- [x]  Split into two teams for prototype and have a shared evaluation criteria so both prototypes stay aligned to one WatchTower product [#20]
-- [x] Define one shared event schema and API contract for both prototype teams.[#21]
-- [x] Create a  working Prototype 1 front-end from event ingestion to dashboard rendering with test coverage on what works.[#22]
-- [x] Create a  working Prototype 2 front-end from SDK integration to dashboard rendering with test coverage on what works.[#23]
-- [x] Use proffessor feedback to guide Apply professor guidance to both prototypes:
-    - Minimal mobile usability
-    - Clear access to full desktop experience
-    - Priority-based sizing/color emphasis using progressive disclosure 
-- [x] Make document structure more intutive and make it easier to find stuff and create JSDoc standards for code base[#26]
-- [x] Create a plan for separating the monitored test app from the WatchTower repo, without migrating.[#27]
-- [x] Create a sprint-end comparison readout for both prototypes using the agreed rubric then use that to guide what prototype to use (1,2, or hybrid)[#28]
-
-## Sprint 3
-- [x] Current Standup meetings documentation is messy and not updated, change structure to be more readable and easier to update in the future[#45]
-- [x] Update ADR to reflect new backend technologies.[#53]
-- [x] Add filters for querying database.[#54]
-- [x] Write SDK logic to send correct JSON messages to the correct endpoints as defined in `Course-Project\src\prototype_1\server\server-1.1.js.`[#55]
-- [x] Look at `Course-Project\docs\design\event-schema-v1.md` and `Course-Project\src\prototype_1\server\server-1.1.js` to make sure that all fields of event schema can be captured and filled out. If required, research any new APIs that will enable this. If any fields cannot be captured, then state so and briefly explain why.[#56]
-- [ ] Merge Frontend Candidates [#57]
-
-## Sprint 4
-- [x] Create WatchTower landing page content and information architecture [#60]
-- [x] Implement landing page UI with Login / Sign Up CTA [#61]
-- [x] Build static Login and Sign Up screens [#62]
-- [x] Navigation polish (Back, Return Home, and route consistency) [#63]
-- [x] UI quality pass to reduce AI-generated look and improve visual coherence [#64]3
-- [x] Define and implement dual dashboard modes (Executive View + Developer View)[#65]
-- [x] Change the logo to be only one since there is no difference between the dark mode and light mode logo.[#71]
-- [x] Research Clerk and Resend as possible integrations for WatchTower. The goal is to evaluate whether Clerk should be used for login/authentication and whether Resend should be used to send email alerts when WatchTower detects high-risk issues.[#78]
-- [ ] Polishing up UI[#87] 
 
 ## Sprint 5
 - [x] Use Clerk API to implement authorization for sign in page and update ADR.[#95]
