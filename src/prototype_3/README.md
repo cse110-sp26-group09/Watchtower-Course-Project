@@ -74,6 +74,8 @@ create index if not exists idx_prototype3_events_user_type_received_at
   on public.prototype3_events(user_id, type, received_at);
 create index if not exists idx_prototype3_events_user_route_received_at
   on public.prototype3_events(user_id, route, received_at);
+create index if not exists idx_prototype3_events_user_timestamp
+  on public.prototype3_events(user_id, timestamp);
 
 create table if not exists public.app_users (
   clerk_user_id text primary key,
