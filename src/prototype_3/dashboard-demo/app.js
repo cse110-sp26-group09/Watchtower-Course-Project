@@ -81,11 +81,12 @@
   }
 
   function renderMode() {
-    const currentModeLabel = state.mode === "manager" ? "Manager view" : "Developer view";
-    const nextModeLabel = state.mode === "manager" ? "Developer view" : "Manager view";
     document.body.dataset.dashboardMode = state.mode;
-    setText("dashboard-mode-pill", nextModeLabel);
-    setText("mode-current-view", "Currently on: " + currentModeLabel);
+    qsa(".mode-toggle-option").forEach(function (button) {
+      const isActive = button.getAttribute("data-mode") === state.mode;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
     qsa("[data-dashboard-mode]").forEach(function (element) {
       element.hidden = element.getAttribute("data-dashboard-mode") !== state.mode;
     });
@@ -422,9 +423,9 @@
     document.addEventListener("click", function (event) {
       const target = event.target;
       if (!(target instanceof window.Element)) return;
-      const modeButton = target.closest("#dashboard-mode-pill");
+      const modeButton = target.closest(".mode-toggle-option");
       if (modeButton) {
-        state.mode = state.mode === "manager" ? "developer" : "manager";
+        state.mode = modeButton.getAttribute("data-mode") || "manager";
         renderMode();
         renderHome();
         renderAnalytics();
