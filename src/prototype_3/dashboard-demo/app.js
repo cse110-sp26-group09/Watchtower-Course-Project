@@ -11,21 +11,26 @@
 
   const viewLabels = { home: "Home", issues: "Issues", health: "Health", analytics: "Analytics", settings: "Settings" };
   const severityLabels = { critical: "Critical", warning: "Warning", info: "Info" };
-  const severityRank = { critical: 3, warning: 2, info: 1 };
 
   const data = {
     issues: [
       { id: "ISS-1042", severity: "critical", title: "Checkout TypeError after payment handoff", route: "/checkout", app: "watchtower-demo", version: "v1.8.5", time: "8m", users: 36, owner: "Hieu", message: "Cannot read properties of undefined: reading 'total'", stack: "CheckoutSummary.render -> PaymentComplete.mount -> Router.commit" },
-      { id: "ISS-1037", severity: "warning", title: "POST /checkout returned 502 for card retry", route: "/checkout", app: "watchtower-demo", version: "v1.8.5", time: "18m", users: 19, owner: "James", message: "Gateway timeout during retry window", stack: "api.checkout.retry -> gateway.authorize -> retryQueue.flush" },
-      { id: "ISS-1029", severity: "warning", title: "Feedback drawer froze on mobile Safari", route: "/feedback", app: "watchtower-demo", version: "v1.8.4", time: "31m", users: 11, owner: "Josh", message: "Touch listener blocked the drawer close action", stack: "FeedbackDrawer.open -> gestureTrap.attach -> input.blur" },
-      { id: "ISS-1022", severity: "info", title: "Product grid image took longer than expected", route: "/products", app: "watchtower-demo", version: "v1.8.5", time: "44m", users: 7, owner: "Hemendra", message: "Largest image loaded after the p95 threshold", stack: "ProductGrid.observe -> ImageCard.load -> PerformanceObserver" },
-      { id: "ISS-1018", severity: "info", title: "Deploy note attached to latency regression", route: "/demo", app: "watchtower-demo", version: "v1.8.5", time: "1h", users: 5, owner: "Fahad", message: "Release changed client bundle split around checkout", stack: "DeployMarker.compare -> release.diff -> impactSummary" },
+      { id: "ISS-1037", severity: "critical", title: "POST /checkout returned 502 for card retry", route: "/checkout", app: "watchtower-demo", version: "v1.8.5", time: "18m", users: 19, owner: "James", message: "Gateway timeout during retry window", stack: "api.checkout.retry -> gateway.authorize -> retryQueue.flush" },
+      { id: "ISS-1029", severity: "critical", title: "Feedback drawer froze on mobile Safari", route: "/feedback", app: "watchtower-demo", version: "v1.8.4", time: "31m", users: 11, owner: "Josh", message: "Touch listener blocked the drawer close action", stack: "FeedbackDrawer.open -> gestureTrap.attach -> input.blur" },
+      { id: "ISS-1022", severity: "critical", title: "Product grid image took longer than expected", route: "/products", app: "watchtower-demo", version: "v1.8.5", time: "44m", users: 7, owner: "Hemendra", message: "Largest image loaded after the p95 threshold", stack: "ProductGrid.observe -> ImageCard.load -> PerformanceObserver" },
+      { id: "ISS-1018", severity: "critical", title: "Deploy note attached to latency regression", route: "/demo", app: "watchtower-demo", version: "v1.8.5", time: "1h", users: 5, owner: "Fahad", message: "Release changed client bundle split around checkout", stack: "DeployMarker.compare -> release.diff -> impactSummary" },
     ],
     labels: ["-21h", "-18h", "-15h", "-12h", "-9h", "-6h", "-3h", "Now"],
     users: [3, 4, 4, 5, 6, 7, 7, 8],
     actions: [24, 28, 31, 35, 39, 44, 51, 58],
     errors: [0, 1, 1, 2, 1, 3, 2, 4],
     latency: [180, 194, 221, 248, 280, 312, 289, 326],
+    latencyRoutes: [
+      { route: "/checkout", p95: 326, avg: 248 },
+      { route: "/feedback", p95: 281, avg: 214 },
+      { route: "/products", p95: 244, avg: 196 },
+      { route: "/demo", p95: 188, avg: 142 },
+    ],
     health: [
       { key: "Availability", score: 98, tone: "good" },
       { key: "Errors", score: 72, tone: "warning" },
@@ -82,6 +87,10 @@
 
   function renderMode() {
     document.body.dataset.dashboardMode = state.mode;
+    const modePill = document.getElementById("dashboard-mode-pill");
+    if (modePill) {
+      modePill.classList.toggle("mode-developer", state.mode === "developer");
+    }
     qsa(".mode-toggle-option").forEach(function (button) {
       const isActive = button.getAttribute("data-mode") === state.mode;
       button.classList.toggle("active", isActive);
@@ -160,7 +169,7 @@
       }).join("");
     }
 
-    renderTimeline("activity-feed", [["Now", "Checkout route produced a fresh latency sample at " + avgLatency + " ms."], ["8m", "Critical checkout TypeError affected 36 demo sessions."], ["18m", "Deploy v1.8.5 correlated with a warning-level 502 spike."], ["31m", "Feedback drawer freeze reported on mobile Safari."]]);
+    renderTimeline("activity-feed", [["Now", "Checkout route produced a fresh latency sample at " + avgLatency + " ms."], ["8m", "Critical checkout TypeError affected 36 demo sessions."], ["18m", "Deploy v1.8.5 correlated with a critical 502 spike."], ["31m", "Critical feedback drawer freeze reported on mobile Safari."]]);
     renderList("manager-summary-list", ["Open issues are concentrated around checkout and feedback.", "Latency is watch-level but still under the critical threshold.", "Deploy v1.8.5 has the strongest correlation with recent spikes."]);
     renderInsightCards();
     renderDeveloperSummary();
@@ -214,7 +223,6 @@
   }
 
   function filteredIssues() {
-    const severity = (document.getElementById("issue-filter-severity") || {}).value || "all";
     const version = ((document.getElementById("issue-filter-version") || {}).value || "").toLowerCase();
     const app = ((document.getElementById("issue-filter-app") || {}).value || "").toLowerCase();
     const route = ((document.getElementById("issue-filter-route") || {}).value || "").toLowerCase();
@@ -223,12 +231,11 @@
     const sortDirection = (document.getElementById("issue-sort-direction") || {}).value || "desc";
     const filtered = data.issues.filter(function (issue) {
       const haystack = [issue.title, issue.route, issue.app, issue.version, issue.message].join(" ").toLowerCase();
-      return (severity === "all" || issue.severity === severity) && (!version || issue.version.toLowerCase().includes(version)) && (!app || issue.app.toLowerCase().includes(app)) && (!route || issue.route.toLowerCase().includes(route)) && (!search || haystack.includes(search));
+      return (!version || issue.version.toLowerCase().includes(version)) && (!app || issue.app.toLowerCase().includes(app)) && (!route || issue.route.toLowerCase().includes(route)) && (!search || haystack.includes(search));
     });
     filtered.sort(function (left, right) {
       let value = 0;
-      if (sortField === "severity") value = severityRank[left.severity] - severityRank[right.severity];
-      else if (sortField === "version") value = left.version.localeCompare(right.version);
+      if (sortField === "version") value = left.version.localeCompare(right.version);
       else if (sortField === "route") value = left.route.localeCompare(right.route);
       else value = data.issues.indexOf(right) - data.issues.indexOf(left);
       return sortDirection === "asc" ? value : -value;
@@ -248,10 +255,6 @@
       toggle.hidden = rows.length <= 4;
       toggle.textContent = state.issueLimit >= rows.length ? "Show fewer" : "Show all issues";
     }
-    setText("dev-critical-count", String(data.issues.filter(function (issue) { return issue.severity === "critical"; }).length));
-    setText("dev-warning-count", String(data.issues.filter(function (issue) { return issue.severity === "warning"; }).length));
-    setText("dev-info-count", String(data.issues.filter(function (issue) { return issue.severity === "info"; }).length));
-    setText("dev-total-count", String(data.issues.length));
     renderTimeline("issues-activity-feed", data.issues.slice(0, 5).map(function (issue) { return [issue.time, issue.title + " on " + issue.route]; }));
   }
 
@@ -313,15 +316,24 @@
     const actions = data.actions.map(function (value) { return Math.round(value * multiplier); });
     const errors = data.errors.map(function (value) { return Math.round(value * Math.max(1, Math.round(multiplier / 2))); });
     const latency = data.latency.map(function (value, index) { return value + (multiplier - 1) * 8 + index * 3; });
+    const latencyRoutes = data.latencyRoutes.map(function (entry, index) {
+      return {
+        route: entry.route,
+        p95: entry.p95 + (multiplier - 1) * 10 + index * 4,
+        avg: entry.avg + (multiplier - 1) * 6 + index * 2,
+      };
+    });
     setText("analytics-range-users", String(Math.max.apply(null, users)));
     setText("analytics-range-actions", String(actions.reduce(function (sum, value) { return sum + value; }, 0)));
-    setText("analytics-range-latency", Math.max.apply(null, latency) + " ms");
+    setText("analytics-range-latency", Math.max.apply(null, latencyRoutes.map(function (entry) { return entry.p95; })) + " ms");
     setText("user-delta", Math.max.apply(null, users) + " active");
     setText("purchase-delta", Math.max.apply(null, actions) + " actions");
+    const totalErrors = errors.reduce(function (sum, value) { return sum + value; }, 0);
+    setText("error-delta", totalErrors + (totalErrors === 1 ? " issue" : " issues"));
     renderBarChart("user-chart", data.labels, users, users.length - 1, "users");
     renderBarChart("purchase-chart", data.labels, actions, actions.length - 1, "actions");
     renderBarChart("dev-error-chart", data.labels, errors, errors.length - 1, "errors");
-    renderLatencyLine(latency, data.labels);
+    renderLatencyRouteChart(latencyRoutes);
     renderDeveloperLatencyCanvas(latency, data.labels);
     renderRatings();
     renderBreakdown();
@@ -338,22 +350,31 @@
     }).join("");
   }
 
-  function renderLatencyLine(values, labels) {
-    const line = document.getElementById("latency-line");
-    const yAxis = document.getElementById("latency-y-axis");
-    const xAxis = document.getElementById("latency-x-axis");
-    if (!line || !yAxis || !xAxis) return;
-    const min = 120;
-    const max = Math.max.apply(null, values.concat([360]));
-    line.setAttribute("d", "M" + values.map(function (value, index) {
-      const x = 60 + index * (550 / (values.length - 1));
-      const y = 240 - ((value - min) / (max - min)) * 190;
-      return x.toFixed(1) + " " + y.toFixed(1);
-    }).join(" L"));
-    yAxis.innerHTML = [400, 300, 200, 100].map(function (tick, index) { return "<text x=\"52\" y=\"" + (54 + index * 50) + "\">" + tick + "ms</text>"; }).join("");
-    xAxis.innerHTML = labels.map(function (label, index) { const x = 60 + index * (550 / (labels.length - 1)); return "<text x=\"" + x.toFixed(1) + "\" y=\"265\">" + escapeHtml(label) + "</text>"; }).join("");
+  function renderLatencyRouteChart(routes) {
+    const container = document.getElementById("latency-bar-chart");
     const legend = document.getElementById("latency-legend");
-    if (legend) legend.innerHTML = "<span><i class=\"legend-swatch checkout\"></i>Checkout p95 latency</span><span><i class=\"legend-swatch search\"></i>Watch threshold 250ms</span>";
+    if (!container || !legend) return;
+    const entries = routes.slice().sort(function (left, right) { return right.p95 - left.p95; });
+    if (entries.length === 0) {
+      container.style.setProperty("--bar-count", "1");
+      container.classList.add("is-empty");
+      container.innerHTML = "<div class=\"bar\" style=\"--bar-height:8%\" data-value=\"0\"><i class=\"bar-fill\" aria-hidden=\"true\"></i><span>No routes</span></div>";
+      legend.innerHTML = "<span>Waiting for pageload samples</span>";
+      return;
+    }
+    container.classList.remove("is-empty");
+    const max = Math.max.apply(null, entries.map(function (entry) { return entry.p95; }).concat([100]));
+    container.style.setProperty("--bar-count", String(entries.length));
+    container.innerHTML = entries.map(function (entry) {
+      const percent = Math.round((entry.p95 / max) * 100);
+      const color = entry.p95 < 200 ? "var(--green)" : (entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
+      const label = entry.route.replace("/demo", "demo") || "/";
+      return "<div class=\"bar\" style=\"--bar-height:" + Math.max(percent, 8) + "%\" data-value=\"" + entry.p95 + "ms p95 / " + entry.avg + "ms avg\"><i class=\"bar-fill\" style=\"background:" + color + "\" aria-hidden=\"true\"></i><span>" + escapeHtml(label) + "</span></div>";
+    }).join("");
+    legend.innerHTML = entries.map(function (entry) {
+      const color = entry.p95 < 200 ? "var(--green)" : (entry.p95 <= 800 ? "var(--amber)" : "var(--coral)");
+      return "<span><i class=\"legend-swatch\" style=\"background:" + color + "\"></i>" + escapeHtml(entry.route) + " p95 " + entry.p95 + "ms</span>";
+    }).join("");
   }
 
   function renderDeveloperLatencyCanvas(values, labels) {
@@ -470,7 +491,7 @@
       }
     });
 
-    ["issue-sort-field", "issue-sort-direction", "issue-filter-severity", "issue-filter-version", "issue-filter-app", "issue-filter-route", "developer-issue-search"].forEach(function (id) {
+    ["issue-sort-field", "issue-sort-direction", "issue-filter-version", "issue-filter-app", "issue-filter-route", "developer-issue-search"].forEach(function (id) {
       const field = document.getElementById(id);
       if (field) {
         field.addEventListener("input", renderIssues);

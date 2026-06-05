@@ -2,6 +2,8 @@
 
 const {
   DEFAULT_TABLE,
+  DEFAULT_USERS_TABLE,
+  APP_USERS_TIMEZONE_MIGRATION_SQL,
   hasSupabaseConfig,
   normalizeForStorage,
   eventToRow,
@@ -152,5 +154,73 @@ describe("Prototype 3 event store", () => {
     const pruned = await store.pruneOldest(1);
     expect(pruned).toBe(1);
     expect(client._rows).toHaveLength(1);
+  });
+
+  // Helper that captures upsert calls to the users table so we can assert on
+  // the exact row shape without depending on the events-table fake client.
+  function createFakeUserSyncClient() {
+    const capturedUserRows = [];
+    const fakeClient = {
+      _capturedUserRows: capturedUserRows,
+      from() {
+        return {
+          upsert(rowData) {
+            capturedUserRows.push(rowData);
+            return {
+              select() {
+                return Promise.resolve({ data: [rowData] });
+              },
+            };
+          },
+        };
+      },
+    };
+    return fakeClient;
+  }
+
+  test("syncUser writes the timezone field to the upserted row", async () => {
+    const fakeClient = createFakeUserSyncClient();
+    const store = createSupabaseEventStore(fakeClient, {
+      tableName: DEFAULT_TABLE,
+      usersTableName: DEFAULT_USERS_TABLE,
+    });
+
+    await store.syncUser({
+      clerkUserId: "clerk-tz-001",
+      email: "dev@example.com",
+      displayName: "Dev User",
+      timezone: "America/New_York",
+    });
+
+    expect(fakeClient._capturedUserRows).toHaveLength(1);
+    expect(fakeClient._capturedUserRows[0]).toMatchObject({
+      clerk_user_id: "clerk-tz-001",
+      email: "dev@example.com",
+      display_name: "Dev User",
+      timezone: "America/New_York",
+    });
+  });
+
+  test("syncUser defaults timezone to empty string when caller omits it", async () => {
+    const fakeClient = createFakeUserSyncClient();
+    const store = createSupabaseEventStore(fakeClient, {
+      tableName: DEFAULT_TABLE,
+      usersTableName: DEFAULT_USERS_TABLE,
+    });
+
+    await store.syncUser({
+      clerkUserId: "clerk-tz-002",
+      email: "anon@example.com",
+      displayName: "Anonymous",
+    });
+
+    // An empty string satisfies the NOT NULL column constraint; null would not.
+    expect(fakeClient._capturedUserRows[0].timezone).toBe("");
+  });
+
+  test("APP_USERS_TIMEZONE_MIGRATION_SQL contains a non-destructive ALTER TABLE", () => {
+    // Verify the migration uses IF NOT EXISTS so it is safe to re-run.
+    expect(APP_USERS_TIMEZONE_MIGRATION_SQL).toMatch(/add column if not exists/i);
+    expect(APP_USERS_TIMEZONE_MIGRATION_SQL).toMatch(/timezone/i);
   });
 });

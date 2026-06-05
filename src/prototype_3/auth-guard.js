@@ -207,6 +207,13 @@
 
     getClerkUserHeaders()
       .then((authHeaders) => {
+        // Include the stored timezone so the server-side user record stays in
+        // sync with the browser preference without requiring a separate API call.
+        let storedTimezoneIdentifier = "";
+        try {
+          storedTimezoneIdentifier = localStorage.getItem("watchtower_timezone") || "";
+        } catch (_storageError) {}
+
         return fetch("/api/users/sync", {
           method: "POST",
           headers: Object.assign({ "Content-Type": "application/json" }, authHeaders),
@@ -214,6 +221,7 @@
             clerkUserId: user.id,
             email: (user.primaryEmailAddress && user.primaryEmailAddress.emailAddress) || "",
             displayName: user.fullName || user.username || "",
+            timezone: storedTimezoneIdentifier,
           }),
           keepalive: true,
         });

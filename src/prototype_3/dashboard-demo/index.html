@@ -100,7 +100,7 @@
     <!-- ===== 3. MAIN CONTENT - five views, one visible at a time ===== -->
     <main class="content" id="main-content">
 
-      <!-- --- 3a. HOME VIEW ---
+      <!-- 3a. HOME VIEW
            KPI tiles (users, events, errors, deploys) link to other views.
            Manager mode: most-clicked features, recent user signals, operational highlights.
            Developer mode: top issues, high-latency windows, peak traffic, health summary. -->
@@ -122,22 +122,57 @@
           <!-- Manager KPI tiles -->
           <div class="summary-metrics" data-dashboard-mode="manager" role="group" aria-label="Key metrics">
             <button class="metric-tile metric-link" type="button" data-view="analytics" data-scroll-target="user-chart-title">
-              <span class="metric-label"><i class="metric-icon users" aria-hidden="true"></i>Active users</span>
+              <span class="metric-label">
+                <span class="metric-icon users" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9.5" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </span>
+                Active users
+              </span>
               <strong id="active-users">0</strong>
               <span class="metric-trend positive">Current sessions</span>
             </button>
             <button class="metric-tile metric-link" type="button" data-view="analytics" data-scroll-target="purchase-chart-title">
-              <span class="metric-label"><i class="metric-icon events" aria-hidden="true"></i>Events ingested</span>
+              <span class="metric-label">
+                <span class="metric-icon events" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M3 12h4l3-8 4 16 3-8h4"></path>
+                  </svg>
+                </span>
+                Events ingested
+              </span>
               <strong id="total-events">0</strong>
               <span class="metric-trend neutral">Stable</span>
             </button>
             <button class="metric-tile metric-link warning" type="button" data-view="issues" data-scroll-target="issues-title">
-              <span class="metric-label"><i class="metric-icon errors" aria-hidden="true"></i>Open errors</span>
+              <span class="metric-label">
+                <span class="metric-icon errors" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 9v4"></path>
+                    <path d="M12 17h.01"></path>
+                    <path d="M10.3 4.6 3.1 19.1a1 1 0 0 0 .9 1.4h16a1 1 0 0 0 .9-1.4L13.7 4.6a1 1 0 0 0-1.4 0Z"></path>
+                  </svg>
+                </span>
+                Open errors
+              </span>
               <strong id="total-errors">0</strong>
               <span class="metric-trend negative">Needs review</span>
             </button>
             <button class="metric-tile metric-link" type="button" data-view="health" data-scroll-target="health-title">
-              <span class="metric-label"><i class="metric-icon deploys" aria-hidden="true"></i>Deploy versions</span>
+              <span class="metric-label">
+                <span class="metric-icon deploys" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                    <path d="m3.3 7 8.7 5 8.7-5"></path>
+                    <path d="M12 22V12"></path>
+                  </svg>
+                </span>
+                Deploy versions
+              </span>
               <strong id="version-count">0</strong>
               <span class="metric-trend neutral">Deploys seen</span>
             </button>
@@ -166,7 +201,13 @@
             </div>
             <div class="dev-stat-card accent-errors" data-view="issues" data-scroll-target="issues-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#9888;</span>
+                <span class="dev-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 9v4"></path>
+                    <path d="M12 17h.01"></path>
+                    <path d="M10.3 4.6 3.1 19.1a1 1 0 0 0 .9 1.4h16a1 1 0 0 0 .9-1.4L13.7 4.6a1 1 0 0 0-1.4 0Z"></path>
+                  </svg>
+                </span>
                 <span class="dev-stat-tag">Issues</span>
               </div>
               <div class="dev-stat-value" id="dev-active-issues">0</div>
@@ -175,7 +216,12 @@
             </div>
             <div class="dev-stat-card accent-latency" data-view="analytics" data-scroll-target="latency-chart-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#9201;</span>
+                <span class="dev-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="8"></circle>
+                    <path d="M12 7v5l3 2"></path>
+                  </svg>
+                </span>
                 <span class="dev-stat-tag">Latency</span>
               </div>
               <div class="dev-stat-value" id="dev-avg-latency">0 ms</div>
@@ -184,7 +230,12 @@
             </div>
             <div class="dev-stat-card accent-traffic" data-view="analytics" data-scroll-target="purchase-chart-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-icon">&#9652;</span>
+                <span class="dev-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 17 10 11l4 4 6-8"></path>
+                    <path d="M15 7h5v5"></path>
+                  </svg>
+                </span>
                 <span class="dev-stat-tag">Traffic</span>
               </div>
               <div class="dev-stat-value" id="dev-peak-traffic">0/min</div>
@@ -243,7 +294,13 @@
           <section class="developer-only-panel developer-home-insight-row" data-dashboard-mode="developer" aria-label="Developer insight cards" hidden>
             <div class="panel developer-insight-panel bundle-errors bundle-clickable" data-view="issues" data-scroll-target="issues-title" tabindex="0" role="button" aria-label="View issues">
               <div class="bundle-summary-bar accent-errors">
-                <span class="bundle-icon-mark">&#9888;</span>
+                <span class="bundle-icon-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 9v4"></path>
+                    <path d="M12 17h.01"></path>
+                    <path d="M10.3 4.6 3.1 19.1a1 1 0 0 0 .9 1.4h16a1 1 0 0 0 .9-1.4L13.7 4.6a1 1 0 0 0-1.4 0Z"></path>
+                  </svg>
+                </span>
                 <div>
                   <p class="eyebrow">Current Issues</p>
                   <p class="bundle-title" id="developer-home-insights-title">Latest Issues</p>
@@ -257,7 +314,12 @@
 
             <div class="panel developer-insight-panel bundle-latency bundle-clickable" data-view="analytics" data-scroll-target="latency-chart-title" tabindex="0" role="button" aria-label="View latency analytics">
               <div class="bundle-summary-bar accent-latency">
-                <span class="bundle-icon-mark">&#9201;</span>
+                <span class="bundle-icon-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="8"></circle>
+                    <path d="M12 7v5l3 2"></path>
+                  </svg>
+                </span>
                 <div>
                   <p class="eyebrow">Latency</p>
                   <p class="bundle-title">High latency windows</p>
@@ -271,7 +333,12 @@
 
             <div class="panel developer-insight-panel bundle-traffic bundle-clickable" data-view="analytics" data-scroll-target="user-chart-title" tabindex="0" role="button" aria-label="View traffic analytics">
               <div class="bundle-summary-bar accent-traffic">
-                <span class="bundle-icon-mark">&#9652;</span>
+                <span class="bundle-icon-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 17 10 11l4 4 6-8"></path>
+                    <path d="M15 7h5v5"></path>
+                  </svg>
+                </span>
                 <div>
                   <p class="eyebrow">Traffic</p>
                   <p class="bundle-title">Peak traffic</p>
@@ -330,7 +397,7 @@
         </div>
       </section>
 
-      <!-- --- 3b. ISSUES VIEW ---
+      <!-- 3b. ISSUES VIEW
            Triage queue with sort/filter controls (severity, version, app, route).
            Developer mode adds severity diagnostic chips, a search bar, and a mute-alerts toggle. -->
       <section class="view" id="issues-view" aria-labelledby="issues-page-title" hidden>
@@ -355,7 +422,6 @@
             <select id="issue-sort-field">
               <option value="timestamp">Timestamp</option>
               <option value="version">Version</option>
-              <option value="severity">Severity</option>
               <option value="route">Route</option>
             </select>
           </label>
@@ -364,14 +430,6 @@
             <select id="issue-sort-direction">
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
-            </select>
-          </label>
-          <label>
-            <span>Severity</span>
-            <select id="issue-filter-severity">
-              <option value="all">All</option>
-              <option value="critical">Critical</option>
-              <option value="warning">Warning</option>
             </select>
           </label>
           <label>
@@ -389,27 +447,15 @@
           <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
         </div>
 
-        <!-- Developer alerts panel - severity KPI chips + developer search input -->
-        <section class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" aria-labelledby="developer-alerts-title" hidden>
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Developer alerts</p>
-              <h2 id="developer-alerts-title">Severity diagnostics and signal controls</h2>
-            </div>
-          </div>
-          <div class="developer-kpi-grid">
-            <div class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></div>
-            <div class="summary-chip"><p>Warning</p><strong id="dev-warning-count">0</strong></div>
-            <div class="summary-chip"><p>Info/Other</p><strong id="dev-info-count">0</strong></div>
-            <div class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></div>
-          </div>
+        <!-- Developer search panel - quick text filter for issue title, route, app, and version. -->
+        <div class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" hidden>
           <div class="developer-issue-tools">
             <label class="field-row" for="developer-issue-search">
-              <span>Developer search</span>
+              <span id="developer-alerts-title">Developer search</span>
               <input id="developer-issue-search" type="text" placeholder="Search title, route, app, version...">
             </label>
           </div>
-        </section>
+        </div>
 
         <!-- Issue list + activity feed. Issue rows are clickable to expand detail panels. -->
         <div class="issues-layout">
@@ -437,7 +483,7 @@
         </div>
       </section>
 
-      <!-- --- 3c. HEALTH VIEW ---
+      <!-- 3c. HEALTH VIEW
            Radar chart showing app health dimensions, service status stack, and incident feed. -->
       <section class="view" id="health-view" aria-labelledby="health-title" hidden>
         <div class="health-summary">
@@ -496,9 +542,9 @@
         </div>
       </section>
 
-      <!-- --- 3d. ANALYTICS VIEW ---
+      <!-- 3d. ANALYTICS VIEW
            Time-range selector (24h / 7d / 30d), summary chips, bar charts (users, activity),
-           latency line chart, star-rating feedback block, donut event breakdown.
+           route latency chart, star-rating feedback block, donut event breakdown.
            Developer mode adds event-type mix and route-pressure tables. -->
       <section class="view" id="analytics-view" aria-labelledby="analytics-title" hidden>
         <div class="page-heading">
@@ -563,7 +609,7 @@
             <div class="bar-chart error-chart" id="dev-error-chart" role="img" aria-label="Error count over time"></div>
           </section>
 
-          <!-- Developer: 24h response latency canvas line chart with manual threshold -->
+          <!-- Developer: 24h response latency canvas with manual threshold -->
           <section class="panel wide-panel" data-dashboard-mode="developer" aria-labelledby="dev-latency-24h-title" hidden>
             <div class="panel-header">
               <div>
@@ -588,19 +634,7 @@
                 <h2 id="latency-chart-title">Latency by route</h2>
               </div>
             </div>
-            <svg class="line-chart" id="latency-chart" viewBox="0 0 640 280" role="img" aria-labelledby="latency-svg-title">
-              <title id="latency-svg-title">Latency line chart showing checkout above other routes</title>
-              <g class="grid-lines">
-                <path d="M60 40H610"></path>
-                <path d="M60 90H610"></path>
-                <path d="M60 140H610"></path>
-                <path d="M60 190H610"></path>
-                <path d="M60 240H610"></path>
-              </g>
-              <g class="axis-labels y-axis" id="latency-y-axis"></g>
-              <g class="axis-labels x-axis" id="latency-x-axis"></g>
-              <path class="line checkout" id="latency-line" d="M60 240 L610 240"></path>
-            </svg>
+            <div class="bar-chart latency-route-chart" id="latency-bar-chart" role="img" aria-label="Route p95 latency bars"></div>
             <div class="chart-legend" id="latency-legend">
               <span><i class="legend-swatch checkout"></i>Waiting for pageload samples</span>
             </div>
@@ -662,7 +696,7 @@
         </div>
       </section>
 
-      <!-- --- 3e. SETTINGS VIEW ---
+      <!-- 3e. SETTINGS VIEW
            Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode,
            time zone, refresh rate), Notifications (on/off toggle, volume, type, schedule, threshold, snooze).
            Includes a notification preview card on the right. -->
