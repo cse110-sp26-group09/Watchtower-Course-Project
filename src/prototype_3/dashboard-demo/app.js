@@ -87,6 +87,10 @@
 
   function renderMode() {
     document.body.dataset.dashboardMode = state.mode;
+    const modePill = document.getElementById("dashboard-mode-pill");
+    if (modePill) {
+      modePill.classList.toggle("mode-developer", state.mode === "developer");
+    }
     qsa(".mode-toggle-option").forEach(function (button) {
       const isActive = button.getAttribute("data-mode") === state.mode;
       button.classList.toggle("active", isActive);
