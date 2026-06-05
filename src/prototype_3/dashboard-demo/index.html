@@ -355,7 +355,6 @@
             <select id="issue-sort-field">
               <option value="timestamp">Timestamp</option>
               <option value="version">Version</option>
-              <option value="severity">Severity</option>
               <option value="route">Route</option>
             </select>
           </label>
@@ -364,13 +363,6 @@
             <select id="issue-sort-direction">
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
-            </select>
-          </label>
-          <label>
-            <span>Severity</span>
-            <select id="issue-filter-severity">
-              <option value="all">All</option>
-              <option value="critical">Critical</option>
             </select>
           </label>
           <label>
@@ -388,25 +380,15 @@
           <button class="ghost-button" id="issue-filter-clear" type="button">Clear</button>
         </div>
 
-        <!-- Developer alerts panel - severity KPI chips + developer search input -->
-        <section class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" aria-labelledby="developer-alerts-title" hidden>
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Developer alerts</p>
-              <h2 id="developer-alerts-title">Severity diagnostics and signal controls</h2>
-            </div>
-          </div>
-          <div class="developer-kpi-grid">
-            <div class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></div>
-            <div class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></div>
-          </div>
+        <!-- Developer search panel - quick text filter for issue title, route, app, and version. -->
+        <div class="panel developer-only-panel developer-alerts-panel" data-dashboard-mode="developer" hidden>
           <div class="developer-issue-tools">
             <label class="field-row" for="developer-issue-search">
-              <span>Developer search</span>
+              <span id="developer-alerts-title">Developer search</span>
               <input id="developer-issue-search" type="text" placeholder="Search title, route, app, version...">
             </label>
           </div>
-        </section>
+        </div>
 
         <!-- Issue list + activity feed. Issue rows are clickable to expand detail panels. -->
         <div class="issues-layout">

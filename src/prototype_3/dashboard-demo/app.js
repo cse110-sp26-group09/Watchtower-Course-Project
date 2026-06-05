@@ -11,7 +11,6 @@
 
   const viewLabels = { home: "Home", issues: "Issues", health: "Health", analytics: "Analytics", settings: "Settings" };
   const severityLabels = { critical: "Critical", warning: "Warning", info: "Info" };
-  const severityRank = { critical: 3, warning: 2, info: 1 };
 
   const data = {
     issues: [
@@ -214,7 +213,6 @@
   }
 
   function filteredIssues() {
-    const severity = (document.getElementById("issue-filter-severity") || {}).value || "all";
     const version = ((document.getElementById("issue-filter-version") || {}).value || "").toLowerCase();
     const app = ((document.getElementById("issue-filter-app") || {}).value || "").toLowerCase();
     const route = ((document.getElementById("issue-filter-route") || {}).value || "").toLowerCase();
@@ -223,12 +221,11 @@
     const sortDirection = (document.getElementById("issue-sort-direction") || {}).value || "desc";
     const filtered = data.issues.filter(function (issue) {
       const haystack = [issue.title, issue.route, issue.app, issue.version, issue.message].join(" ").toLowerCase();
-      return (severity === "all" || issue.severity === severity) && (!version || issue.version.toLowerCase().includes(version)) && (!app || issue.app.toLowerCase().includes(app)) && (!route || issue.route.toLowerCase().includes(route)) && (!search || haystack.includes(search));
+      return (!version || issue.version.toLowerCase().includes(version)) && (!app || issue.app.toLowerCase().includes(app)) && (!route || issue.route.toLowerCase().includes(route)) && (!search || haystack.includes(search));
     });
     filtered.sort(function (left, right) {
       let value = 0;
-      if (sortField === "severity") value = severityRank[left.severity] - severityRank[right.severity];
-      else if (sortField === "version") value = left.version.localeCompare(right.version);
+      if (sortField === "version") value = left.version.localeCompare(right.version);
       else if (sortField === "route") value = left.route.localeCompare(right.route);
       else value = data.issues.indexOf(right) - data.issues.indexOf(left);
       return sortDirection === "asc" ? value : -value;
@@ -248,10 +245,6 @@
       toggle.hidden = rows.length <= 4;
       toggle.textContent = state.issueLimit >= rows.length ? "Show fewer" : "Show all issues";
     }
-    setText("dev-critical-count", String(data.issues.filter(function (issue) { return issue.severity === "critical"; }).length));
-    setText("dev-warning-count", String(data.issues.filter(function (issue) { return issue.severity === "warning"; }).length));
-    setText("dev-info-count", String(data.issues.filter(function (issue) { return issue.severity === "info"; }).length));
-    setText("dev-total-count", String(data.issues.length));
     renderTimeline("issues-activity-feed", data.issues.slice(0, 5).map(function (issue) { return [issue.time, issue.title + " on " + issue.route]; }));
   }
 
@@ -470,7 +463,7 @@
       }
     });
 
-    ["issue-sort-field", "issue-sort-direction", "issue-filter-severity", "issue-filter-version", "issue-filter-app", "issue-filter-route", "developer-issue-search"].forEach(function (id) {
+    ["issue-sort-field", "issue-sort-direction", "issue-filter-version", "issue-filter-app", "issue-filter-route", "developer-issue-search"].forEach(function (id) {
       const field = document.getElementById(id);
       if (field) {
         field.addEventListener("input", renderIssues);
