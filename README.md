@@ -17,74 +17,178 @@ WatchTower helps development teams understand what's happening in production. By
 
 ## Quick Start
 
-- Static hosted demo: see the [hosted demo guide](src/prototype_2/hosted_demo/README.md)
+### Running Prototype 3 (Current)
 
-### For Developers
-1. Clone the repository
-2. Navigate to the prototype: `cd src/prototype_1`
-3. Follow the [setup instructions](src/prototype_1/README.md)
+**Prerequisites:** Node.js 18 or later, npm.
+
+**1. Clone the repository**
+
+```bash
+git clone https://github.com/cse110-sp26-group09/Watchtower-Course-Project.git
+cd Watchtower-Course-Project
+```
+
+**2. Install dependencies**
+
+```bash
+npm install
+```
+
+**3. Set up environment variables**
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in the required values:
+
+| Variable | Required | Description |
+|---|---|---|
+| `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key (`pk_test_...`). Found in the Clerk dashboard under Configure > API Keys. |
+| `SUPABASE_URL` | For persistence | Your Supabase project URL. |
+| `SUPABASE_SERVICE_ROLE_KEY` | For persistence | Supabase service role key. |
+| `SUPABASE_P3_EVENTS_TABLE` | No | Events table name. Defaults to `prototype3_events`. |
+| `ACTIVE_USER_WINDOW_MS` | No | Active session window in ms. Defaults to `30000`. |
+| `PORT` | No | Server port. Defaults to `3000`. |
+
+See `.env.example` for all optional variables including Gmail alert settings and CORS.
+
+**4. Set up the database (Supabase only)**
+
+If using Supabase, run these SQL statements once in the Supabase SQL editor:
+
+```sql
+-- Events table
+create table if not exists public.prototype3_events (
+  id text primary key,
+  type text not null,
+  event_name text,
+  timestamp timestamptz not null,
+  session_id text,
+  user_id text,
+  route text,
+  deploy_version text,
+  app_name text,
+  environment text,
+  sdk_version text,
+  data jsonb default '{}'::jsonb,
+  received_at timestamptz not null
+);
+
+create index if not exists idx_prototype3_events_type on public.prototype3_events(type);
+create index if not exists idx_prototype3_events_received_at on public.prototype3_events(received_at);
+
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.prototype3_events to service_role;
+
+-- Users table
+create table if not exists public.app_users (
+  clerk_user_id text primary key,
+  email text not null default '',
+  display_name text not null default '',
+  timezone text not null default '',
+  last_seen_at timestamptz not null
+);
+
+grant select, insert, update, delete on public.app_users to service_role;
+```
+
+If the `app_users` table already exists without the `timezone` column, run this migration:
+
+```sql
+alter table public.app_users
+  add column if not exists timezone text not null default '';
+```
+
+**5. Start the server**
+
+```bash
+npm run start:prototype3
+```
+
+The start script automatically generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` before launching.
+
+**6. Open in the browser**
+
+| URL | Description |
+|---|---|
+| `http://localhost:3000/` | Main dashboard (requires Clerk sign-in) |
+| `http://localhost:3000/demo` | Demo app that sends events to the dashboard |
+| `http://localhost:3000/dashboard-demo` | Static dashboard demo (no sign-in required) |
+
+> Without Supabase credentials the server runs with in-memory storage. Events are lost on restart but everything else works for local development.
 
 ### For Documentation & Project Info
-- **Project Overview** — See [Documentation](docs/README.md)
-- **Requirements** — See [Requirements](docs/product/requirements.md)
-- **Sprint Planning** — See [Sprint 1 Planning](docs/planning/sprint-1-planning.md)
-- **Security Policy** — See [Security Policy](SECURITY.md)
+- **Project Overview** - See [Documentation](docs/README.md)
+- **Requirements** - See [Requirements](docs/product/requirements.md)
+- **Sprint Planning** - See [Sprint 1 Planning](docs/planning/sprint-1-planning.md)
+- **Security Policy** - See [Security Policy](SECURITY.md)
 
 ## Project Structure
 
 ```
 .
-├── .github/                 # GitHub configuration, issue templates, and CI workflows
-│   ├── ISSUE_TEMPLATE/       # GitHub issue templates
-│   ├── workflows/            # GitHub Actions CI workflows
-│   └── dependabot.yml        # Dependabot configuration, if enabled
+├── .github/
+│   ├── ISSUE_TEMPLATE/           # GitHub issue templates
+│   └── workflows/
+│       └── ci.yml                # CI pipeline (lint, HTML/CSS validation, unit + e2e tests)
 │
-├── docs/                     # Project documentation
-│   ├── adr/                  # Architecture decision records
-│   ├── architecture/         # Architecture of app 
-│   ├── back-end/             # Folder for Backend team to keep track of workflow
-│   ├── design/               # Wireframes, user flows, and design notes
-│       └── media/                # Images, diagrams, screenshots, and other media
-│   ├── meetings/             # Standup notes, TA meetings, and team sync notes
-│        └── Sprint/                # Standup meeting notes for every week split up by Sprints
-│            ├── 0/                      # Standup meeting notes for Sprint 0
-│            ├── 1/                      # Standup meeting notes for Sprint 1
-│            ├── 2/                      # Standup meeting notes for Sprint 2
-│            ├── 3/                      # Standup meeting notes for Sprint 3
-│            └── 4/                      # Standup meeting notes for Sprint 4
-│   ├── planning/             # Sprint plans, backlog notes, and retrospectives
-│       └──Retrospectives          # Notes from Retrospective meetings
-│   ├── process/              # Workflow, Git process, and GenAI usage documentation
-│   ├── product/              # Project brief, MVP, requirements, and user stories
-│   ├── research/             # Research notes and technical investigations
-│   └── README.md             # Documentation index
+├── docs/
+│   ├── adr/                      # Architecture decision records
+│   ├── architecture/             # System architecture diagrams and notes
+│   ├── back-end/                 # Backend team workflow notes
+│   ├── design/                   # Wireframes, user flows, and design notes
+│   │   └── media/                # Images, diagrams, and screenshots
+│   ├── meetings/                 # Standup notes and TA meeting notes
+│   │   └── Sprint/               # Notes organized by sprint (0-4)
+│   ├── planning/                 # Sprint plans, backlog, and retrospectives
+│   ├── process/                  # Git workflow, conventions, and GenAI usage docs
+│   ├── product/                  # MVP definition, requirements, and user stories
+│   ├── research/                 # Technical research and investigation notes
+│   └── README.md                 # Documentation index
 │
-├── scripts/                  # Scripts used for creating Clerk config
+├── scripts/
+│   └── generate-clerk-config.js  # Generates clerk-config.js from CLERK_PUBLISHABLE_KEY
 │
-├── src/                      # Source code and prototypes
-│   ├── README.md             # Source code overview
-│   └── prototype_1/           # Main WatchTower prototype
-│       ├── dashboard/         # WatchTower dashboard UI
-│       ├── demo/              # Local demo/test application
-│       ├── hosted_demo/       # Static hosted demo version
-│       ├── sdk/               # Client-side WatchTower SDK/instrumentation
-│       ├── server/            # Prototype Node.js server/API
-│       ├── utils/             # Shared utility functions
-│       └── README.md          # Prototype setup instructions
+├── src/
+│   ├── prototype_3/              # Current active prototype
+│   │   ├── Landing-Page/         # Public marketing landing page
+│   │   ├── Log-In-Page/          # Clerk-backed authentication pages
+│   │   ├── assets/               # Logos, favicons, and team photos
+│   │   ├── dashboard-demo/       # Static dashboard demo (no auth required)
+│   │   ├── demo/                 # Demo app that fires events at the dashboard
+│   │   ├── sdk/
+│   │   │   └── watchtower.js     # Client-side instrumentation SDK
+│   │   ├── server/
+│   │   │   ├── server.js         # Node.js HTTP server and all API routes
+│   │   │   ├── event-store.js    # Supabase/in-memory event and user persistence
+│   │   │   ├── server-helpers.js # Request parsing, normalization utilities
+│   │   │   ├── alert-threshold.js# Error-rate threshold and cooldown logic
+│   │   │   ├── clerk-alert-recipients.js # Clerk-backed alert recipient lookup
+│   │   │   └── mailer.js         # Gmail OAuth alert email sender
+│   │   ├── app.js                # Dashboard frontend (single-page app)
+│   │   ├── auth-guard.js         # Clerk session guard and user sync
+│   │   ├── index.html            # Dashboard shell
+│   │   ├── auth.html             # Auth redirect handler
+│   │   ├── landing.html          # Landing page entry point
+│   │   ├── style.css             # Dashboard styles
+│   │   └── README.md             # Prototype 3 setup and configuration reference
+│   ├── prototype_1/              # Archived - original prototype
+│   └── prototype_2/              # Archived - second iteration
 │
-├── tests/                    # Testing files and testing documentation
-│   ├── e2e/                  # End-to-end tests
-│   ├── unit/                 # Unit tests
-│   └── README.md             # Testing overview
+├── tests/
+│   ├── e2e/                      # Playwright end-to-end tests
+│   ├── unit/                     # Jest unit tests
+│   └── README.md                 # Testing overview
 │
-├── .gitignore                # Files and folders ignored by Git
-├── CHANGELOG.md              # Project change history
-├── package.json              # Root npm scripts and minimal dev dependencies
-├── package-lock.json         # Locked npm dependency versions
-├── playwright.config.js      # Playwright end-to-end test configuration
-├── README.md                 # Main project overview
-└── SECURITY.md               # Security policy
-
+├── .env.example                  # Environment variable template (copy to .env)
+├── .gitignore
+├── CHANGELOG.md
+├── package.json                  # npm scripts: start, test:unit, test:e2e, docs:js
+├── package-lock.json
+├── playwright.config.js
+├── README.md
+└── SECURITY.md
 ```
 
 For a detailed breakdown of the documentation structure, see [docs/README.md](docs/README.md).
@@ -102,11 +206,18 @@ We follow these standards to keep our work organized and clear:
 ## Team Roles
 
 | Role | Responsibility |
-|------|-----------------|
-| **Technical Lead** (Aditya) | Architecture and engineering decisions |
-| **Product Lead** (Fahad) | Vision, requirements, and user focus |
-| **Frontend Lead** (James) | UI implementation and user experience |
-| **UI/UX Lead** (Hieu) | Design and interaction patterns |
+|------|----------------|
+| **Technical Lead / CI-CD / Architecture** (Aditya) | Repo setup, branch/commit guidelines, GitHub Actions, architecture and technical decisions |
+| **Product / Process / Sprint Documentation Lead** (Fahad) | MVP definition, sprint planning, requirements, sprint tracking, TA communication |
+| **Frontend Lead** (James) | Dashboard frontend structure, UI pages/components, responsive layout, frontend coordination |
+| **UI/UX Lead** (Hieu) | Wireframes, user flow, dashboard design, user-centered design artifacts |
+| **Instrumentation / Backend Prototype Lead** (Daniel) | Error/performance event capture, event schemas, data flow, prototype-to-dashboard integration |
+| **JavaScript Instrumentation Owner** (Jason) | Browser-side error capture, client-side logging prototype, performance tracking, demo page behavior |
+| **Data / Backend Logic Owner** (Waleed) | Data schemas, normalization, storage approach, event flow with Daniel and Jason |
+| **Documentation / Communication / Requirements Support** (Josh) | Research docs, MVP and user story docs, meeting notes, GitHub documentation organization |
+| **Research / QA / AI Tools Support** (Woosik) | Observability and security research, QA checklists, GenAI contribution documentation |
+| **Frontend Prototype Support** (Alex) | Dashboard cards, tables, UI sections, responsiveness and usability testing |
+| **Frontend Components / Styling Support** (Hemendra) | Reusable components, styling consistency, dashboard layout, component documentation |
 
 See [docs/planning/sprint-1-planning.md](docs/planning/sprint-1-planning.md) for the full team structure and task assignments.
 
