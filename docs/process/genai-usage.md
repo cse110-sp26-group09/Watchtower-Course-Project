@@ -161,3 +161,8 @@
 - **Scale:** tests/unit/prototype1-event-store.test.js, tests/e2e/prototype1-postgresql.spec.js (formerly tests/e2e/prototype1-sqlite.spec.js)
 - **Description:** Asked codex to reformat .js to migrate from sqlite to postgresql access patterns so that it is compatible with supabase.
 - **Prompt:** look at unit/prototype1-event-store.text.js, and also look at e2e/prototype1-sqlite.spec.js. They are linked to each other. Are there any changes needed to the unit and e2e test? You can address those changes to make sure that the tests are compatible with postgresql instead of sqlite
+===
+
+# Sprint 5
+
+
