@@ -16,10 +16,10 @@
   const data = {
     issues: [
       { id: "ISS-1042", severity: "critical", title: "Checkout TypeError after payment handoff", route: "/checkout", app: "watchtower-demo", version: "v1.8.5", time: "8m", users: 36, owner: "Hieu", message: "Cannot read properties of undefined: reading 'total'", stack: "CheckoutSummary.render -> PaymentComplete.mount -> Router.commit" },
-      { id: "ISS-1037", severity: "warning", title: "POST /checkout returned 502 for card retry", route: "/checkout", app: "watchtower-demo", version: "v1.8.5", time: "18m", users: 19, owner: "James", message: "Gateway timeout during retry window", stack: "api.checkout.retry -> gateway.authorize -> retryQueue.flush" },
-      { id: "ISS-1029", severity: "warning", title: "Feedback drawer froze on mobile Safari", route: "/feedback", app: "watchtower-demo", version: "v1.8.4", time: "31m", users: 11, owner: "Josh", message: "Touch listener blocked the drawer close action", stack: "FeedbackDrawer.open -> gestureTrap.attach -> input.blur" },
-      { id: "ISS-1022", severity: "info", title: "Product grid image took longer than expected", route: "/products", app: "watchtower-demo", version: "v1.8.5", time: "44m", users: 7, owner: "Hemendra", message: "Largest image loaded after the p95 threshold", stack: "ProductGrid.observe -> ImageCard.load -> PerformanceObserver" },
-      { id: "ISS-1018", severity: "info", title: "Deploy note attached to latency regression", route: "/demo", app: "watchtower-demo", version: "v1.8.5", time: "1h", users: 5, owner: "Fahad", message: "Release changed client bundle split around checkout", stack: "DeployMarker.compare -> release.diff -> impactSummary" },
+      { id: "ISS-1037", severity: "critical", title: "POST /checkout returned 502 for card retry", route: "/checkout", app: "watchtower-demo", version: "v1.8.5", time: "18m", users: 19, owner: "James", message: "Gateway timeout during retry window", stack: "api.checkout.retry -> gateway.authorize -> retryQueue.flush" },
+      { id: "ISS-1029", severity: "critical", title: "Feedback drawer froze on mobile Safari", route: "/feedback", app: "watchtower-demo", version: "v1.8.4", time: "31m", users: 11, owner: "Josh", message: "Touch listener blocked the drawer close action", stack: "FeedbackDrawer.open -> gestureTrap.attach -> input.blur" },
+      { id: "ISS-1022", severity: "critical", title: "Product grid image took longer than expected", route: "/products", app: "watchtower-demo", version: "v1.8.5", time: "44m", users: 7, owner: "Hemendra", message: "Largest image loaded after the p95 threshold", stack: "ProductGrid.observe -> ImageCard.load -> PerformanceObserver" },
+      { id: "ISS-1018", severity: "critical", title: "Deploy note attached to latency regression", route: "/demo", app: "watchtower-demo", version: "v1.8.5", time: "1h", users: 5, owner: "Fahad", message: "Release changed client bundle split around checkout", stack: "DeployMarker.compare -> release.diff -> impactSummary" },
     ],
     labels: ["-21h", "-18h", "-15h", "-12h", "-9h", "-6h", "-3h", "Now"],
     users: [3, 4, 4, 5, 6, 7, 7, 8],
@@ -160,7 +160,7 @@
       }).join("");
     }
 
-    renderTimeline("activity-feed", [["Now", "Checkout route produced a fresh latency sample at " + avgLatency + " ms."], ["8m", "Critical checkout TypeError affected 36 demo sessions."], ["18m", "Deploy v1.8.5 correlated with a warning-level 502 spike."], ["31m", "Feedback drawer freeze reported on mobile Safari."]]);
+    renderTimeline("activity-feed", [["Now", "Checkout route produced a fresh latency sample at " + avgLatency + " ms."], ["8m", "Critical checkout TypeError affected 36 demo sessions."], ["18m", "Deploy v1.8.5 correlated with a critical 502 spike."], ["31m", "Critical feedback drawer freeze reported on mobile Safari."]]);
     renderList("manager-summary-list", ["Open issues are concentrated around checkout and feedback.", "Latency is watch-level but still under the critical threshold.", "Deploy v1.8.5 has the strongest correlation with recent spikes."]);
     renderInsightCards();
     renderDeveloperSummary();

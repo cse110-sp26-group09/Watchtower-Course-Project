@@ -100,7 +100,7 @@
     <!-- ===== 3. MAIN CONTENT - five views, one visible at a time ===== -->
     <main class="content" id="main-content">
 
-      <!-- --- 3a. HOME VIEW ---
+      <!-- 3a. HOME VIEW
            KPI tiles (users, events, errors, deploys) link to other views.
            Manager mode: most-clicked features, recent user signals, operational highlights.
            Developer mode: top issues, high-latency windows, peak traffic, health summary. -->
@@ -330,7 +330,7 @@
         </div>
       </section>
 
-      <!-- --- 3b. ISSUES VIEW ---
+      <!-- 3b. ISSUES VIEW
            Triage queue with sort/filter controls (severity, version, app, route).
            Developer mode adds severity diagnostic chips, a search bar, and a mute-alerts toggle. -->
       <section class="view" id="issues-view" aria-labelledby="issues-page-title" hidden>
@@ -371,7 +371,6 @@
             <select id="issue-filter-severity">
               <option value="all">All</option>
               <option value="critical">Critical</option>
-              <option value="warning">Warning</option>
             </select>
           </label>
           <label>
@@ -399,8 +398,6 @@
           </div>
           <div class="developer-kpi-grid">
             <div class="summary-chip"><p>Critical</p><strong id="dev-critical-count">0</strong></div>
-            <div class="summary-chip"><p>Warning</p><strong id="dev-warning-count">0</strong></div>
-            <div class="summary-chip"><p>Info/Other</p><strong id="dev-info-count">0</strong></div>
             <div class="summary-chip"><p>Total open</p><strong id="dev-total-count">0</strong></div>
           </div>
           <div class="developer-issue-tools">
@@ -437,7 +434,7 @@
         </div>
       </section>
 
-      <!-- --- 3c. HEALTH VIEW ---
+      <!-- 3c. HEALTH VIEW
            Radar chart showing app health dimensions, service status stack, and incident feed. -->
       <section class="view" id="health-view" aria-labelledby="health-title" hidden>
         <div class="health-summary">
@@ -496,7 +493,7 @@
         </div>
       </section>
 
-      <!-- --- 3d. ANALYTICS VIEW ---
+      <!-- 3d. ANALYTICS VIEW
            Time-range selector (24h / 7d / 30d), summary chips, bar charts (users, activity),
            latency line chart, star-rating feedback block, donut event breakdown.
            Developer mode adds event-type mix and route-pressure tables. -->
@@ -662,7 +659,7 @@
         </div>
       </section>
 
-      <!-- --- 3e. SETTINGS VIEW ---
+      <!-- 3e. SETTINGS VIEW
            Accordion sections: Profile (name, password, 2FA), Accessibility (dark mode,
            time zone, refresh rate), Notifications (on/off toggle, volume, type, schedule, threshold, snooze).
            Includes a notification preview card on the right. -->
