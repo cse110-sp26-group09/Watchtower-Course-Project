@@ -421,7 +421,7 @@ function getDashboardStats(events) {
     if (e.type === "error") {
       totalErrors += 1;
       errorsByVersion[e.deployVersion] = (errorsByVersion[e.deployVersion] || 0) + 1;
-      if (recentErrors.length < 1000) {recentErrors.push(e);}
+      if (recentErrors.length < 10000) {recentErrors.push(e);}
     }
   }
 
@@ -1190,7 +1190,9 @@ const server = http.createServer(async function (request, response) {
     try {
       const userId = await requireCurrentUser(request, response);
       if (!userId) {return;}
-      const events = await eventStore.listEvents(100, { userId: userId });
+      const requestedLimit = parseInt(parsedUrl.searchParams.get("limit") || "100", 10);
+      const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), MAX_EVENTS);
+      const events = await eventStore.listEvents(limit, { userId: userId });
       sendJson(response, 200, { events: events }, request);
     } catch (error) {
       console.error("[prototype_3] Failed to list events:", error);
@@ -1250,15 +1252,15 @@ const server = http.createServer(async function (request, response) {
     try {
       const userId = await requireCurrentUser(request, response);
       if (!userId) {return;}
-      const events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
-      const stats = getDashboardStats(events);
-      // Override the window-bound error count with a real count from the store
-      // so "active issues" reflects actual errors, not just errors that happen
-      // to remain in the recent-events window. Scoped to the current user.
-      if (typeof eventStore.countErrors === "function") {
-        const since = ERROR_WINDOW_MS > 0 ? Date.now() - ERROR_WINDOW_MS : null;
-        stats.totalErrors = await eventStore.countErrors({ sinceMs: since, userId: userId });
-      }
+      const errorSinceMs = ERROR_WINDOW_MS > 0 ? Date.now() - ERROR_WINDOW_MS : null;
+      const stats = typeof eventStore.getAnalyticsSnapshot === "function"
+        ? await eventStore.getAnalyticsSnapshot({
+          userId: userId,
+          maxEvents: MAX_EVENTS,
+          activeUserWindowMs: ACTIVE_USER_WINDOW,
+          errorSinceMs: errorSinceMs,
+        })
+        : getDashboardStats(await eventStore.allEvents(MAX_EVENTS, { userId: userId }));
       sendJson(response, 200, stats, request);
     } catch (error) {
       console.error("[prototype_3] Failed to fetch stats:", error);

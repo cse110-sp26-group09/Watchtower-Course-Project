@@ -257,6 +257,9 @@
   let DASHBOARD_MODE_STORAGE_KEY = "watchtower_dashboard_mode";
   let ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
   let DEV_QUERY_SAVED_STORAGE_KEY = "watchtower_dev_saved_queries";
+  // Edit these caps to change the visual max height for Analytics bar charts.
+  let USER_ACTIVITY_CHART_PEAK = 500;
+  let ISSUES_CHART_PEAK = 100;
   // Persists the IANA timezone identifier chosen in Settings across reloads.
   // "auto" means defer to the browser's system timezone (the default behavior).
   let TIMEZONE_STORAGE_KEY = "watchtower_timezone";
@@ -1852,9 +1855,23 @@
     return Object.keys(counts).map(function (k) { return { name: k, count: counts[k] }; }).sort((a, b) => b.count - a.count);
   }
 
-  function renderFeatureHotspots(activityEvents) {
+  function getFeatureCounts(stats, activityEvents) {
+    if (stats && Array.isArray(stats.featureCounts)) {
+      return stats.featureCounts.map(function (item) {
+        return {
+          name: String(item.name || ""),
+          count: Number(item.count) || 0,
+        };
+      }).filter(function (item) {
+        return item.name && item.count > 0;
+      }).sort(function (left, right) { return right.count - left.count; });
+    }
+    return deriveFeatureCounts(activityEvents);
+  }
+
+  function renderFeatureHotspots(stats, activityEvents) {
     if (!featureHotspotsContainer) return;
-    let top = deriveFeatureCounts(activityEvents).slice(0, 4);
+    let top = getFeatureCounts(stats, activityEvents).slice(0, 4);
     if (top.length === 0) {
       featureHotspotsContainer.innerHTML = '<div><strong>Waiting for instrumentation signals from client tags...</strong></div>';
       return;
@@ -1866,7 +1883,7 @@
 
   function renderManagerSummary(stats, activityEvents) {
     if (!managerSummaryList) return;
-    let actions = deriveFeatureCounts(activityEvents);
+    let actions = getFeatureCounts(stats, activityEvents);
     let topAction = actions[0];
     let slowRoutes = Object.keys(stats.latencyByRoute || {}).filter(function (route) {
       return (stats.latencyByRoute[route].p95 || 0) > 1800;
@@ -1964,7 +1981,7 @@
     let rangeEvents = getRangeEvents(activityEvents);
     let uniqueUsers = new Set();
     rangeEvents.forEach(function (eventRecord) {
-      let userKey = eventRecord.userId || eventRecord.sessionId;
+      let userKey = eventRecord.sessionId || eventRecord.userId;
       if (userKey) uniqueUsers.add(String(userKey));
     });
     let maxUsers = Number.isFinite(stats.maxUsers)
@@ -1992,7 +2009,7 @@
     if (devActiveUsersValue) devActiveUsersValue.textContent = String(stats.activeUsers || 0);
     if (devActiveUsersTrend) devActiveUsersTrend.textContent = "Current sessions";
     if (devMaxUsersValue) devMaxUsersValue.textContent = String(maxUsers || 0);
-    if (devMaxUsersTrend) devMaxUsersTrend.textContent = "Peak in last 24h";
+    if (devMaxUsersTrend) devMaxUsersTrend.textContent = "Rolling 30s window";
     if (devActiveIssuesValue) {
       let errStatus = getErrorStatusClass(stats.totalErrors || 0);
       devActiveIssuesValue.textContent = String(stats.totalErrors || 0);
@@ -2084,7 +2101,7 @@
     }
 
     if (developerInsightTraffic) {
-      let topActions = deriveFeatureCounts(activityEvents).slice(0, 3);
+      let topActions = getFeatureCounts(stats, activityEvents).slice(0, 3);
       if (topActions.length === 0) {
         developerInsightTraffic.innerHTML = '<li><span class="rank">-</span><span>Waiting for activity samples</span><strong>0/min</strong></li>';
       } else {
@@ -2120,7 +2137,7 @@
 
   function renderDeveloperHealthMini(stats, activityEvents) {
     let healthModel = buildHealthModel(stats, activityEvents);
-    let topAction = deriveFeatureCounts(activityEvents || [])[0];
+    let topAction = getFeatureCounts(stats, activityEvents || [])[0];
     let errorCount = (stats.totalErrors || 0);
     let alertSummary = errorCount > 0
       ? (errorCount + " open issue" + (errorCount === 1 ? "" : "s") + " need attention.")
@@ -2215,27 +2232,29 @@
     }).join("");
   }
 
-  function renderBarChart(chartContainer, labels, values, highlightedIndex) {
+  function renderBarChart(chartContainer, labels, values, highlightedIndex, visualPeak) {
     if (!chartContainer) return;
-    let max = Math.max.apply(null, values.concat([1]));
+    let peak = Number(visualPeak);
+    let max = Number.isFinite(peak) && peak > 0 ? peak : Math.max.apply(null, values.concat([1]));
     chartContainer.style.setProperty("--bar-count", String(Math.max(labels.length, 1)));
     chartContainer.classList.toggle("is-empty", values.every(function (value) { return value === 0; }));
     chartContainer.innerHTML = labels.map(function (l, idx) {
-      let pct = Math.round((values[idx] / max) * 100);
+      let pct = Math.min(100, Math.round((values[idx] / max) * 100));
       let className = "bar" + (idx === highlightedIndex ? " highlight" : "") + (labels.length > 8 ? " dense" : "");
       return '<div class="' + className + '" style="--bar-height: ' + Math.max(pct, 8) + '%" data-value="' + escapeHtml(values[idx]) + '">' +
         '<i class="bar-fill" aria-hidden="true"></i><span>' + escapeHtml(l) + '</span></div>';
     }).join("");
   }
 
-  function renderErrorBarChart(chartContainer, labels, values) {
+  function renderErrorBarChart(chartContainer, labels, values, visualPeak) {
     if (!chartContainer) return;
-    let max = Math.max.apply(null, values.concat([1]));
+    let peak = Number(visualPeak);
+    let max = Number.isFinite(peak) && peak > 0 ? peak : Math.max.apply(null, values.concat([1]));
     chartContainer.style.setProperty("--bar-count", String(Math.max(labels.length, 1)));
     chartContainer.classList.toggle("is-empty", values.every(function (v) { return v === 0; }));
     chartContainer.innerHTML = labels.map(function (l, idx) {
       let v = values[idx];
-      let pct = Math.round((v / max) * 100);
+      let pct = Math.min(100, Math.round((v / max) * 100));
       let color = v === 0 ? "var(--green)" : (v <= 10 ? "var(--amber)" : "var(--coral)");
       return '<div class="bar' + (labels.length > 8 ? " dense" : "") + '" style="--bar-height: ' + Math.max(pct, 8) + '%" data-value="' + v + '">' +
         '<i class="bar-fill" style="background:' + color + '" aria-hidden="true"></i><span>' + escapeHtml(l) + '</span></div>';
@@ -2267,6 +2286,31 @@
     });
   }
 
+  function getStartOfDayMs(valueMs) {
+    let date = new Date(valueMs);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+
+  function getRangeBucketIndex(ts, bucketCount) {
+    if (uiState.selectedRange === "7d") {
+      let daysAgo = Math.floor((getStartOfDayMs(Date.now()) - getStartOfDayMs(ts)) / (24 * 60 * 60 * 1000));
+      if (daysAgo < 0 || daysAgo >= bucketCount) return null;
+      return bucketCount - 1 - daysAgo;
+    }
+    if (uiState.selectedRange === "30d") {
+      let daysAgo = Math.floor((getStartOfDayMs(Date.now()) - getStartOfDayMs(ts)) / (24 * 60 * 60 * 1000));
+      if (daysAgo < 0 || daysAgo >= 30) return null;
+      let weeksAgo = Math.floor(daysAgo / 7);
+      if (weeksAgo >= bucketCount) return null;
+      return bucketCount - 1 - weeksAgo;
+    }
+    let cutoff = getRangeCutoff();
+    if (ts < cutoff) return null;
+    let span = Math.max(Date.now() - cutoff, 1);
+    return Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+  }
+
   function buildTimeSeries(events, bucketCount, valuePicker) {
     let buckets = Array.from({ length: bucketCount }, function () { return 0; });
     let labels = Array.from({ length: bucketCount }, function (_value, idx) {
@@ -2274,13 +2318,11 @@
       if (uiState.selectedRange === "7d") return idx === bucketCount - 1 ? "Today" : "-" + (bucketCount - idx - 1) + "d";
       return idx === bucketCount - 1 ? "This wk" : "-" + (bucketCount - idx - 1) + "w";
     });
-    let cutoff = getRangeCutoff();
-    let span = Math.max(Date.now() - cutoff, 1);
-
     (events || []).forEach(function (eventRecord) {
       let ts = getValidTimestamp(eventRecord.timestamp);
-      if (ts === null || ts < cutoff) return;
-      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+      if (ts === null) return;
+      let bucketIndex = getRangeBucketIndex(ts, bucketCount);
+      if (bucketIndex === null) return;
       buckets[bucketIndex] += valuePicker(eventRecord);
     });
 
@@ -2290,15 +2332,13 @@
   function buildUniqueTimeSeries(events, bucketCount, keyPicker) {
     let labels = buildTimeSeries([], bucketCount, function () { return 0; }).labels;
     let bucketSets = Array.from({ length: bucketCount }, function () { return new Set(); });
-    let cutoff = getRangeCutoff();
-    let span = Math.max(Date.now() - cutoff, 1);
-
     (events || []).forEach(function (eventRecord) {
       let ts = getValidTimestamp(eventRecord.timestamp);
-      if (ts === null || ts < cutoff) return;
+      if (ts === null) return;
       let uniqueKey = keyPicker(eventRecord);
       if (!uniqueKey) return;
-      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+      let bucketIndex = getRangeBucketIndex(ts, bucketCount);
+      if (bucketIndex === null) return;
       bucketSets[bucketIndex].add(String(uniqueKey));
     });
 
@@ -2313,19 +2353,28 @@
     return Number.isFinite(value) ? Math.min(5, Math.max(1, Math.round(value))) : null;
   }
 
-  function renderRatingSummary(events) {
+  function renderRatingSummary(events, feedbackCounts) {
     if (!ratingAverage || !ratingCaption || !ratingBars) return;
-    let ratingCounts = [0, 0, 0, 0, 0];
-    let total = 0;
+    let ratingCounts = feedbackCounts && Array.isArray(feedbackCounts.ratingCounts)
+      ? feedbackCounts.ratingCounts.slice(0, 5)
+      : [0, 0, 0, 0, 0];
+    while (ratingCounts.length < 5) ratingCounts.push(0);
+    let total = feedbackCounts && Number.isFinite(Number(feedbackCounts.total)) ? Number(feedbackCounts.total) : 0;
     let sum = 0;
 
-    (events || []).forEach(function (eventRecord) {
-      let rating = getEventRating(eventRecord);
-      if (rating === null) return;
-      ratingCounts[rating - 1] += 1;
-      total += 1;
-      sum += rating;
-    });
+    if (!feedbackCounts) {
+      (events || []).forEach(function (eventRecord) {
+        let rating = getEventRating(eventRecord);
+        if (rating === null) return;
+        ratingCounts[rating - 1] += 1;
+        total += 1;
+        sum += rating;
+      });
+    } else {
+      ratingCounts.forEach(function (count, idx) {
+        sum += Number(count || 0) * (idx + 1);
+      });
+    }
 
     ratingAverage.textContent = total === 0 ? "0.0" : (sum / total).toFixed(1);
     ratingCaption.textContent = total === 0 ? "waiting for feedback" : total + " feedback responses";
@@ -2390,21 +2439,27 @@
     }, {});
   }
 
-  function renderEventBreakdown(events) {
+  function renderEventBreakdown(events, breakdownCounts) {
     if (!breakdownDonut || !breakdownList) return;
     let groups = [
-      { key: "Performance", className: "teal", count: 0, detail: "Pageload + web vitals" },
-      { key: "Errors", className: "coral", count: 0, detail: "Runtime + API failures" },
-      { key: "Feedback", className: "amber", count: 0, detail: "Ratings + comments" },
-      { key: "Events", className: "blue", count: 0, detail: "Click + custom actions" }
+      { key: "Performance", sourceKey: "performance", className: "teal", count: 0, detail: "Pageload + web vitals" },
+      { key: "Errors", sourceKey: "errors", className: "coral", count: 0, detail: "Runtime + API failures" },
+      { key: "Feedback", sourceKey: "feedback", className: "amber", count: 0, detail: "Ratings + comments" },
+      { key: "Events", sourceKey: "clicks", className: "blue", count: 0, detail: "Click + custom actions" }
     ];
 
-    (events || []).forEach(function (eventRecord) {
-      if (eventRecord.type === "pageload" || eventRecord.type === "performance") groups[0].count += 1;
-      else if (eventRecord.type === "error") groups[1].count += 1;
-      else if (eventRecord.type === "feedback") groups[2].count += 1;
-      else if (eventRecord.type === "click" || eventRecord.type === "custom") groups[3].count += 1;
-    });
+    if (breakdownCounts) {
+      groups.forEach(function (group) {
+        group.count = Number(breakdownCounts[group.sourceKey]) || 0;
+      });
+    } else {
+      (events || []).forEach(function (eventRecord) {
+        if (eventRecord.type === "pageload" || eventRecord.type === "performance") groups[0].count += 1;
+        else if (eventRecord.type === "error") groups[1].count += 1;
+        else if (eventRecord.type === "feedback") groups[2].count += 1;
+        else if (eventRecord.type === "click" || eventRecord.type === "custom") groups[3].count += 1;
+      });
+    }
 
     let total = groups.reduce(function (sum, group) { return sum + group.count; }, 0) || 1;
     let cursor = 0;
@@ -2470,20 +2525,16 @@
 
     if (eventRecord.type === "pageload") {
       let pageloadDuration = Number(eventRecord.data.duration);
-      return Number.isFinite(pageloadDuration) ? pageloadDuration : null;
+      return Number.isFinite(pageloadDuration) && pageloadDuration > 0 ? pageloadDuration : null;
     }
 
     if (eventRecord.type === "performance") {
       let metricName = String(eventRecord.data.metricName || eventRecord.data.name || "").toLowerCase();
+      let explicitLatency = Number(eventRecord.data.duration || eventRecord.data.latency || eventRecord.data.latencyMs);
+      if (Number.isFinite(explicitLatency) && explicitLatency > 0) return explicitLatency;
       let metricValue = Number(eventRecord.data.value);
-      if (!Number.isFinite(metricValue)) {
-        metricValue = Number(eventRecord.data.duration);
-      }
-      if (!Number.isFinite(metricValue)) {
-        metricValue = Number(eventRecord.data.latency);
-      }
-      if (!Number.isFinite(metricValue)) return null;
-      if (metricName.indexOf("latency") !== -1 || metricName.indexOf("duration") !== -1 || metricName.indexOf("ttfb") !== -1 || metricName.indexOf("load") !== -1) {
+      if (!Number.isFinite(metricValue) || metricValue <= 0) return null;
+      if (metricName.indexOf("latency") !== -1 || metricName.indexOf("duration") !== -1 || metricName.indexOf("ttfb") !== -1 || metricName.indexOf("load") !== -1 || metricName.indexOf("api") !== -1 || metricName.indexOf("fetch") !== -1) {
         return metricValue;
       }
     }
@@ -2491,7 +2542,7 @@
     return null;
   }
 
-  function renderDeveloperLatencyCanvas(rangeEvents, bucketCount) {
+  function renderDeveloperLatencyCanvas(rangeEvents, bucketCount, latencySeries) {
     if (!developerLatencyCanvas) return;
     let context = developerLatencyCanvas.getContext("2d");
     if (!context) return;
@@ -2505,23 +2556,28 @@
     context.clearRect(0, 0, width, height);
 
     let labels = buildTimeSeries([], bucketCount, function () { return 0; }).labels;
-    let cutoff = getRangeCutoff();
-    let span = Math.max(Date.now() - cutoff, 1);
-    let latencyBuckets = Array.from({ length: bucketCount }, function () { return []; });
+    let values = Array.isArray(latencySeries) && latencySeries.length === bucketCount
+      ? latencySeries.map(function (value) { return Number(value) || 0; })
+      : null;
 
-    (rangeEvents || []).forEach(function (eventRecord) {
-      let ts = getValidTimestamp(eventRecord.timestamp);
-      if (ts === null || ts < cutoff) return;
-      let latencyMs = getLatencyMsFromEvent(eventRecord);
-      if (!Number.isFinite(latencyMs)) return;
-      let bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
-      latencyBuckets[bucketIndex].push(latencyMs);
-    });
+    if (!values) {
+      let latencyBuckets = Array.from({ length: bucketCount }, function () { return []; });
 
-    let values = latencyBuckets.map(function (bucket) {
-      if (!bucket.length) return 0;
-      return Math.round(bucket.reduce(function (sum, latencyMs) { return sum + latencyMs; }, 0) / bucket.length);
-    });
+      (rangeEvents || []).forEach(function (eventRecord) {
+        let ts = getValidTimestamp(eventRecord.timestamp);
+        if (ts === null) return;
+        let latencyMs = getLatencyMsFromEvent(eventRecord);
+        if (!Number.isFinite(latencyMs)) return;
+        let bucketIndex = getRangeBucketIndex(ts, bucketCount);
+        if (bucketIndex === null) return;
+        latencyBuckets[bucketIndex].push(latencyMs);
+      });
+
+      values = latencyBuckets.map(function (bucket) {
+        if (!bucket.length) return 0;
+        return Math.round(bucket.reduce(function (sum, latencyMs) { return sum + latencyMs; }, 0) / bucket.length);
+      });
+    }
 
     let threshold = 250;
     if (developerLatencyThresholdInput) {
@@ -2607,20 +2663,28 @@
     }
   }
 
-  function renderAnalyticsSummary(eventsInRange, latencySummary) {
+  function renderAnalyticsSummary(eventsInRange, latencySummary, rangeAnalytics) {
     if (analyticsRangeUsers) {
-      let usersSet = new Set();
-      eventsInRange.forEach(function (eventRecord) {
-        if (eventRecord.sessionId) usersSet.add(eventRecord.sessionId);
-      });
-      analyticsRangeUsers.textContent = String(usersSet.size);
+      if (rangeAnalytics && Number.isFinite(Number(rangeAnalytics.uniqueUsers))) {
+        analyticsRangeUsers.textContent = String(Number(rangeAnalytics.uniqueUsers));
+      } else {
+        let usersSet = new Set();
+        eventsInRange.forEach(function (eventRecord) {
+          if (eventRecord.sessionId) usersSet.add(eventRecord.sessionId);
+        });
+        analyticsRangeUsers.textContent = String(usersSet.size);
+      }
     }
 
     if (analyticsRangeActions) {
-      let actions = eventsInRange.filter(function (eventRecord) {
-        return eventRecord.type === "click" || eventRecord.type === "custom" || eventRecord.type === "feedback";
-      }).length;
-      analyticsRangeActions.textContent = String(actions);
+      if (rangeAnalytics && Number.isFinite(Number(rangeAnalytics.actionCount))) {
+        analyticsRangeActions.textContent = String(Number(rangeAnalytics.actionCount));
+      } else {
+        let actions = eventsInRange.filter(function (eventRecord) {
+          return eventRecord.type === "click" || eventRecord.type === "custom" || eventRecord.type === "feedback";
+        }).length;
+        analyticsRangeActions.textContent = String(actions);
+      }
     }
 
     if (analyticsRangeLatency) {
@@ -2692,30 +2756,41 @@
 
   function renderAnalyticsPanels(stats, events) {
     let rangeEvents = getRangeEvents(events);
-    let bucketCount = uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5);
-    let userSeries = buildUniqueTimeSeries(rangeEvents, bucketCount, function (eventRecord) {
-      return eventRecord.userId || eventRecord.sessionId || null;
-    });
-    let activitySeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
-    let errorSeries = buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "error" ? 1 : 0; });
-    let peakLatency = Object.keys(stats.latencyByRoute || {}).reduce(function (max, route) {
-      return Math.max(max, Number(stats.latencyByRoute[route].p95) || 0);
+    let rangeAnalytics = stats && stats.analyticsRanges ? stats.analyticsRanges[uiState.selectedRange] : null;
+    let bucketCount = rangeAnalytics && Number.isFinite(Number(rangeAnalytics.bucketCount))
+      ? Number(rangeAnalytics.bucketCount)
+      : (uiState.selectedRange === "24h" ? 8 : (uiState.selectedRange === "7d" ? 7 : 5));
+    let labels = buildTimeSeries([], bucketCount, function () { return 0; }).labels;
+    let userSeries = rangeAnalytics && Array.isArray(rangeAnalytics.userActivitySeries)
+      ? { labels: labels, values: rangeAnalytics.userActivitySeries }
+      : buildUniqueTimeSeries(rangeEvents, bucketCount, function (eventRecord) {
+        return eventRecord.userId || eventRecord.sessionId || null;
+      });
+    let activitySeries = rangeAnalytics && Array.isArray(rangeAnalytics.actionSeries)
+      ? { labels: labels, values: rangeAnalytics.actionSeries }
+      : buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "custom" || eventRecord.type === "click" ? 1 : 0; });
+    let errorSeries = rangeAnalytics && Array.isArray(rangeAnalytics.errorSeries)
+      ? { labels: labels, values: rangeAnalytics.errorSeries }
+      : buildTimeSeries(rangeEvents, bucketCount, function (eventRecord) { return eventRecord.type === "error" ? 1 : 0; });
+    let latencySummary = rangeAnalytics && rangeAnalytics.latencyByRoute ? rangeAnalytics.latencyByRoute : (stats.latencyByRoute || {});
+    let peakLatency = Object.keys(latencySummary || {}).reduce(function (max, route) {
+      return Math.max(max, Number(latencySummary[route].p95) || 0);
     }, 0);
 
     renderBarChart(userChartContainer, userSeries.labels, userSeries.values, userSeries.values.length - 1);
-    renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1);
-    renderLatencyChart(stats);
-    renderErrorBarChart(developerErrorChartContainer, errorSeries.labels, errorSeries.values);
-    renderDeveloperLatencyCanvas(rangeEvents, bucketCount);
-    renderRatingSummary(rangeEvents);
-    renderEventBreakdown(rangeEvents);
-    renderAnalyticsSummary(rangeEvents, stats.latencyByRoute || {});
+    renderBarChart(purchaseChartContainer, activitySeries.labels, activitySeries.values, activitySeries.values.length - 1, USER_ACTIVITY_CHART_PEAK);
+    renderLatencyChart(Object.assign({}, stats, { latencyByRoute: latencySummary }));
+    renderErrorBarChart(developerErrorChartContainer, errorSeries.labels, errorSeries.values, ISSUES_CHART_PEAK);
+    renderDeveloperLatencyCanvas(rangeEvents, bucketCount, rangeAnalytics ? rangeAnalytics.latencySeries : null);
+    renderRatingSummary(rangeEvents, rangeAnalytics ? rangeAnalytics.feedbackCounts : stats.feedbackCounts);
+    renderEventBreakdown(rangeEvents, rangeAnalytics ? rangeAnalytics.eventBreakdown : stats.eventBreakdown);
+    renderAnalyticsSummary(rangeEvents, latencySummary, rangeAnalytics);
 
     if (analyticsRangeLatency) {
       analyticsRangeLatency.textContent = peakLatency + " ms";
       applyStatusClass(analyticsRangeLatency, getLatencyStatusClass(peakLatency));
     }
-    if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " current bucket";
+    if (userDeltaBadge) userDeltaBadge.textContent = formatNumber(userSeries.values[userSeries.values.length - 1] || 0) + " sessions in bucket";
     if (purchaseDeltaBadge) purchaseDeltaBadge.textContent = formatNumber(activitySeries.values[activitySeries.values.length - 1] || 0) + " actions";
     if (errorDeltaBadge) {
       let totalErr = stats.totalErrors || 0;
@@ -2746,7 +2821,7 @@
     renderIssueList(stats.recentErrors || []);
 
     renderServiceStatus(stats);
-    renderFeatureHotspots(resolved);
+    renderFeatureHotspots(stats, resolved);
     renderManagerSummary(stats, resolved);
     renderDeveloperInsights(stats, resolved);
     renderActivityFeed(resolved);

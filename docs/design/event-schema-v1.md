@@ -1,6 +1,7 @@
-# Shared Event Schema v1 + API Contract
+# Prototype 3 Event Schema v1 + Storage Contract
 
-**Applies to:** `src/prototype_1`, `src/prototype_2`  
+**Applies to:** `src/prototype_3`  
+**Source of truth:** `src/prototype_3/server/event-store.js`  
 **Status:** Accepted  
 **Sprint:** 2
 
@@ -8,62 +9,73 @@
 
 ## Overview
 
-This document defines the canonical event schema and API contract shared by both WatchTower prototypes. All SDK clients, servers, and dashboards must conform to this contract so that either candidate's backend can serve either candidate's frontend without modification.
+This document describes the event and user schemas used by Prototype 3's backend event store. The runtime store uses Supabase/PostgreSQL when Supabase environment variables are configured, and an in-memory store with the same normalized event shape for local and CI runs.
+
+The default Supabase tables are:
+
+| Logical data | Default table | Override |
+|---|---|---|
+| Events | `prototype3_events` | `SUPABASE_P3_EVENTS_TABLE` |
+| Users | `app_users` | `SUPABASE_P3_USERS_TABLE` |
 
 ---
 
-## Event Envelope
+## Runtime Event Shape
 
-Every event — regardless of type — uses the same outer envelope. The three required fields are set by the SDK before the event is queued; optional context fields are populated from SDK configuration; `receivedAt` is added server-side on ingestion.
+Incoming events are normalized before storage. The in-memory store keeps this camelCase shape, and the Supabase store maps it to snake_case columns.
 
-### Required Fields
+| Field | Type | Default / normalization | Description |
+|---|---|---|---|
+| `id` | `string` | Existing non-empty `rawEvent.id`, else generated UUID/fallback id. | Primary event identifier. |
+| `type` | `string` | `raw.type || "custom"` | Event type. Server validation only requires `type` to be a string before ingestion. |
+| `eventName` | `string` | `raw.eventName || raw.name`, else derived from event content. | Human-readable event name for filtering/display. |
+| `timestamp` | `string` | `raw.timestamp || new Date().toISOString()` | Client event time, stored as `timestamptz` in Supabase. |
+| `sessionId` | `string` | `raw.sessionId || "unknown-session"` | Session identifier used for active-user metrics. |
+| `userId` | `string \| null` | `raw.userId || null`, unless request ownership stamps/overrides it. | Application/Clerk owner id used for per-user filtering. |
+| `deployVersion` | `string` | `raw.deployVersion || "unknown"` | Release/deploy label. |
+| `appName` | `string` | `raw.appName || "shopdemo"` | Logical app name. |
+| `environment` | `string` | Normalized from `raw.environment || raw.env` and `raw.url`; defaults to `"production"`. | One of `production`, `staging`, `development`, or `preview` when recognized. |
+| `sdkVersion` | `string` | `raw.sdkVersion || "sdk-unknown"` | SDK/client version label. |
+| `route` | `string` | `raw.route || "/"` | App route associated with the event. |
+| `data` | `object` | `raw.data` when it is an object, else `{}` | Type-specific JSON payload. |
+| `receivedAt` | `string` | `new Date().toISOString()` | Server ingestion time. |
 
-| Field | Type | Description |
-|---|---|---|
-| `type` | `string` | Event type (see [Event Types](#event-types)). Must be a non-empty string. |
-| `timestamp` | `string` | ISO-8601 client-side creation time (e.g. `"2026-05-16T18:00:00.000Z"`). |
-| `data` | `object` | Type-specific payload (see per-type schemas below). Must be an object, never `null`. |
+### Event Name Derivation
 
-### Optional Context Fields
+If `eventName` is missing after reading `eventName`/`name`, the server derives it as follows:
 
-These fields are set by the SDK from its configuration and are present on every real event sent from a browser, but are not enforced by the server validator.
+| Condition | Derived `eventName` |
+|---|---|
+| `type === "custom"` | `data.name` if present, else `"custom"` |
+| `type === "performance"` | `"performance:" + data.metricName` |
+| Any other type | `type`, else `"unknown"` |
 
-| Field | Type | Description |
-|---|---|---|
-| `sessionId` | `string` | Stable per-tab identifier stored in `sessionStorage`. Used for active-user counting. |
-| `userId` | `string \| null` | Application-level user identifier. `null` until `setUser()` or `trackLogin()` is called. |
-| `deployVersion` | `string` | Deploy/release label (e.g. `"v1.2.3"`). Defaults to `"unknown"`. |
-| `appName` | `string` | Logical application name. Defaults to `location.hostname`. |
-| `url` | `string` | Full `location.href` at the time the event was created. |
-| `route` | `string` | `location.pathname` at the time the event was created. |
+### Minimal Accepted Event
 
-### Server-Added Fields
-
-| Field | Type | Description |
-|---|---|---|
-| `receivedAt` | `string` | ISO-8601 server ingestion time, added by the server before the event is stored. |
-
-### Minimal Valid Event (Example)
+`POST /api/events` filters incoming events through `isValidEvent`, which only requires a non-null object with `type` as a string.
 
 ```json
 {
-  "type": "click",
-  "timestamp": "2026-05-16T18:00:00.000Z",
-  "data": { "target": "button#submit", "text": "Submit" }
+  "type": "click"
 }
 ```
 
-### Full SDK-Emitted Event (Example)
+After normalization this event is stored with generated/default fields such as `id`, `timestamp`, `sessionId`, `eventName`, `data`, and `receivedAt`.
+
+### Normalized Event Example
 
 ```json
 {
+  "id": "4f2080f7-9a22-4df8-a3fd-7a7f51b28a59",
   "type": "error",
+  "eventName": "error",
   "timestamp": "2026-05-16T18:00:01.234Z",
   "sessionId": "a1b2c3d4-e5f6-4789",
   "userId": "user_42",
   "deployVersion": "v1.0.0",
-  "appName": "my-app.example.com",
-  "url": "https://my-app.example.com/dashboard",
+  "appName": "shopdemo",
+  "environment": "production",
+  "sdkVersion": "sdk-unknown",
   "route": "/dashboard",
   "data": {
     "message": "Cannot read properties of undefined",
@@ -78,270 +90,215 @@ These fields are set by the SDK from its configuration and are present on every 
 
 ---
 
-## Event Types
+## Supabase Event Table
 
-The server accepts any non-empty `type` string, but the dashboard only renders the following built-in types. New types can be added to the SDK without a coordinated server deploy.
+`event-store.js` exposes the following SQL in `EVENTS_TABLE_SCHEMA_SQL`.
 
-### `error`
+```sql
+create table if not exists public.prototype3_events (
+  id text primary key,
+  type text not null,
+  event_name text,
+  timestamp timestamptz not null,
+  session_id text,
+  user_id text,
+  route text,
+  deploy_version text,
+  app_name text,
+  environment text,
+  sdk_version text,
+  data jsonb default '{}'::jsonb,
+  received_at timestamptz not null
+);
+```
 
-Captured automatically via `window.onerror` / `unhandledrejection`, or sent manually via `WatchTower.trackError(error)`.
+### Event Column Mapping
 
-| Field | Type | Default | Description |
+| Runtime field | Database column | Database type |
+|---|---|---|
+| `id` | `id` | `text primary key` |
+| `type` | `type` | `text not null` |
+| `eventName` | `event_name` | `text` |
+| `timestamp` | `timestamp` | `timestamptz not null` |
+| `sessionId` | `session_id` | `text` |
+| `userId` | `user_id` | `text` |
+| `route` | `route` | `text` |
+| `deployVersion` | `deploy_version` | `text` |
+| `appName` | `app_name` | `text` |
+| `environment` | `environment` | `text` |
+| `sdkVersion` | `sdk_version` | `text` |
+| `data` | `data` | `jsonb default '{}'::jsonb` |
+| `receivedAt` | `received_at` | `timestamptz not null` |
+
+### Event Indexes
+
+The schema creates indexes for common listing, filtering, ownership, and analytics queries:
+
+```sql
+create index if not exists idx_prototype3_events_type
+  on public.prototype3_events(type);
+
+create index if not exists idx_prototype3_events_event_name
+  on public.prototype3_events(event_name);
+
+create index if not exists idx_prototype3_events_session_id
+  on public.prototype3_events(session_id);
+
+create index if not exists idx_prototype3_events_environment
+  on public.prototype3_events(environment);
+
+create index if not exists idx_prototype3_events_received_at
+  on public.prototype3_events(received_at);
+
+create index if not exists idx_prototype3_events_user_received_at
+  on public.prototype3_events(user_id, received_at);
+
+create index if not exists idx_prototype3_events_user_type_received_at
+  on public.prototype3_events(user_id, type, received_at);
+
+create index if not exists idx_prototype3_events_user_route_received_at
+  on public.prototype3_events(user_id, route, received_at);
+
+create index if not exists idx_prototype3_events_user_timestamp
+  on public.prototype3_events(user_id, timestamp);
+```
+
+---
+
+## User Table
+
+Prototype 3 also syncs dashboard/application users through `eventStore.syncUser()`.
+
+```sql
+create table if not exists public.app_users (
+  clerk_user_id text primary key,
+  email text default '',
+  display_name text default '',
+  last_seen_at timestamptz not null
+);
+
+create index if not exists idx_app_users_last_seen_at
+  on public.app_users(last_seen_at);
+```
+
+The current code also defines a separate migration for `timezone`:
+
+```sql
+alter table public.app_users
+  add column if not exists timezone text not null default '';
+```
+
+### User Column Mapping
+
+| Runtime input | Database column | Database type / default | Description |
 |---|---|---|---|
-| `message` | `string` | `"Unknown error"` | Human-readable error message. |
-| `source` | `string` | `""` | Originating script filename or label (`"manual"` for manually tracked errors, `"unhandledrejection"` for promise rejections). |
-| `line` | `number` | `0` | Line number where the error occurred. |
-| `col` | `number` | `0` | Column number where the error occurred. |
-| `stack` | `string` | `""` | Stack trace string, if available. |
+| `clerkUserId` | `clerk_user_id` | `text primary key` | Required user id. |
+| `email` | `email` | `text default ''` | Email, normalized to an empty string when missing. |
+| `displayName` | `display_name` | `text default ''` | Display name, normalized to an empty string when missing. |
+| `timezone` | `timezone` | `text not null default ''` | Timezone preference; empty string means unset/default. |
+| Server-generated | `last_seen_at` | `timestamptz not null` | Updated to current server time on each sync. |
 
-### `pageload`
+---
 
-Captured automatically on `window.load` using the Navigation Timing API (`PerformanceNavigationTiming`).
+## Store Behavior
 
-| Field | Type | Description |
-|---|---|---|
-| `duration` | `number` | Total navigation duration in milliseconds (rounded). |
-| `ttfb` | `number` | Time to first byte in milliseconds (`responseStart - requestStart`, rounded). |
-| `domContentLoaded` | `number` | Time until `DOMContentLoaded` event fired in milliseconds. |
-| `loadComplete` | `number` | Time until `load` event fired in milliseconds. |
-| `transferSize` | `number` | Transfer size of the main document in bytes. `0` if unavailable. |
+### Insert
 
-### `click`
+`insertEvents(rawEvents)`:
 
-Sent via `WatchTower.trackClick(target, text)`.
+1. Normalizes each raw event.
+2. Generates an `id` when one is not supplied.
+3. Supabase mode upserts rows into the event table with `onConflict: "id"` and `ignoreDuplicates: true`.
+4. In-memory mode appends normalized events and drops the oldest rows when the configured maximum is exceeded.
 
-| Field | Type | Description |
-|---|---|---|
-| `target` | `string` | Description of the clicked element (e.g. CSS-like selector `"button#submit"`). |
-| `text` | `string` | Visible text on the element, truncated to 100 characters. |
+### Read
 
-### `login`
+`listEvents(limit, { userId })` and `allEvents(limit, { userId })`:
 
-Sent via `WatchTower.trackLogin(userId, method)`. Also sets `userId` on the SDK instance for all subsequent events.
-
-| Field | Type | Default | Description |
+| Store | Ordering | Filtering | Returned shape |
 |---|---|---|---|
-| `userId` | `string` | — | The user's application-level identifier. |
-| `method` | `string` | `"unknown"` | Authentication method label (e.g. `"google"`, `"email"`). |
+| Supabase | Most recent `received_at`/`id` rows are selected, then reversed to chronological order. | Optional `user_id === userId`. | Runtime camelCase event shape. |
+| Memory | Takes the most recent events from the array. | Optional `userId === userId`. | Runtime camelCase event shape. |
 
-### `logout`
+### Analytics Query Window
 
-Sent via `WatchTower.trackEvent("logout", payload)` or custom integration. No standardized `data` fields — use `data: {}` or include app-specific context.
+`analyticsEvents({ userId, sinceMs, maxEvents })` filters by `userId` and, when `sinceMs` is finite, by event `timestamp`. Supabase mode orders by `timestamp` descending and returns the final result in chronological order.
 
-### `feedback`
+---
 
-Sent via `WatchTower.trackEvent("feedback", feedbackData)` or direct server POST. The server normalizes this type before storage.
+## Analytics Snapshot Shape
 
-| Field | Type | Constraints | Description |
-|---|---|---|---|
-| `rating` | `number \| null` | Integer, clamped to `[1, 5]`. `null` if omitted or non-finite. | User satisfaction rating. |
-| `message` | `string` | Trimmed, max 500 characters. | Free-form feedback text. |
-| `category` | `string` | Defaults to `"general"` if absent. | Optional grouping label. |
-
-### `custom`
-
-Sent via `WatchTower.trackEvent(name, payload)`.
+`getAnalyticsSnapshot()` returns the shape built by `buildAnalyticsSnapshot()`:
 
 | Field | Type | Description |
 |---|---|---|
-| `name` | `string` | Short event name (e.g. `"add-to-cart"`, `"tutorial-complete"`). |
-| `payload` | `object` | Arbitrary JSON-serializable details. Defaults to `{}`. |
-
----
-
-## API Contract
-
-Both candidates expose the same HTTP API. The server is intentionally framework-free (plain Node.js `http` module). CORS is open (`*`) so the SDK can post from any origin.
-
-**Base URL:** `http://localhost:3000` (configurable via `PORT` env var)
-
----
-
-### POST /api/events
-
-Ingest one or more events. The SDK sends batches using the `events` array form.
-
-**Request body — single event:**
-
-```json
-{
-  "type": "click",
-  "timestamp": "2026-05-16T18:00:00.000Z",
-  "sessionId": "a1b2c3d4-e5f6-4789",
-  "data": { "target": "button#submit", "text": "Submit" }
-}
-```
-
-**Request body — batch:**
-
-```json
-{
-  "events": [
-    { "type": "pageload", "timestamp": "2026-05-16T18:00:00.000Z", "data": { "duration": 312, "ttfb": 45, "domContentLoaded": 210, "loadComplete": 312, "transferSize": 14200 } },
-    { "type": "click",    "timestamp": "2026-05-16T18:00:05.000Z", "data": { "target": "a.nav-link", "text": "Dashboard" } }
-  ]
-}
-```
-
-**Response `200 OK`:**
-
-```json
-{ "accepted": 2 }
-```
-
-**Response `400 Bad Request`** (body is not valid JSON):
-
-```json
-{ "error": "Invalid JSON" }
-```
-
-**Notes:**
-- The server does not validate per-field types beyond JSON parsing; malformed events are stored as-is.
-- The in-memory buffer is capped at 10,000 events (oldest events are dropped first).
-- Each accepted event has `receivedAt` (ISO-8601) appended before storage.
-- Newly ingested events are broadcast to all connected SSE clients immediately.
-
----
-
-### GET /api/events
-
-Retrieve stored events with optional filtering.
-
-**Query Parameters:**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `type` | `string` | Filter to events where `event.type === type`. |
-| `version` | `string` | Filter to events where `event.deployVersion === version`. |
-| `limit` | `number` | Maximum number of events to return (default: `100`). Returns the most recent `limit` events. |
-
-**Example:**
-
-```
-GET /api/events?type=error&limit=50&version=v1.0.0
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "events": [
-    {
-      "type": "error",
-      "timestamp": "2026-05-16T18:00:01.234Z",
-      "sessionId": "a1b2c3d4-e5f6-4789",
-      "deployVersion": "v1.0.0",
-      "data": { "message": "Cannot read properties of undefined", "source": "app.js", "line": 42, "col": 8, "stack": "..." },
-      "receivedAt": "2026-05-16T18:00:01.300Z"
-    }
-  ]
-}
-```
-
----
-
-### GET /api/stats
-
-Return aggregated statistics computed from the in-memory event buffer. Used by the dashboard.
-
-**Response `200 OK`:**
-
-```json
-{
-  "activeUsers": 3,
-  "totalEvents": 142,
-  "totalErrors": 7,
-  "errorsByVersion": {
-    "v1.0.0": 5,
-    "v1.1.0": 2
-  },
-  "latencyByRoute": {
-    "/dashboard": {
-      "count": 18,
-      "p50": 290,
-      "p95": 520,
-      "avg": 315,
-      "points": [
-        { "duration": 290, "ttfb": 40, "timestamp": "2026-05-16T17:55:00.000Z" }
-      ]
-    }
-  },
-  "recentErrors": [
-    {
-      "type": "error",
-      "timestamp": "2026-05-16T18:00:01.234Z",
-      "data": { "message": "Cannot read properties of undefined", "source": "app.js", "line": 42, "col": 8, "stack": "..." }
-    }
-  ]
-}
-```
-
-**Response Field Definitions:**
-
-| Field | Type | Description |
-|---|---|---|
-| `activeUsers` | `number` | Count of distinct `sessionId` values seen in the last 5 minutes. |
-| `totalEvents` | `number` | Total events currently in the in-memory buffer. |
-| `totalErrors` | `number` | Count of `error`-type events in `recentErrors` (capped at 50). |
+| `activeUsers` | `number` | Count of sessions active within the configured active-user window. |
+| `maxUsers` | `number` | Maximum concurrent users computed over the active-user window. |
+| `totalEvents` | `number` | Total event count for the selected owner. |
+| `totalErrors` | `number` | Error count, optionally constrained by `errorSinceMs`. |
 | `errorsByVersion` | `object` | Error counts keyed by `deployVersion`. |
-| `latencyByRoute` | `object` | Per-route `pageload` latency summary (see below). |
-| `recentErrors` | `Event[]` | Up to 50 most recent `error`-type events. |
+| `latencyByRoute` | `object` | Per-route latency summary with `count`, `p95`, and `avg`. |
+| `feedbackCounts` | `object` | Feedback `total`, `average`, and five-element `ratingCounts` array. |
+| `eventBreakdown` | `object` | Counts for `performance`, `errors`, `feedback`, and `clicks`. |
+| `featureCounts` | `array` | `{ name, count }` entries derived from click/custom events. |
+| `userActivity` | `object` | `{ activeUsers, maxUsers, windowMs }`. |
+| `analyticsRanges` | `object` | Range summaries for `24h`, `7d`, and `30d`. |
+| `recentErrors` | `Event[]` | Up to 1000 recent error events from the analytics source window. |
+| `recentActivity` | `Event[]` | Last 20 events from the analytics source window. |
 
-**`latencyByRoute[route]` Fields:**
+### Analytics Ranges
 
-| Field | Type | Description |
+| Range | Window | Buckets |
 |---|---|---|
-| `count` | `number` | Number of `pageload` events recorded for this route. |
-| `p50` | `number` | 50th percentile duration in milliseconds. |
-| `p95` | `number` | 95th percentile duration in milliseconds. |
-| `avg` | `number` | Average duration in milliseconds (rounded). |
-| `points` | `array` | Up to 100 most recent `{duration, ttfb, timestamp}` samples. |
+| `24h` | 24 hours | 8 |
+| `7d` | 7 days | 7 |
+| `30d` | 30 days | 5 |
+
+Each range contains:
+
+| Field | Type |
+|---|---|
+| `windowMs` | `number` |
+| `bucketCount` | `number` |
+| `uniqueUsers` | `number` |
+| `actionCount` | `number` |
+| `totalEvents` | `number` |
+| `latencyByRoute` | `object` |
+| `feedbackCounts` | `object` |
+| `eventBreakdown` | `object` |
+| `featureCounts` | `array` |
+| `userActivitySeries` | `number[]` |
+| `actionSeries` | `number[]` |
+| `errorSeries` | `number[]` |
+| `latencySeries` | `number[]` |
 
 ---
 
-### GET /api/events/stream
+## HTTP Endpoints Using This Store
 
-Server-Sent Events (SSE) stream. The dashboard subscribes to this endpoint to receive newly ingested events in real time without polling.
-
-**Response headers:**
-
-```
-Content-Type: text/event-stream
-Cache-Control: no-cache
-Connection: keep-alive
-```
-
-**Stream format:** Each broadcast is a standard SSE `data` line followed by a blank line.
-
-```
-data: [{"type":"error","timestamp":"2026-05-16T18:00:01.234Z","data":{...},"receivedAt":"..."}]
-
-```
-
-**Notes:**
-- The server sends a keep-alive comment (`: \n\n`) immediately on connection.
-- Clients are removed from the broadcast set on connection close.
-- There is no authentication or rate limiting on this endpoint in either prototype.
+| Endpoint | Store interaction | Notes |
+|---|---|---|
+| `POST /api/events` | `insertEvents()`, then `pruneOldest()` | Accepts a single event or `{ "events": [...] }`; responds `{ "accepted": count }`. |
+| `POST /api/beacon` | `insertEvents()`, then `pruneOldest()` | Same ingestion path as `/api/events`; returns `204`. |
+| `GET /api/events` | `listEvents(limit, { userId })` | Requires the current user and only returns that user's events. |
+| `GET /api/stats` | `getAnalyticsSnapshot({ userId, ... })` | Requires the current user. |
+| `GET /api/developer/stream` | `allEvents(MAX_EVENTS, { userId })` | Applies additional in-process filters. |
+| `GET /api/developer/insights` | `allEvents(MAX_EVENTS, { userId })` | Builds developer insight summaries. |
+| `POST /api/developer/query` | `allEvents(MAX_EVENTS, { userId })` | Runs developer queries against the user's events. |
+| `POST /api/users/sync` | `syncUser()` | Upserts into `app_users`. |
 
 ---
 
 ## Validation Rules
 
-The `isValidEvent` utility (in `src/shared/utils/event-utils.js`) enforces the minimum envelope check used in tests. The server itself stores events without re-validating them.
+Prototype 3 ingestion uses `isValidEvent()` from `src/prototype_3/server/server-helpers.js` before calling the event store.
 
-An event **passes** validation when:
+An incoming event passes validation when:
+
 1. It is a non-null object.
-2. `type` is a non-empty string.
-3. `timestamp` is a non-empty string that parses as a finite date (`Date.parse` returns a finite number).
-4. `data` is a non-null, non-undefined object.
+2. `type` is a string.
 
-An event **fails** if any of the above is violated.
-
----
-
-## SDK Batching Behavior
-
-The SDK queues events locally and flushes in batches every 2 seconds (`FLUSH_INTERVAL = 2000 ms`). It also flushes immediately when `document.visibilityState` changes to `"hidden"` (tab switch or close). Failed batches are re-prepended to the queue for retry on the next flush cycle. Each flush sends at most 50 events.
+The event store then fills defaults for missing fields during normalization. Type-specific `data` schemas are not enforced by `event-store.js`.
 
 ---
 
@@ -349,4 +306,5 @@ The SDK queues events locally and flushes in batches every 2 seconds (`FLUSH_INT
 
 | Version | Date | Notes |
 |---|---|---|
-| v1 | 2026-05-16 | Initial schema definition covering both prototypes. |
+| v1 | 2026-05-16 | Initial shared schema definition. |
+| v1 update | 2026-06-05 | Revised to match Prototype 3 `event-store.js` Supabase and in-memory schemas. |
