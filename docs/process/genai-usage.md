@@ -152,17 +152,33 @@
 - **Scale:** src/prototype_1/server.js
 - **Description:** Asked codex to reformat server.js to migrate from sqlite to postgresql access patterns so that it is compatible with supabase.
 - **Prompt:** can you rewrite server.js to use PostgreSQL to match event-store.js
-
-- **Name:** Jason Nguyen
-- **Date:** 05/30/26
-- **Sprint #:** 4
-- **Model:** Codex 5.5 medium reasoning
-- **LOC:** 
-- **Scale:** tests/unit/prototype1-event-store.test.js, tests/e2e/prototype1-postgresql.spec.js (formerly tests/e2e/prototype1-sqlite.spec.js)
-- **Description:** Asked codex to reformat .js to migrate from sqlite to postgresql access patterns so that it is compatible with supabase.
-- **Prompt:** look at unit/prototype1-event-store.text.js, and also look at e2e/prototype1-sqlite.spec.js. They are linked to each other. Are there any changes needed to the unit and e2e test? You can address those changes to make sure that the tests are compatible with postgresql instead of sqlite
 ===
 
 # Sprint 5
 
+- **Name:** Jason Nguyen
+- **Date:** 06/03/26
+- **Sprint #:** 5
+- **Model:** Codex 5.5 medium reasoning
+- **LOC:** 249
+- **Scale:** sdk/watchtower.js, app.js, index.html
+- **Description:** Asked codex to add UI element interaction tracking to the standalone SDK to mimic the functionality in the demo.
+- **Prompt:** look under Course-project/src/prototype_3/demo/app.js and notice the event listeners that allow the app to track specific UI element interaction counts. Now look at the current tracking capabilities in watchtower-test-app. Please tell me if this functionality can be captured by only modifying watchtower-test-app/sdk/watchtower.js
 
+- **Name:** Jason Nguyen
+- **Date:** 06/05/26
+- **Sprint #:** 5
+- **Model:** Codex 5.5 medium reasoning
+- **LOC:** 139
+- **Scale:** src/prototype_3/demo/app.js, src/prototype_3/demo/style.css
+- **Description:** Asked codex to implement the 1-5 star rating feedback to the demo and test app.
+- **Prompt:** right now the send feedback button sends a fixed 4 star rating. Please make it so that clicking it opens a popup that allows the user to select between 1-5 stars to send as a rating signal.
+
+- **Name:** Jason Nguyen
+- **Date:** 06/05/26
+- **Sprint #:** 5
+- **Model:** Codex 5.5 medium reasoning
+- **LOC:** 609
+- **Scale:** src/prototype_3/server/event-store.js, src/prototype_3/server/server.js, src/prototype_3/app.js, src/prototype_3/index.html, src/prototype_3/README.md
+- **Description:** Asked codex to add database integration for the analytics charts and most-clicked features so that they can display persistent, historical data. Also asked to set limits to the tab heights.
+- **Prompt:** please review the logic for the user count, user activity, issues, and response latency charts, which have suffered from dropping some values in the past. Make sure that they use database information from server/event-store.js, so that they show historical data from all time. Also, please apply the same fix to the most-clicked features tabs on the home page. For analytics, can you configure a peak height for the issues chart and user activity? By default, set the peak for issues to 100 and the peak for user activity to 500. The idea is to have the height for values that go beyond these peaks to be the same so that the difference between heights isn't so dramatic. Also, please make this value easily editable and point me to where it is
