@@ -160,11 +160,11 @@
             </div>
             <div class="dev-stat-card" data-view="analytics" data-scroll-target="user-chart-title" role="button" tabindex="0">
               <div class="dev-stat-head">
-                <span class="dev-stat-tag">24h Peak</span>
+                <span class="dev-stat-tag">Concurrency</span>
               </div>
               <div class="dev-stat-value" id="dev-max-users">0</div>
-              <div class="dev-stat-label">Max Users (24h)</div>
-              <p class="dev-stat-trend up" id="dev-max-users-trend">Peak in last 24h</p>
+              <div class="dev-stat-label">Peak Concurrent Users</div>
+              <p class="dev-stat-trend up" id="dev-max-users-trend">Rolling 30s window</p>
             </div>
             <div class="dev-stat-card accent-errors" data-view="issues" data-scroll-target="issues-title" role="button" tabindex="0">
               <div class="dev-stat-head">
@@ -517,7 +517,7 @@
 
         <section class="analytics-summary" aria-label="Analytics summary">
           <div class="summary-chip">
-            <p>Range active users</p>
+            <p>Range sessions</p>
             <strong id="analytics-range-users">0</strong>
           </div>
           <div class="summary-chip">
@@ -535,11 +535,11 @@
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Users</p>
-                <h2 id="user-chart-title">User Count</h2>
+                <h2 id="user-chart-title">Session Count</h2>
               </div>
-              <span class="delta-badge positive" id="user-delta">0 active</span>
+              <span class="delta-badge positive" id="user-delta">0 sessions</span>
             </div>
-            <div class="bar-chart user-chart" id="user-chart" role="img" aria-label="User count over time"></div>
+            <div class="bar-chart user-chart" id="user-chart" role="img" aria-label="Session count over time"></div>
           </section>
 
           <section class="panel wide-panel" aria-labelledby="purchase-chart-title">
