@@ -1021,13 +1021,65 @@ async function maybeSendErrorThresholdAlert() {
   sendAlert(evaluation.alert, recipients).catch(err => console.error("[mailer] Failed to send alert:", err));
 }
 
-async function ingestEventsBody(body, ownerUserId) {
+/**
+ * Read the configured temporary default ingest owner.
+ *
+ * DEFAULT_INGEST_OWNER_USER_ID is a temporary prototype-only fallback for
+ * unauthenticated external SDK events (e.g. the public GitHub Pages test app,
+ * which has no Clerk session and therefore sends no user id / no
+ * X-Clerk-User-Id header). When it is set, those otherwise-anonymous events are
+ * attributed to this demo owner's Clerk user id so they appear on that owner's
+ * scoped dashboard. Production should replace this with a project/app key
+ * ownership system rather than a single hard-coded demo owner.
+ *
+ * @returns {string} The configured demo owner Clerk user id, or "" when unset.
+ */
+function getDefaultIngestOwnerUserId() {
+  return safeString(process.env.DEFAULT_INGEST_OWNER_USER_ID).trim();
+}
+
+/**
+ * Resolve which user id (if any) should own the events on an ingest request.
+ *
+ * Preference order:
+ *   1. The authenticated dashboard user — a verified Clerk session JWT, or the
+ *      X-Clerk-User-Id header when token verification is not enforced (see
+ *      resolveCurrentUserId). This is authoritative.
+ *   2. DEFAULT_INGEST_OWNER_USER_ID — a temporary fallback for unauthenticated
+ *      external SDK events. Not authoritative.
+ *   3. None — the request stays anonymous and events keep whatever userId they
+ *      carry (which may be null). Current behavior is preserved.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {Promise<{ownerUserId: string, authoritative: boolean}>} The owner
+ *   to stamp and whether it came from an authenticated user.
+ */
+async function getIngestOwnerUserId(request) {
+  const authedUserId = await resolveCurrentUserId(request);
+  if (authedUserId) {
+    return { ownerUserId: authedUserId, authoritative: true };
+  }
+  const fallbackOwner = getDefaultIngestOwnerUserId();
+  if (fallbackOwner) {
+    return { ownerUserId: fallbackOwner, authoritative: false };
+  }
+  return { ownerUserId: "", authoritative: false };
+}
+
+async function ingestEventsBody(body, ownerUserId, options) {
+  const opts = options || {};
+  // When the owner is authoritative (an authenticated dashboard user) we stamp
+  // every event with their Clerk user id so a client cannot spoof another
+  // user's id. When the owner is only the temporary default fallback we fill in
+  // just the events that arrive without a userId, so the same-origin demo's own
+  // per-user tagging (and any future client-supplied owner) is preserved.
+  const fillOnlyMissing = Boolean(opts.fillOnlyMissing);
   let arr = getIncomingEvents(body).filter(isValidEvent);
-  // When an authenticated dashboard user owns this ingest call, stamp every
-  // event with their Clerk user id so it is scoped to them. External/SDK
-  // events arrive without an owner and keep whatever userId they carry.
   if (ownerUserId) {
     arr = arr.map(function (event) {
+      if (fillOnlyMissing && event && event.userId) {
+        return event;
+      }
       return Object.assign({}, event, { userId: ownerUserId });
     });
   }
@@ -1099,9 +1151,13 @@ const server = http.createServer(async function (request, response) {
     try {
       const body = await readJsonBody(request);
       // External SDK events may be unauthenticated for now, so we never reject
-      // a missing user id here; we just stamp ownership when it is present.
-      const userId = await resolveCurrentUserId(request);
-      const norm = await ingestEventsBody(body, userId || null);
+      // a missing user id here. Ownership is the authenticated dashboard user
+      // when present, else the temporary DEFAULT_INGEST_OWNER_USER_ID fallback,
+      // else anonymous (user_id stays null).
+      const owner = await getIngestOwnerUserId(request);
+      const norm = await ingestEventsBody(body, owner.ownerUserId || null, {
+        fillOnlyMissing: !owner.authoritative,
+      });
       sendJson(response, 200, { accepted: norm.length }, request);
     } catch (error) {
       console.error("[prototype_3] Failed to ingest events:", error);
@@ -1112,8 +1168,13 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "POST" && pathname === "/api/beacon") {
     try {
       const body = await readJsonBody(request);
-      const userId = await resolveCurrentUserId(request);
-      await ingestEventsBody(body, userId || null);
+      // Same owner resolution as POST /api/events (auth user → default owner →
+      // anonymous) so beacon-flushed events from the external test app are
+      // attributed to the same demo owner.
+      const owner = await getIngestOwnerUserId(request);
+      await ingestEventsBody(body, owner.ownerUserId || null, {
+        fillOnlyMissing: !owner.authoritative,
+      });
     } catch (_error) {
       // Beacon callers ignore response bodies, so keep this endpoint fail-closed.
     }
