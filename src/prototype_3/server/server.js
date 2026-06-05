@@ -291,7 +291,7 @@ function sendJson(res, status, payload, req) {
 
 /**
  * Read the raw `X-Clerk-User-Id` header (trusted only when JWT verification is
- * not enforced — see resolveCurrentUserId).
+ * not enforced - see resolveCurrentUserId).
  *
  * @param {http.IncomingMessage} request - Incoming HTTP request.
  * @returns {string} Trimmed Clerk user id header value, or "" when absent.
@@ -326,7 +326,7 @@ function getBearerToken(request) {
  * Resolve the current Clerk user id for a request.
  *
  * Preference order:
- *   1. A verified Clerk session JWT (Authorization: Bearer ...) — authoritative.
+ *   1. A verified Clerk session JWT (Authorization: Bearer ...) - authoritative.
  *   2. The `X-Clerk-User-Id` header, but ONLY when JWT verification is not
  *      enforced (no real Clerk instance configured, or the header-trust escape
  *      hatch is enabled). This keeps the prototype/tests working.
@@ -1042,12 +1042,12 @@ function getDefaultIngestOwnerUserId() {
  * Resolve which user id (if any) should own the events on an ingest request.
  *
  * Preference order:
- *   1. The authenticated dashboard user — a verified Clerk session JWT, or the
+ *   1. The authenticated dashboard user - a verified Clerk session JWT, or the
  *      X-Clerk-User-Id header when token verification is not enforced (see
  *      resolveCurrentUserId). This is authoritative.
- *   2. DEFAULT_INGEST_OWNER_USER_ID — a temporary fallback for unauthenticated
+ *   2. DEFAULT_INGEST_OWNER_USER_ID - a temporary fallback for unauthenticated
  *      external SDK events. Not authoritative.
- *   3. None — the request stays anonymous and events keep whatever userId they
+ *   3. None - the request stays anonymous and events keep whatever userId they
  *      carry (which may be null). Current behavior is preserved.
  *
  * @param {http.IncomingMessage} request - Incoming HTTP request.
@@ -1139,6 +1139,9 @@ const server = http.createServer(async function (request, response) {
         clerkUserId: clerkUserId,
         email: safeString(body && body.email).trim(),
         displayName: safeString(body && body.displayName).trim(),
+        // Pass through so the DB row reflects the user's timezone preference.
+        // An empty string means "use the server/browser default" - never null.
+        timezone: safeString(body && body.timezone).trim(),
       });
       sendJson(response, 200, { ok: true, user: user }, request);
     } catch (error) {
@@ -1380,6 +1383,6 @@ server.listen(PORT, function () {
   if (CLERK_VERIFICATION_ENABLED) {
     console.log("Clerk session verification: ENABLED (issuer " + CLERK_ISSUER + ")" + (TRUST_USER_HEADER ? " + header escape hatch" : ""));
   } else {
-    console.log("Clerk session verification: DISABLED (trusting X-Clerk-User-Id header — prototype/test mode)");
+    console.log("Clerk session verification: DISABLED (trusting X-Clerk-User-Id header - prototype/test mode)");
   }
 });

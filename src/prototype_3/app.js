@@ -262,6 +262,9 @@
   let DASHBOARD_MODE_STORAGE_KEY = "watchtower_dashboard_mode";
   let ISSUE_ASSIGNEES_STORAGE_KEY = "watchtower_issue_assignees";
   let DEV_QUERY_SAVED_STORAGE_KEY = "watchtower_dev_saved_queries";
+  // Persists the IANA timezone identifier chosen in Settings across reloads.
+  // "auto" means defer to the browser's system timezone (the default behavior).
+  let TIMEZONE_STORAGE_KEY = "watchtower_timezone";
   let LIGHT_LOGO_PATH = "assets/watchtower-transparent.png";
   let DARK_LOGO_PATH = "assets/watchtower-transparent.png";
 
@@ -291,7 +294,10 @@
     selectedSessionId: "",
     selectedFlagUserId: "",
     savedQueries: [],
-    queryHistory: []
+    queryHistory: [],
+    // IANA timezone identifier used by all timestamp formatting functions.
+    // Defaults to "auto" so first-time visitors see their system timezone.
+    selectedTimezoneIdentifier: "auto"
   };
   let developerShortcutPrimedAt = 0;
 
@@ -314,25 +320,51 @@
     return Number.isFinite(t) ? t : null;
   }
 
+  // Returns the IANA timezone string to pass to Intl formatting options, or
+  // undefined when the user chose "auto" so the browser falls back to the
+  // system timezone. Centralised here so both formatClockTime and
+  // formatTimestamp stay in sync with whatever the user last selected.
+  function resolveTimezoneOption() {
+    let chosenIdentifier = uiState.selectedTimezoneIdentifier;
+    return (chosenIdentifier && chosenIdentifier !== "auto") ? chosenIdentifier : undefined;
+  }
+
   function formatClockTime(isoTimestamp) {
-    return new Date(isoTimestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    let timezoneOption = resolveTimezoneOption();
+    let clockFormatOptions = { hour: "2-digit", minute: "2-digit" };
+    if (timezoneOption) {
+      clockFormatOptions.timeZone = timezoneOption;
+    }
+    try {
+      return new Date(isoTimestamp).toLocaleTimeString([], clockFormatOptions);
+    } catch (_rangeError) {
+      // Invalid IANA string stored in localStorage - fall back to system timezone.
+      return new Date(isoTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
   }
 
   function formatTimestamp(value) {
     if (!value) return "--";
     let ts = getValidTimestamp(value);
     if (ts === null) return "--";
-    return new Date(ts).toLocaleString([], {
+    let timezoneOption = resolveTimezoneOption();
+    let fullFormatOptions = {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit"
-    });
+    };
+    if (timezoneOption) {
+      fullFormatOptions.timeZone = timezoneOption;
+    }
+    try {
+      return new Date(ts).toLocaleString([], fullFormatOptions);
+    } catch (_rangeError) {
+      // Invalid IANA string stored in localStorage - fall back to system timezone.
+      return new Date(ts).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
   }
 
   function formatRelativeAge(value) {
@@ -1514,6 +1546,36 @@
       document.body.classList.remove("text-compact", "text-large");
       if (textSizeSlider.value === "0") document.body.classList.add("text-compact");
       if (textSizeSlider.value === "2") document.body.classList.add("text-large");
+    });
+  }
+
+  function initializeTimezoneControl() {
+    let timezoneSelectElement = document.getElementById("timezone-select");
+    let savedTimezoneIdentifier = loadUiPreference(TIMEZONE_STORAGE_KEY);
+
+    // Apply the persisted preference before the first render so timestamps
+    // are correct from the moment data arrives, not just after a user interaction.
+    if (savedTimezoneIdentifier) {
+      uiState.selectedTimezoneIdentifier = savedTimezoneIdentifier;
+      if (timezoneSelectElement) {
+        timezoneSelectElement.value = savedTimezoneIdentifier;
+      }
+    }
+
+    if (!timezoneSelectElement) {
+      return;
+    }
+
+    timezoneSelectElement.addEventListener("change", function () {
+      let chosenTimezoneIdentifier = timezoneSelectElement.value;
+      uiState.selectedTimezoneIdentifier = chosenTimezoneIdentifier;
+      saveUiPreference(TIMEZONE_STORAGE_KEY, chosenTimezoneIdentifier);
+
+      // Re-render with the cached dataset so every visible timestamp flips
+      // to the new timezone immediately instead of waiting for the next poll.
+      if (uiState.latestStats) {
+        updateDashboardStats(uiState.latestStats, uiState.latestEvents || []);
+      }
     });
   }
 
@@ -2790,6 +2852,7 @@
     initializeDarkModeToggle();
     initializeContrastToggle();
     initializeTextSizeSlider();
+    initializeTimezoneControl();
     initializeNotificationControls();
     initializeProfileControls();
     initializeManualRefresh();
