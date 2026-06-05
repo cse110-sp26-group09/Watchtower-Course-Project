@@ -74,7 +74,6 @@
   let issueExpandToggleButton = document.getElementById("issue-expand-toggle");
   let issueSortFieldSelect = document.getElementById("issue-sort-field");
   let issueSortDirectionSelect = document.getElementById("issue-sort-direction");
-  let issueFilterSeveritySelect = document.getElementById("issue-filter-severity");
   let issueFilterVersionInput = document.getElementById("issue-filter-version");
   let issueFilterAppInput = document.getElementById("issue-filter-app");
   let issueFilterRouteInput = document.getElementById("issue-filter-route");
@@ -173,10 +172,6 @@
   let developerIssueSearchInput = document.getElementById("developer-issue-search");
   let developerMuteToggleButton = document.getElementById("developer-mute-toggle");
   let developerMuteStatusLine = document.getElementById("developer-mute-status");
-  let developerCriticalCount = document.getElementById("dev-critical-count");
-  let developerWarningCount = document.getElementById("dev-warning-count");
-  let developerInfoCount = document.getElementById("dev-info-count");
-  let developerTotalCount = document.getElementById("dev-total-count");
   let developerTabButtons = document.querySelectorAll(".devtab-button");
   let developerTabPanels = document.querySelectorAll("[data-devtab-panel]");
   let devFilterEvent = document.getElementById("dev-filter-event");
@@ -276,7 +271,6 @@
     latestEvents: [],
     issueSortField: "timestamp",
     issueSortDirection: "desc",
-    issueFilterSeverity: "all",
     issueFilterVersion: "",
     issueFilterApp: "",
     issueFilterRoute: "",
@@ -625,14 +619,6 @@
       });
     }
 
-    if (issueFilterSeveritySelect) {
-      issueFilterSeveritySelect.value = uiState.issueFilterSeverity;
-      issueFilterSeveritySelect.addEventListener("change", function () {
-        uiState.issueFilterSeverity = issueFilterSeveritySelect.value;
-        rerenderIfReady();
-      });
-    }
-
     [
       { element: issueFilterVersionInput, key: "issueFilterVersion" },
       { element: issueFilterAppInput, key: "issueFilterApp" },
@@ -662,7 +648,6 @@
 
     if (issueFilterClearButton) {
       issueFilterClearButton.addEventListener("click", function () {
-        uiState.issueFilterSeverity = "all";
         uiState.issueFilterVersion = "";
         uiState.issueFilterApp = "";
         uiState.issueFilterRoute = "";
@@ -671,7 +656,6 @@
 
         if (issueSortFieldSelect) issueSortFieldSelect.value = uiState.issueSortField;
         if (issueSortDirectionSelect) issueSortDirectionSelect.value = uiState.issueSortDirection;
-        if (issueFilterSeveritySelect) issueFilterSeveritySelect.value = uiState.issueFilterSeverity;
         if (issueFilterVersionInput) issueFilterVersionInput.value = "";
         if (issueFilterAppInput) issueFilterAppInput.value = "";
         if (issueFilterRouteInput) issueFilterRouteInput.value = "";
@@ -1698,7 +1682,6 @@
     let appName = String((eventRecord && eventRecord.appName) || "").toLowerCase();
     let route = String((eventRecord && eventRecord.route) || "").toLowerCase();
 
-    if (uiState.issueFilterSeverity !== "all" && severity !== uiState.issueFilterSeverity) return false;
     if (uiState.issueFilterVersion && version.indexOf(uiState.issueFilterVersion) === -1) return false;
     if (uiState.issueFilterApp && appName.indexOf(uiState.issueFilterApp) === -1) return false;
     if (uiState.issueFilterRoute && route.indexOf(uiState.issueFilterRoute) === -1) return false;
@@ -1719,13 +1702,6 @@
 
   function compareIssues(leftIssue, rightIssue) {
     let sortDirection = uiState.issueSortDirection === "asc" ? 1 : -1;
-    let leftSeverity = toIssueSeverity(leftIssue) === "critical" ? 2 : 1;
-    let rightSeverity = toIssueSeverity(rightIssue) === "critical" ? 2 : 1;
-
-    if (uiState.issueSortField === "severity") {
-      if (leftSeverity !== rightSeverity) return (leftSeverity - rightSeverity) * sortDirection;
-      return ((getValidTimestamp(leftIssue.timestamp) || 0) - (getValidTimestamp(rightIssue.timestamp) || 0)) * -1;
-    }
     if (uiState.issueSortField === "version") {
       let lV = String(leftIssue.deployVersion || "");
       let rV = String(rightIssue.deployVersion || "");
@@ -2768,18 +2744,6 @@
     if (alertPillButton) alertPillButton.classList.toggle("quiet", (stats.totalErrors || 0) === 0);
 
     renderIssueList(stats.recentErrors || []);
-
-    let criticalCount = 0, warningCount = 0, infoCount = 0;
-    (stats.recentErrors || []).forEach(function (err) {
-      let sev = toIssueSeverity(err);
-      if (sev === "critical") criticalCount += 1;
-      else if (sev === "warning") warningCount += 1;
-      else infoCount += 1;
-    });
-    if (developerCriticalCount) developerCriticalCount.textContent = String(criticalCount);
-    if (developerWarningCount) developerWarningCount.textContent = String(warningCount);
-    if (developerInfoCount) developerInfoCount.textContent = String(infoCount);
-    if (developerTotalCount) developerTotalCount.textContent = String(stats.totalErrors || 0);
 
     renderServiceStatus(stats);
     renderFeatureHotspots(resolved);
