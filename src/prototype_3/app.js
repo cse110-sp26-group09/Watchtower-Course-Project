@@ -74,7 +74,6 @@
   let issueExpandToggleButton = document.getElementById("issue-expand-toggle");
   let issueSortFieldSelect = document.getElementById("issue-sort-field");
   let issueSortDirectionSelect = document.getElementById("issue-sort-direction");
-  let issueFilterSeveritySelect = document.getElementById("issue-filter-severity");
   let issueFilterVersionInput = document.getElementById("issue-filter-version");
   let issueFilterAppInput = document.getElementById("issue-filter-app");
   let issueFilterRouteInput = document.getElementById("issue-filter-route");
@@ -173,10 +172,6 @@
   let developerIssueSearchInput = document.getElementById("developer-issue-search");
   let developerMuteToggleButton = document.getElementById("developer-mute-toggle");
   let developerMuteStatusLine = document.getElementById("developer-mute-status");
-  let developerCriticalCount = document.getElementById("dev-critical-count");
-  let developerWarningCount = document.getElementById("dev-warning-count");
-  let developerInfoCount = document.getElementById("dev-info-count");
-  let developerTotalCount = document.getElementById("dev-total-count");
   let developerTabButtons = document.querySelectorAll(".devtab-button");
   let developerTabPanels = document.querySelectorAll("[data-devtab-panel]");
   let devFilterEvent = document.getElementById("dev-filter-event");
@@ -265,6 +260,9 @@
   // Edit these caps to change the visual max height for Analytics bar charts.
   let USER_ACTIVITY_CHART_PEAK = 500;
   let ISSUES_CHART_PEAK = 100;
+  // Persists the IANA timezone identifier chosen in Settings across reloads.
+  // "auto" means defer to the browser's system timezone (the default behavior).
+  let TIMEZONE_STORAGE_KEY = "watchtower_timezone";
   let LIGHT_LOGO_PATH = "assets/watchtower-transparent.png";
   let DARK_LOGO_PATH = "assets/watchtower-transparent.png";
 
@@ -276,7 +274,6 @@
     latestEvents: [],
     issueSortField: "timestamp",
     issueSortDirection: "desc",
-    issueFilterSeverity: "all",
     issueFilterVersion: "",
     issueFilterApp: "",
     issueFilterRoute: "",
@@ -294,7 +291,10 @@
     selectedSessionId: "",
     selectedFlagUserId: "",
     savedQueries: [],
-    queryHistory: []
+    queryHistory: [],
+    // IANA timezone identifier used by all timestamp formatting functions.
+    // Defaults to "auto" so first-time visitors see their system timezone.
+    selectedTimezoneIdentifier: "auto"
   };
   let developerShortcutPrimedAt = 0;
 
@@ -317,25 +317,51 @@
     return Number.isFinite(t) ? t : null;
   }
 
+  // Returns the IANA timezone string to pass to Intl formatting options, or
+  // undefined when the user chose "auto" so the browser falls back to the
+  // system timezone. Centralised here so both formatClockTime and
+  // formatTimestamp stay in sync with whatever the user last selected.
+  function resolveTimezoneOption() {
+    let chosenIdentifier = uiState.selectedTimezoneIdentifier;
+    return (chosenIdentifier && chosenIdentifier !== "auto") ? chosenIdentifier : undefined;
+  }
+
   function formatClockTime(isoTimestamp) {
-    return new Date(isoTimestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    let timezoneOption = resolveTimezoneOption();
+    let clockFormatOptions = { hour: "2-digit", minute: "2-digit" };
+    if (timezoneOption) {
+      clockFormatOptions.timeZone = timezoneOption;
+    }
+    try {
+      return new Date(isoTimestamp).toLocaleTimeString([], clockFormatOptions);
+    } catch (_rangeError) {
+      // Invalid IANA string stored in localStorage - fall back to system timezone.
+      return new Date(isoTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
   }
 
   function formatTimestamp(value) {
     if (!value) return "--";
     let ts = getValidTimestamp(value);
     if (ts === null) return "--";
-    return new Date(ts).toLocaleString([], {
+    let timezoneOption = resolveTimezoneOption();
+    let fullFormatOptions = {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit"
-    });
+    };
+    if (timezoneOption) {
+      fullFormatOptions.timeZone = timezoneOption;
+    }
+    try {
+      return new Date(ts).toLocaleString([], fullFormatOptions);
+    } catch (_rangeError) {
+      // Invalid IANA string stored in localStorage - fall back to system timezone.
+      return new Date(ts).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
   }
 
   function formatRelativeAge(value) {
@@ -596,14 +622,6 @@
       });
     }
 
-    if (issueFilterSeveritySelect) {
-      issueFilterSeveritySelect.value = uiState.issueFilterSeverity;
-      issueFilterSeveritySelect.addEventListener("change", function () {
-        uiState.issueFilterSeverity = issueFilterSeveritySelect.value;
-        rerenderIfReady();
-      });
-    }
-
     [
       { element: issueFilterVersionInput, key: "issueFilterVersion" },
       { element: issueFilterAppInput, key: "issueFilterApp" },
@@ -633,7 +651,6 @@
 
     if (issueFilterClearButton) {
       issueFilterClearButton.addEventListener("click", function () {
-        uiState.issueFilterSeverity = "all";
         uiState.issueFilterVersion = "";
         uiState.issueFilterApp = "";
         uiState.issueFilterRoute = "";
@@ -642,7 +659,6 @@
 
         if (issueSortFieldSelect) issueSortFieldSelect.value = uiState.issueSortField;
         if (issueSortDirectionSelect) issueSortDirectionSelect.value = uiState.issueSortDirection;
-        if (issueFilterSeveritySelect) issueFilterSeveritySelect.value = uiState.issueFilterSeverity;
         if (issueFilterVersionInput) issueFilterVersionInput.value = "";
         if (issueFilterAppInput) issueFilterAppInput.value = "";
         if (issueFilterRouteInput) issueFilterRouteInput.value = "";
@@ -1520,6 +1536,36 @@
     });
   }
 
+  function initializeTimezoneControl() {
+    let timezoneSelectElement = document.getElementById("timezone-select");
+    let savedTimezoneIdentifier = loadUiPreference(TIMEZONE_STORAGE_KEY);
+
+    // Apply the persisted preference before the first render so timestamps
+    // are correct from the moment data arrives, not just after a user interaction.
+    if (savedTimezoneIdentifier) {
+      uiState.selectedTimezoneIdentifier = savedTimezoneIdentifier;
+      if (timezoneSelectElement) {
+        timezoneSelectElement.value = savedTimezoneIdentifier;
+      }
+    }
+
+    if (!timezoneSelectElement) {
+      return;
+    }
+
+    timezoneSelectElement.addEventListener("change", function () {
+      let chosenTimezoneIdentifier = timezoneSelectElement.value;
+      uiState.selectedTimezoneIdentifier = chosenTimezoneIdentifier;
+      saveUiPreference(TIMEZONE_STORAGE_KEY, chosenTimezoneIdentifier);
+
+      // Re-render with the cached dataset so every visible timestamp flips
+      // to the new timezone immediately instead of waiting for the next poll.
+      if (uiState.latestStats) {
+        updateDashboardStats(uiState.latestStats, uiState.latestEvents || []);
+      }
+    });
+  }
+
   function updateNotificationPreview() {
     if (!notificationPreviewCopy || !notificationModeSelect || !notificationStartInput || !notificationEndInput) return;
     let base = notificationModeSelect.value + " alerts run between " + notificationStartInput.value + " and " + notificationEndInput.value + ".";
@@ -1639,7 +1685,6 @@
     let appName = String((eventRecord && eventRecord.appName) || "").toLowerCase();
     let route = String((eventRecord && eventRecord.route) || "").toLowerCase();
 
-    if (uiState.issueFilterSeverity !== "all" && severity !== uiState.issueFilterSeverity) return false;
     if (uiState.issueFilterVersion && version.indexOf(uiState.issueFilterVersion) === -1) return false;
     if (uiState.issueFilterApp && appName.indexOf(uiState.issueFilterApp) === -1) return false;
     if (uiState.issueFilterRoute && route.indexOf(uiState.issueFilterRoute) === -1) return false;
@@ -1660,13 +1705,6 @@
 
   function compareIssues(leftIssue, rightIssue) {
     let sortDirection = uiState.issueSortDirection === "asc" ? 1 : -1;
-    let leftSeverity = toIssueSeverity(leftIssue) === "critical" ? 2 : 1;
-    let rightSeverity = toIssueSeverity(rightIssue) === "critical" ? 2 : 1;
-
-    if (uiState.issueSortField === "severity") {
-      if (leftSeverity !== rightSeverity) return (leftSeverity - rightSeverity) * sortDirection;
-      return ((getValidTimestamp(leftIssue.timestamp) || 0) - (getValidTimestamp(rightIssue.timestamp) || 0)) * -1;
-    }
     if (uiState.issueSortField === "version") {
       let lV = String(leftIssue.deployVersion || "");
       let rV = String(rightIssue.deployVersion || "");
@@ -2782,18 +2820,6 @@
 
     renderIssueList(stats.recentErrors || []);
 
-    let criticalCount = 0, warningCount = 0, infoCount = 0;
-    (stats.recentErrors || []).forEach(function (err) {
-      let sev = toIssueSeverity(err);
-      if (sev === "critical") criticalCount += 1;
-      else if (sev === "warning") warningCount += 1;
-      else infoCount += 1;
-    });
-    if (developerCriticalCount) developerCriticalCount.textContent = String(criticalCount);
-    if (developerWarningCount) developerWarningCount.textContent = String(warningCount);
-    if (developerInfoCount) developerInfoCount.textContent = String(infoCount);
-    if (developerTotalCount) developerTotalCount.textContent = String(stats.totalErrors || 0);
-
     renderServiceStatus(stats);
     renderFeatureHotspots(stats, resolved);
     renderManagerSummary(stats, resolved);
@@ -2865,6 +2891,7 @@
     initializeDarkModeToggle();
     initializeContrastToggle();
     initializeTextSizeSlider();
+    initializeTimezoneControl();
     initializeNotificationControls();
     initializeProfileControls();
     initializeManualRefresh();
