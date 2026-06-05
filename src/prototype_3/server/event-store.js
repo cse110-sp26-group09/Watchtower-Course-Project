@@ -13,7 +13,13 @@ const path = require("path");
 const { randomUUID } = require("crypto");
 const { config: loadEnv } = require("dotenv");
 const { createClient } = require("@supabase/supabase-js");
-const { normalizeIncomingEvent } = require("./server-helpers");
+const {
+  calculateAverage,
+  calculatePercentile,
+  computeMaxConcurrentUsers,
+  normalizeIncomingEvent,
+  parseTimestamp,
+} = require("./server-helpers");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const DEFAULT_TABLE = "prototype3_events";
@@ -54,7 +60,32 @@ create index if not exists idx_prototype3_events_environment
 
 create index if not exists idx_prototype3_events_received_at
   on public.prototype3_events(received_at);
+
+create index if not exists idx_prototype3_events_user_received_at
+  on public.prototype3_events(user_id, received_at);
+
+create index if not exists idx_prototype3_events_user_type_received_at
+  on public.prototype3_events(user_id, type, received_at);
+
+create index if not exists idx_prototype3_events_user_route_received_at
+  on public.prototype3_events(user_id, route, received_at);
+
+create table if not exists public.app_users (
+  clerk_user_id text primary key,
+  email text default '',
+  display_name text default '',
+  last_seen_at timestamptz not null
+);
+
+create index if not exists idx_app_users_last_seen_at
+  on public.app_users(last_seen_at);
 `;
+
+const ANALYTICS_RANGES = [
+  { key: "24h", windowMs: 24 * 60 * 60 * 1000, buckets: 8 },
+  { key: "7d", windowMs: 7 * 24 * 60 * 60 * 1000, buckets: 7 },
+  { key: "30d", windowMs: 30 * 24 * 60 * 60 * 1000, buckets: 5 },
+];
 
 function generateEventId() {
   if (typeof randomUUID === "function") return randomUUID();
@@ -109,6 +140,227 @@ function rowToEvent(row) {
     route: row.route || "/",
     data: row.data && typeof row.data === "object" ? row.data : {},
     receivedAt: row.received_at,
+  };
+}
+
+function getEventTimestampMs(event) {
+  return parseTimestamp(event && (event.timestamp || event.receivedAt));
+}
+
+function getLatencyMs(event) {
+  if (!event || !event.data) return null;
+  if (event.type === "pageload") {
+    const duration = Number(event.data.duration);
+    return Number.isFinite(duration) && duration > 0 ? duration : null;
+  }
+  if (event.type === "performance") {
+    const metricName = String(event.data.metricName || event.data.name || "").toLowerCase();
+    const explicitLatency = Number(event.data.duration || event.data.latency || event.data.latencyMs);
+    if (Number.isFinite(explicitLatency) && explicitLatency > 0) return explicitLatency;
+    const value = Number(event.data.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    if (
+      metricName.indexOf("latency") !== -1 ||
+      metricName.indexOf("duration") !== -1 ||
+      metricName.indexOf("ttfb") !== -1 ||
+      metricName.indexOf("load") !== -1 ||
+      metricName.indexOf("api") !== -1 ||
+      metricName.indexOf("fetch") !== -1
+    ) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function getFeedbackRating(event) {
+  const value = event && event.data ? Number(event.data.rating) : NaN;
+  return Number.isFinite(value) ? Math.min(5, Math.max(1, Math.round(value))) : null;
+}
+
+function getEventBreakdownKey(event) {
+  const type = event && event.type ? String(event.type) : "";
+  if (type === "pageload" || type === "performance") return "performance";
+  if (type === "error") return "errors";
+  if (type === "feedback") return "feedback";
+  if (type === "click" || type === "custom" || type === "login") return "clicks";
+  return null;
+}
+
+function buildLatencyByRoute(events) {
+  const routes = {};
+  (events || []).forEach(function (event) {
+    const latency = getLatencyMs(event);
+    if (!Number.isFinite(latency)) return;
+    const route = event.route || "/";
+    if (!routes[route]) routes[route] = [];
+    routes[route].push(latency);
+  });
+  return Object.keys(routes).reduce(function (summary, route) {
+    summary[route] = {
+      count: routes[route].length,
+      p95: Math.round(calculatePercentile(routes[route], 95)),
+      avg: Math.round(calculateAverage(routes[route])),
+    };
+    return summary;
+  }, {});
+}
+
+function buildFeedbackCounts(events) {
+  const ratingCounts = [0, 0, 0, 0, 0];
+  let total = 0;
+  let sum = 0;
+  (events || []).forEach(function (event) {
+    if (event.type !== "feedback") return;
+    const rating = getFeedbackRating(event);
+    if (rating === null) return;
+    ratingCounts[rating - 1] += 1;
+    total += 1;
+    sum += rating;
+  });
+  return {
+    total,
+    average: total === 0 ? 0 : Number((sum / total).toFixed(2)),
+    ratingCounts,
+  };
+}
+
+function buildEventBreakdown(events) {
+  const counts = {
+    performance: 0,
+    errors: 0,
+    feedback: 0,
+    clicks: 0,
+  };
+  (events || []).forEach(function (event) {
+    const key = getEventBreakdownKey(event);
+    if (key) counts[key] += 1;
+  });
+  return counts;
+}
+
+function buildBucketSeries(events, nowMs, windowMs, bucketCount, valuePicker) {
+  const buckets = Array.from({ length: bucketCount }, function () { return 0; });
+  const cutoff = nowMs - windowMs;
+  const span = Math.max(nowMs - cutoff, 1);
+  (events || []).forEach(function (event) {
+    const ts = getEventTimestampMs(event);
+    if (ts === null || ts < cutoff) return;
+    const bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+    buckets[bucketIndex] += valuePicker(event);
+  });
+  return buckets;
+}
+
+function buildUniqueBucketSeries(events, nowMs, windowMs, bucketCount, keyPicker) {
+  const bucketSets = Array.from({ length: bucketCount }, function () { return new Set(); });
+  const cutoff = nowMs - windowMs;
+  const span = Math.max(nowMs - cutoff, 1);
+  (events || []).forEach(function (event) {
+    const ts = getEventTimestampMs(event);
+    if (ts === null || ts < cutoff) return;
+    const key = keyPicker(event);
+    if (!key) return;
+    const bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+    bucketSets[bucketIndex].add(String(key));
+  });
+  return bucketSets.map(function (bucketSet) { return bucketSet.size; });
+}
+
+function buildLatencyBucketSeries(events, nowMs, windowMs, bucketCount) {
+  const buckets = Array.from({ length: bucketCount }, function () { return []; });
+  const cutoff = nowMs - windowMs;
+  const span = Math.max(nowMs - cutoff, 1);
+  (events || []).forEach(function (event) {
+    const ts = getEventTimestampMs(event);
+    if (ts === null || ts < cutoff) return;
+    const latency = getLatencyMs(event);
+    if (!Number.isFinite(latency)) return;
+    const bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.floor(((ts - cutoff) / span) * bucketCount)));
+    buckets[bucketIndex].push(latency);
+  });
+  return buckets.map(function (bucket) {
+    return bucket.length ? Math.round(calculateAverage(bucket)) : 0;
+  });
+}
+
+function buildRangeAnalytics(events, range, nowMs) {
+  const cutoff = nowMs - range.windowMs;
+  const rangeEvents = (events || []).filter(function (event) {
+    const ts = getEventTimestampMs(event);
+    return ts === null || ts >= cutoff;
+  });
+  return {
+    windowMs: range.windowMs,
+    bucketCount: range.buckets,
+    uniqueUsers: new Set(rangeEvents.map(function (event) {
+      return event.userId || event.sessionId || null;
+    }).filter(Boolean)).size,
+    actionCount: rangeEvents.filter(function (event) {
+      return event.type === "click" || event.type === "custom" || event.type === "feedback";
+    }).length,
+    totalEvents: rangeEvents.length,
+    latencyByRoute: buildLatencyByRoute(rangeEvents),
+    feedbackCounts: buildFeedbackCounts(rangeEvents),
+    eventBreakdown: buildEventBreakdown(rangeEvents),
+    userActivitySeries: buildUniqueBucketSeries(rangeEvents, nowMs, range.windowMs, range.buckets, function (event) {
+      return event.userId || event.sessionId || null;
+    }),
+    actionSeries: buildBucketSeries(rangeEvents, nowMs, range.windowMs, range.buckets, function (event) {
+      return event.type === "custom" || event.type === "click" ? 1 : 0;
+    }),
+    errorSeries: buildBucketSeries(rangeEvents, nowMs, range.windowMs, range.buckets, function (event) {
+      return event.type === "error" ? 1 : 0;
+    }),
+    latencySeries: buildLatencyBucketSeries(rangeEvents, nowMs, range.windowMs, range.buckets),
+  };
+}
+
+function buildAnalyticsSnapshot(events, options) {
+  const opts = options || {};
+  const sourceEvents = events || [];
+  const nowMs = Number.isFinite(opts.nowMs) ? opts.nowMs : Date.now();
+  const activeWindowMs = Number.isFinite(opts.activeUserWindowMs) && opts.activeUserWindowMs > 0
+    ? opts.activeUserWindowMs
+    : 30000;
+  const activeCutoff = nowMs - activeWindowMs;
+  const activeSessions = new Set();
+  const errorsByVersion = {};
+  const recentErrors = [];
+  let totalErrors = 0;
+
+  for (let i = sourceEvents.length - 1; i >= 0; i--) {
+    const event = sourceEvents[i];
+    if (getEventTimestampMs(event) >= activeCutoff && event.sessionId) activeSessions.add(event.sessionId);
+    if (event.type === "error") {
+      totalErrors += 1;
+      errorsByVersion[event.deployVersion] = (errorsByVersion[event.deployVersion] || 0) + 1;
+      if (recentErrors.length < 1000) recentErrors.push(event);
+    }
+  }
+
+  const analyticsRanges = {};
+  ANALYTICS_RANGES.forEach(function (range) {
+    analyticsRanges[range.key] = buildRangeAnalytics(sourceEvents, range, nowMs);
+  });
+
+  return {
+    activeUsers: activeSessions.size,
+    maxUsers: computeMaxConcurrentUsers(sourceEvents, activeWindowMs),
+    totalEvents: sourceEvents.length,
+    totalErrors,
+    errorsByVersion,
+    latencyByRoute: buildLatencyByRoute(sourceEvents),
+    feedbackCounts: buildFeedbackCounts(sourceEvents),
+    eventBreakdown: buildEventBreakdown(sourceEvents),
+    userActivity: {
+      activeUsers: activeSessions.size,
+      maxUsers: computeMaxConcurrentUsers(sourceEvents, activeWindowMs),
+      windowMs: activeWindowMs,
+    },
+    analyticsRanges,
+    recentErrors,
+    recentActivity: sourceEvents.slice(-20),
   };
 }
 
@@ -192,6 +444,30 @@ function createMemoryEventStore(options) {
     }).length;
   }
 
+  async function countEvents(options) {
+    const o = options || {};
+    const owner = o.userId || "";
+    return events.filter(function (e) {
+      if (owner && e.userId !== owner) return false;
+      if (Number.isFinite(o.sinceMs)) {
+        const ts = Date.parse(e.receivedAt || e.timestamp);
+        if (Number.isFinite(ts) && ts < o.sinceMs) return false;
+      }
+      return true;
+    }).length;
+  }
+
+  async function getAnalyticsSnapshot(options) {
+    const o = options || {};
+    const source = await allEvents(o.maxEvents || maxEvents, { userId: o.userId || "" });
+    const snapshot = buildAnalyticsSnapshot(source, o);
+    snapshot.totalEvents = await countEvents({ userId: o.userId || "" });
+    if (Number.isFinite(o.errorSinceMs)) {
+      snapshot.totalErrors = await countErrors({ sinceMs: o.errorSinceMs, userId: o.userId || "" });
+    }
+    return snapshot;
+  }
+
   return {
     type: "memory",
     tableName: null,
@@ -200,7 +476,9 @@ function createMemoryEventStore(options) {
     allEvents,
     syncUser,
     pruneOldest,
+    countEvents,
     countErrors,
+    getAnalyticsSnapshot,
     _events: events,
   };
 }
@@ -270,10 +548,18 @@ function createSupabaseEventStore(client, options) {
     return (result.data && result.data.length ? result.data[0] : row);
   }
 
-  async function countEvents() {
-    const result = await client
+  async function countEvents(options) {
+    const o = options || {};
+    let query = client
       .from(tableName)
       .select("id", { count: "exact", head: true });
+    if (o.userId) {
+      query = query.eq("user_id", o.userId);
+    }
+    if (Number.isFinite(o.sinceMs)) {
+      query = query.gte("received_at", new Date(o.sinceMs).toISOString());
+    }
+    const result = await query;
     assertSupabaseResult(result, "Failed to count Prototype 3 events");
     return result.count || 0;
   }
@@ -317,6 +603,17 @@ function createSupabaseEventStore(client, options) {
     return result.count || 0;
   }
 
+  async function getAnalyticsSnapshot(options) {
+    const o = options || {};
+    const source = await allEvents(o.maxEvents || DEFAULT_MAX_EVENTS, { userId: o.userId || "" });
+    const snapshot = buildAnalyticsSnapshot(source, o);
+    snapshot.totalEvents = await countEvents({ userId: o.userId || "" });
+    if (Number.isFinite(o.errorSinceMs)) {
+      snapshot.totalErrors = await countErrors({ sinceMs: o.errorSinceMs, userId: o.userId || "" });
+    }
+    return snapshot;
+  }
+
   return {
     type: "supabase",
     tableName,
@@ -326,7 +623,9 @@ function createSupabaseEventStore(client, options) {
     allEvents,
     syncUser,
     pruneOldest,
+    countEvents,
     countErrors,
+    getAnalyticsSnapshot,
     _client: client,
   };
 }
@@ -362,6 +661,7 @@ module.exports = {
   normalizeForStorage,
   eventToRow,
   rowToEvent,
+  buildAnalyticsSnapshot,
   createMemoryEventStore,
   createSupabaseEventStore,
   createConfiguredEventStore,
