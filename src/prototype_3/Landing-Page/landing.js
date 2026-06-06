@@ -3,6 +3,7 @@
 
   const snippetOverlay = document.querySelector("[data-modal='snippet']");
   const privacyOverlay = document.querySelector("[data-modal='privacy']");
+  const termsOverlay = document.querySelector("[data-modal='terms']");
   const snippetCode = document.getElementById("snippet-code");
   const stickyCta = document.querySelector(".sticky-cta");
   const workflowTabs = Array.from(document.querySelectorAll("[data-workflow-tab]"));
@@ -76,9 +77,36 @@
   }
 
   /**
+   * Replaces any stale privacy modal body with the current full policy copy.
+   */
+  function renderPrivacyPolicy() {
+    const body = privacyOverlay?.querySelector(".privacy-policy-body");
+    if (!body) {
+      return;
+    }
+
+    body.innerHTML = [
+      '<p class="modal-copy">WatchTower is a lightweight observability platform that helps development teams monitor application behavior, diagnose errors, understand performance issues, and review user feedback through a real-time dashboard.</p>',
+      '<section class="privacy-section"><h3>Scope</h3><p>This policy applies to the WatchTower website, dashboard, SDK, APIs, demos, documentation, and related services. WatchTower may process account and service data from dashboard users, plus customer telemetry data submitted through the SDK or API by monitored applications.</p></section>',
+      '<section class="privacy-section"><h3>Information You Provide</h3><p>We may collect account details, authentication identifiers, alert recipient email addresses, dashboard preferences, support messages, feedback, project names, environment settings, deployment labels, and alert configuration values.</p></section>',
+      '<section class="privacy-section"><h3>Telemetry Collected Through WatchTower</h3><p>Customer applications may send JavaScript errors, stack traces, performance metrics, route timing, clicks, navigation events, custom events, login or logout events, feature usage, session IDs, anonymous identifiers, configured user IDs, browser context, SDK version, environment, deployment version, feedback ratings, feedback messages, ingestion latency, and event validation details.</p></section>',
+      '<section class="privacy-section"><h3>What Should Not Be Sent</h3><p>WatchTower is designed for observability and debugging, not for storing highly sensitive information. Customers should avoid sending passwords, payment card numbers, government ID numbers, health records, secret keys, or other sensitive data unless it is necessary, lawful, and protected by appropriate safeguards.</p></section>',
+      '<section class="privacy-section"><h3>How We Use Information</h3><p>We use information to create and authenticate accounts, provide dashboard access, receive and display telemetry, show error feeds and performance charts, build session timelines, send operational alerts, support filtering and querying, maintain preferences, debug WatchTower, improve reliability, and protect against unauthorized access or abuse.</p></section>',
+      '<section class="privacy-section"><h3>How We Share Information</h3><p>We do not sell personal information in the ordinary sense of the word. We may share information with service providers that help operate WatchTower, including authentication, database, hosting, email delivery, analytics, monitoring, testing, cloud infrastructure, storage, logging, and security providers. Customer telemetry may be visible to authorized users of the customer project or environment.</p></section>',
+      '<section class="privacy-section"><h3>Customer Responsibilities</h3><p>Customers control what telemetry their applications send to WatchTower. Customers are responsible for providing privacy notices to their own users, obtaining any required consent or legal basis, reviewing custom event payloads, honoring applicable access or deletion requests, and securing API keys, SDK configuration, and access credentials.</p></section>',
+      '<section class="privacy-section"><h3>Cookies and Browser Storage</h3><p>WatchTower may use cookies, local storage, session storage, and similar technologies to keep users signed in, maintain secure sessions, remember dashboard preferences, generate or maintain session identifiers, improve reliability, and support diagnostics. The SDK may use sessionStorage to group events into a browser-tab session timeline.</p></section>',
+      '<section class="privacy-section"><h3>Data Retention and Security</h3><p>We retain personal information only as long as reasonably necessary for the purposes described in this policy, unless a longer period is required or permitted by law. We use reasonable safeguards such as authentication, session verification, user-scoped dashboard access, token-based authorization, database access controls, secure transport where deployed over HTTPS, input validation, and event schema checks.</p></section>',
+      '<section class="privacy-section"><h3>Your Privacy Choices</h3><p>Depending on where you live, you may have rights to access, correct, delete, restrict, or object to processing of personal information, request portability, withdraw consent where processing is based on consent, or opt out of certain communications. If your information was collected through a customer application, you may need to contact that customer directly.</p></section>',
+      '<section class="privacy-section"><h3>Children, Transfers, and Third Parties</h3><p>WatchTower is intended for developers, teams, and organizations, and is not directed to children under 13. Information may be processed in the United States or other countries where WatchTower or its service providers operate. The Services may rely on third-party providers such as Clerk, Supabase, Google services, email delivery providers, and infrastructure vendors, each subject to their own privacy practices.</p></section>',
+      '<section class="privacy-section"><h3>Contact</h3><p>Questions or requests about this policy can be sent to the WatchTower Privacy Team at privacy@watchtower.example. This policy is a strong project-ready draft, but it should be reviewed before being treated as production legal coverage.</p></section>',
+    ].join("");
+  }
+
+  /**
    * Opens the privacy policy overlay and focuses the close button.
    */
   function openPrivacy() {
+    renderPrivacyPolicy();
     setOverlayOpen(privacyOverlay, true);
     const closeButton = privacyOverlay?.querySelector("[data-action='close-privacy']");
     if (closeButton) {
@@ -91,6 +119,24 @@
    */
   function closePrivacy() {
     setOverlayOpen(privacyOverlay, false);
+  }
+
+  /**
+   * Opens the terms and conditions overlay and focuses the close button.
+   */
+  function openTerms() {
+    setOverlayOpen(termsOverlay, true);
+    const closeButton = termsOverlay?.querySelector("[data-action='close-terms']");
+    if (closeButton) {
+      closeButton.focus();
+    }
+  }
+
+  /**
+   * Closes the terms and conditions overlay and restores body scroll.
+   */
+  function closeTerms() {
+    setOverlayOpen(termsOverlay, false);
   }
 
   /**
@@ -227,6 +273,12 @@
       case "close-privacy":
         closePrivacy();
         break;
+      case "open-terms":
+        openTerms();
+        break;
+      case "close-terms":
+        closeTerms();
+        break;
     }
   });
 
@@ -237,6 +289,9 @@
     }
     if (event.key === "Escape" && privacyOverlay && !privacyOverlay.hidden) {
       closePrivacy();
+    }
+    if (event.key === "Escape" && termsOverlay && !termsOverlay.hidden) {
+      closeTerms();
     }
   });
 
@@ -253,6 +308,14 @@
     privacyOverlay.addEventListener("click", function (event) {
       if (event.target === privacyOverlay) {
         closePrivacy();
+      }
+    });
+  }
+
+  if (termsOverlay) {
+    termsOverlay.addEventListener("click", function (event) {
+      if (event.target === termsOverlay) {
+        closeTerms();
       }
     });
   }

@@ -249,7 +249,7 @@
       <div class="footer-column">
         <h2>Legal</h2>
         <button class="footer-link-button" type="button" data-action="open-privacy">Privacy policy</button>
-        <span class="footer-placeholder">Data notice <small>Coming soon</small></span>
+        <button class="footer-link-button" type="button" data-action="open-terms">Terms and conditions</button>
       </div>
     </div>
     <div class="landing-footer-bottom">
@@ -290,42 +290,284 @@
         <div>
           <p class="eyebrow">Legal</p>
           <h2 id="privacy-title">Privacy Policy</h2>
+          <p class="privacy-updated">Last updated: June 5, 2026</p>
         </div>
         <button class="icon-button modal-close" type="button" data-action="close-privacy" aria-label="Close privacy policy">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
         </button>
       </div>
 
-      <p class="modal-copy">
-        WatchTower is a class prototype for monitoring web app errors,
-        performance, and user feedback from one dashboard.
-      </p>
-
-      <section class="privacy-section">
-        <h3>What We Use</h3>
-        <p>
-          The prototype may use login information, dashboard events, error
-          reports, performance data, feedback entries, and alert contact details
-          to support the monitoring experience.
+      <div class="privacy-policy-body">
+        <p class="modal-copy">
+          WatchTower is a lightweight observability platform that helps development teams monitor application behavior,
+          diagnose errors, understand performance issues, and review user feedback through a real-time dashboard.
         </p>
-      </section>
 
-      <section class="privacy-section">
-        <h3>Authentication</h3>
-        <p>
-          Sign-in is handled through Clerk. WatchTower does not store passwords
-          in the frontend.
-        </p>
-      </section>
+        <section class="privacy-section">
+          <h3>Scope</h3>
+          <p>
+            This policy applies to the WatchTower website, dashboard, SDK, APIs, demos, documentation, and related
+            services. WatchTower may process account and service data from dashboard users, plus customer telemetry data
+            submitted through the SDK or API by monitored applications.
+          </p>
+        </section>
 
-      <section class="privacy-section">
-        <h3>How It Is Used</h3>
-        <p>
-          Data is used for prototype testing, dashboard display, alerts, and
-          team development work. It should not be treated as a production
-          privacy system.
+        <section class="privacy-section">
+          <h3>Information You Provide</h3>
+          <p>
+            We may collect account details, authentication identifiers, alert recipient email addresses, dashboard
+            preferences, support messages, feedback, project names, environment settings, deployment labels, and alert
+            configuration values.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Telemetry Collected Through WatchTower</h3>
+          <p>
+            Customer applications may send JavaScript errors, stack traces, performance metrics, route timing, clicks,
+            navigation events, custom events, login or logout events, feature usage, session IDs, anonymous identifiers,
+            configured user IDs, browser context, SDK version, environment, deployment version, feedback ratings, feedback
+            messages, ingestion latency, and event validation details.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>What Should Not Be Sent</h3>
+          <p>
+            WatchTower is designed for observability and debugging, not for storing highly sensitive information.
+            Customers should avoid sending passwords, payment card numbers, government ID numbers, health records, secret
+            keys, or other sensitive data unless it is necessary, lawful, and protected by appropriate safeguards.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>How We Use Information</h3>
+          <p>
+            We use information to create and authenticate accounts, provide dashboard access, receive and display
+            telemetry, show error feeds and performance charts, build session timelines, send operational alerts, support
+            filtering and querying, maintain preferences, debug WatchTower, improve reliability, and protect against
+            unauthorized access or abuse.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>How We Share Information</h3>
+          <p>
+            We do not sell personal information in the ordinary sense of the word. We may share information with service
+            providers that help operate WatchTower, including authentication, database, hosting, email delivery, analytics,
+            monitoring, testing, cloud infrastructure, storage, logging, and security providers. Customer telemetry may be
+            visible to authorized users of the customer project or environment.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Customer Responsibilities</h3>
+          <p>
+            Customers control what telemetry their applications send to WatchTower. Customers are responsible for
+            providing privacy notices to their own users, obtaining any required consent or legal basis, reviewing custom
+            event payloads, honoring applicable access or deletion requests, and securing API keys, SDK configuration,
+            and access credentials.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Cookies and Browser Storage</h3>
+          <p>
+            WatchTower may use cookies, local storage, session storage, and similar technologies to keep users signed in,
+            maintain secure sessions, remember dashboard preferences, generate or maintain session identifiers, improve
+            reliability, and support diagnostics. The SDK may use sessionStorage to group events into a browser-tab
+            session timeline.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Data Retention and Security</h3>
+          <p>
+            We retain personal information only as long as reasonably necessary for the purposes described in this policy,
+            unless a longer period is required or permitted by law. We use reasonable administrative, technical, and
+            organizational safeguards such as authentication, session verification, user-scoped dashboard access,
+            token-based authorization, database access controls, secure transport where deployed over HTTPS, input
+            validation, and event schema checks.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Your Privacy Choices</h3>
+          <p>
+            Depending on where you live, you may have rights to access, correct, delete, restrict, or object to processing
+            of personal information, request portability, withdraw consent where processing is based on consent, or opt
+            out of certain communications. If your information was collected through a customer's application, you may
+            need to contact that customer directly.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Children, Transfers, and Third Parties</h3>
+          <p>
+            WatchTower is intended for developers, teams, and organizations, and is not directed to children under 13.
+            Information may be processed in the United States or other countries where WatchTower or its service providers
+            operate. The Services may rely on third-party providers such as Clerk, Supabase, Google services, email
+            delivery providers, and infrastructure vendors, each subject to their own privacy practices.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>Contact</h3>
+          <p>
+            Questions or requests about this policy can be sent to the WatchTower Privacy Team at
+            privacy@watchtower.example. This policy is a strong project-ready draft, but it should be reviewed before
+            being treated as production legal coverage.
+          </p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" data-modal="terms" hidden>
+    <div class="modal panel terms-modal" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Legal</p>
+          <h2 id="terms-title">Terms and Conditions</h2>
+          <p class="privacy-updated">Last updated: June 5, 2026</p>
+        </div>
+        <button class="icon-button modal-close" type="button" data-action="close-terms" aria-label="Close terms and conditions">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="terms-policy-body">
+        <p class="modal-copy">
+          These Terms and Conditions govern access to and use of WatchTower, a lightweight observability application for
+          capturing and displaying user events, JavaScript errors, performance metrics, and feedback through a dashboard.
+          By using WatchTower, you agree to these terms.
         </p>
-      </section>
+
+        <section class="privacy-section">
+          <h3>1. Services</h3>
+          <p>
+            WatchTower provides prototype observability tools, including event ingestion, dashboard views, error
+            monitoring, performance reporting, feedback capture, alerting, and related documentation or demos. We may
+            change, improve, suspend, or discontinue parts of the Services as the project evolves.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>2. Authorized Use</h3>
+          <p>
+            You may use WatchTower only for lawful development, testing, educational, and application-monitoring
+            purposes. You are responsible for your account, credentials, users, projects, SDK configuration, API usage,
+            and all activity that occurs through your access to the Services.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>3. Customer Data and Telemetry</h3>
+          <p>
+            You retain ownership of telemetry, feedback, events, and other data submitted to WatchTower. You grant
+            WatchTower permission to process that data as needed to provide, secure, debug, test, and improve the
+            Services. You are responsible for ensuring that you have the right to collect and send any data you submit.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>4. Sensitive Data Restrictions</h3>
+          <p>
+            WatchTower is not intended to store passwords, payment card data, financial account data, protected health
+            information, government ID numbers, secret keys, or other highly sensitive information. Do not intentionally
+            transmit sensitive data unless you have appropriate authorization, legal basis, and safeguards.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>5. Prohibited Conduct</h3>
+          <p>
+            You may not misuse WatchTower, interfere with the Services, attempt unauthorized access, introduce malicious
+            code, overload systems, reverse engineer protected parts of the Services, remove proprietary notices, use the
+            Services to violate law or third-party rights, or submit data you are not permitted to process.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>6. Security Responsibilities</h3>
+          <p>
+            You are responsible for protecting credentials, API keys, SDK configuration, project access, and authorized
+            users. If you believe an account, key, or project has been compromised, stop using the affected credential and
+            notify the WatchTower team as soon as practical.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>7. Ownership and Feedback</h3>
+          <p>
+            WatchTower and its code, interface, documentation, designs, and related intellectual property remain owned by
+            the WatchTower project team or applicable contributors. If you provide ideas, suggestions, bug reports, or
+            feature requests, we may use that feedback to improve WatchTower without owing compensation.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>8. Third-Party Services</h3>
+          <p>
+            WatchTower may rely on third-party providers such as Clerk, Supabase, Google services, email delivery tools,
+            hosting services, and other infrastructure. Your use of those integrated services may also be governed by
+            their own terms, policies, and availability.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>9. Prototype Status</h3>
+          <p>
+            WatchTower is a course-project prototype and may contain bugs, incomplete features, mock flows, configuration
+            limits, downtime, data loss, or behavior that changes without notice. Do not rely on WatchTower as a
+            production incident-response, compliance, security, or data-retention system unless and until it is separately
+            reviewed and hardened for that purpose.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>10. Disclaimers</h3>
+          <p>
+            The Services are provided "as is" and "as available." To the fullest extent permitted by law, WatchTower
+            disclaims warranties of merchantability, fitness for a particular purpose, non-infringement, uninterrupted
+            operation, error-free operation, and any guarantee that monitoring results will be complete or accurate.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>11. Limitation of Liability</h3>
+          <p>
+            To the fullest extent permitted by law, WatchTower and its contributors will not be liable for indirect,
+            incidental, special, consequential, exemplary, or punitive damages, or for lost profits, lost data, service
+            interruptions, security incidents, or decisions made based on dashboard outputs.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>12. Termination</h3>
+          <p>
+            We may suspend or terminate access to WatchTower if use violates these terms, creates risk, threatens system
+            integrity, or harms other users. You may stop using the Services at any time. Provisions about ownership,
+            customer data responsibilities, disclaimers, limitations of liability, and misuse survive termination.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>13. Changes to These Terms</h3>
+          <p>
+            We may update these Terms and Conditions as WatchTower changes. When we do, we will update the date above.
+            Continued use of WatchTower after changes become available means you accept the updated terms.
+          </p>
+        </section>
+
+        <section class="privacy-section">
+          <h3>14. Contact</h3>
+          <p>
+            Questions about these terms can be sent to the WatchTower team. These terms are a project-ready draft and
+            should be reviewed before being treated as production legal coverage.
+          </p>
+        </section>
+      </div>
     </div>
   </div>
 
