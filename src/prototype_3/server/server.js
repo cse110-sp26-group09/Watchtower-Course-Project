@@ -1003,18 +1003,25 @@ async function maybeSendErrorThresholdAlert() {
 
   if (!evaluation.shouldSend) {return;}
 
-  // Combine the manually registered recipient with the Clerk-sourced ones so
-  // both the dashboard registration flow and the (future) Clerk rollout work.
-  const clerkRecipients = await getClerkAlertRecipients(now);
   const recipients = [];
   if (registeredAlertRecipient) {
     recipients.push(registeredAlertRecipient);
   }
-  clerkRecipients.forEach(function (recipient) {
-    if (recipients.indexOf(recipient) === -1) {
-      recipients.push(recipient);
+
+  // Clerk recipient discovery is a fallback source. Do not let a slow or failed
+  // Clerk lookup block an already registered dashboard recipient.
+  if (!recipients.length) {
+    try {
+      const clerkRecipients = await getClerkAlertRecipients(now);
+      clerkRecipients.forEach(function (recipient) {
+        if (recipients.indexOf(recipient) === -1) {
+          recipients.push(recipient);
+        }
+      });
+    } catch (error) {
+      console.warn("[mailer] Clerk alert recipient lookup skipped:", error.message);
     }
-  });
+  }
   if (!recipients.length) {return;}
 
   lastErrorAlertSentAt = now;
