@@ -138,6 +138,7 @@ docs/
 │   ├── api-contract-v1.md       # Baseline API contract (add v2 addendum)
 │   ├── event-schema-v1.md       # Baseline event schema (add v2 addendum)
 │   └── external-test-app-plan.md
+├── archive/                         # Place to store old/unaccurate documentation 
 ├── adr/                         # Architecture Decision Records (append-only)
 │   ├── README.md
 │   └── ADR-0001..0009.md
