@@ -43,45 +43,122 @@
   </main>
 
   <div class="auth-modal-overlay" id="privacy-modal" hidden>
-    <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
-      <div class="auth-modal-header">
-        <div>
-          <p class="auth-modal-label">Legal</p>
-          <h2 id="privacy-title">Privacy Policy</h2>
-        </div>
-        <button class="auth-modal-close" type="button" data-action="close-privacy" aria-label="Close privacy policy">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <p class="auth-subtitle">
-        WatchTower is a class prototype for monitoring web app errors,
-        performance, and user feedback from one dashboard.
+    <div class="privacy-policy-body">
+      <p class="modal-copy">
+        WatchTower is a lightweight observability platform that helps development teams monitor application behavior,
+        diagnose errors, understand performance issues, and review user feedback through a real-time dashboard.
       </p>
 
-      <section class="legal-section">
-        <h3>What We Use</h3>
+      <section class="privacy-section">
+        <h3>Scope</h3>
         <p>
-          The prototype may use login information, dashboard events, error
-          reports, performance data, feedback entries, and alert contact details
-          to support the monitoring experience.
+          This policy applies to the WatchTower website, dashboard, SDK, APIs, demos, documentation, and related services.
+          WatchTower may process account and service data from dashboard users, plus customer telemetry data submitted
+          through the SDK or API by monitored applications.
         </p>
       </section>
 
-      <section class="legal-section">
-        <h3>Authentication</h3>
+      <section class="privacy-section">
+        <h3>Information You Provide</h3>
         <p>
-          Sign-in is handled through Clerk. WatchTower does not store passwords
-          in the frontend.
+          We may collect account details, authentication identifiers, alert recipient email addresses, dashboard preferences,
+          support messages, feedback, project names, environment settings, deployment labels, and alert configuration values.
         </p>
       </section>
 
-      <section class="legal-section">
-        <h3>How It Is Used</h3>
+      <section class="privacy-section">
+        <h3>Telemetry Collected Through WatchTower</h3>
         <p>
-          Data is used for prototype testing, dashboard display, alerts, and
-          team development work. It should not be treated as a production
-          privacy system.
+          Customer applications may send JavaScript errors, stack traces, performance metrics, route timing, clicks,
+          navigation events, custom events, login or logout events, feature usage, session IDs, anonymous identifiers,
+          configured user IDs, browser context, SDK version, environment, deployment version, feedback ratings, feedback
+          messages, ingestion latency, and event validation details.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>What Should Not Be Sent</h3>
+        <p>
+          WatchTower is designed for observability and debugging, not for storing highly sensitive information. Customers
+          should avoid sending passwords, payment card numbers, government ID numbers, health records, secret keys, or other
+          sensitive data unless it is necessary, lawful, and protected by appropriate safeguards.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>How We Use Information</h3>
+        <p>
+          We use information to create and authenticate accounts, provide dashboard access, receive and display telemetry,
+          show error feeds and performance charts, build session timelines, send operational alerts, support filtering and
+          querying, maintain preferences, debug WatchTower, improve reliability, and protect against unauthorized access or
+          abuse.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>How We Share Information</h3>
+        <p>
+          We do not sell personal information in the ordinary sense of the word. We may share information with service
+          providers that help operate WatchTower, including authentication, database, hosting, email delivery, analytics,
+          monitoring, testing, cloud infrastructure, storage, logging, and security providers. Customer telemetry may be
+          visible to authorized users of the customer project or environment.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Customer Responsibilities</h3>
+        <p>
+          Customers control what telemetry their applications send to WatchTower. Customers are responsible for providing
+          privacy notices to their own users, obtaining any required consent or legal basis, reviewing custom event payloads,
+          honoring applicable access or deletion requests, and securing API keys, SDK configuration, and access credentials.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Cookies and Browser Storage</h3>
+        <p>
+          WatchTower may use cookies, local storage, session storage, and similar technologies to keep users signed in,
+          maintain secure sessions, remember dashboard preferences, generate or maintain session identifiers, improve
+          reliability, and support diagnostics. The SDK may use sessionStorage to group events into a browser-tab session
+          timeline.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Data Retention and Security</h3>
+        <p>
+          We retain personal information only as long as reasonably necessary for the purposes described in this policy,
+          unless a longer period is required or permitted by law. We use reasonable safeguards such as authentication, session
+          verification, user-scoped dashboard access, token-based authorization, database access controls, secure transport
+          where deployed over HTTPS, input validation, and event schema checks.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Your Privacy Choices</h3>
+        <p>
+          Depending on where you live, you may have rights to access, correct, delete, restrict, or object to processing of
+          personal information, request portability, withdraw consent where processing is based on consent, or opt out of
+          certain communications. If your information was collected through a customer application, you may need to contact
+          that customer directly.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Children, Transfers, and Third Parties</h3>
+        <p>
+          WatchTower is intended for developers, teams, and organizations, and is not directed to children under 13.
+          Information may be processed in the United States or other countries where WatchTower or its service providers
+          operate. The Services may rely on third-party providers such as Clerk, Supabase, Google services, email delivery
+          providers, and infrastructure vendors, each subject to their own privacy practices.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Contact</h3>
+        <p>
+          Questions or requests about this policy can be sent to the WatchTower Privacy Team at
+          Hemendra.ande@gmail.com. We will respond to valid requests in accordance with applicable laws and our policies.
         </p>
       </section>
     </div>
