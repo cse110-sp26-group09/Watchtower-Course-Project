@@ -1,5 +1,5 @@
 # WatchTower MVP
-
+## Completed
 ## Overview
 
 WatchTower is a simple observability tool that helps developers understand what is happening in their web application by tracking errors, performance issues, and user feedback in one dashboard.

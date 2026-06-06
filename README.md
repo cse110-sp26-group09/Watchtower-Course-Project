@@ -17,6 +17,8 @@ WatchTower helps development teams understand what's happening in production. By
 
 ## Quick Start
 
+`npm start`
+
 ### Running Prototype 3 (Current)
 
 **Prerequisites:** Node.js 18 or later, npm.
@@ -127,68 +129,56 @@ The start script automatically generates `clerk-config.js` from `CLERK_PUBLISHAB
 ## Project Structure
 
 ```
-.
-├── .github/
-│   ├── ISSUE_TEMPLATE/           # GitHub issue templates
-│   └── workflows/
-│       └── ci.yml                # CI pipeline (lint, HTML/CSS validation, unit + e2e tests)
-│
-├── docs/
-│   ├── adr/                      # Architecture decision records
-│   ├── architecture/             # System architecture diagrams and notes
-│   ├── back-end/                 # Backend team workflow notes
-│   ├── design/                   # Wireframes, user flows, and design notes
-│   │   └── media/                # Images, diagrams, and screenshots
-│   ├── meetings/                 # Standup notes and TA meeting notes
-│   │   └── Sprint/               # Notes organized by sprint (0-4)
-│   ├── planning/                 # Sprint plans, backlog, and retrospectives
-│   ├── process/                  # Git workflow, conventions, and GenAI usage docs
-│   ├── product/                  # MVP definition, requirements, and user stories
-│   ├── research/                 # Technical research and investigation notes
-│   └── README.md                 # Documentation index
-│
-├── scripts/
-│   └── generate-clerk-config.js  # Generates clerk-config.js from CLERK_PUBLISHABLE_KEY
-│
-├── src/
-│   ├── prototype_3/              # Current active prototype
-│   │   ├── Landing-Page/         # Public marketing landing page
-│   │   ├── Log-In-Page/          # Clerk-backed authentication pages
-│   │   ├── assets/               # Logos, favicons, and team photos
-│   │   ├── dashboard-demo/       # Static dashboard demo (no auth required)
-│   │   ├── demo/                 # Demo app that fires events at the dashboard
-│   │   ├── sdk/
-│   │   │   └── watchtower.js     # Client-side instrumentation SDK
-│   │   ├── server/
-│   │   │   ├── server.js         # Node.js HTTP server and all API routes
-│   │   │   ├── event-store.js    # Supabase/in-memory event and user persistence
-│   │   │   ├── server-helpers.js # Request parsing, normalization utilities
-│   │   │   ├── alert-threshold.js# Error-rate threshold and cooldown logic
-│   │   │   ├── clerk-alert-recipients.js # Clerk-backed alert recipient lookup
-│   │   │   └── mailer.js         # Gmail OAuth alert email sender
-│   │   ├── app.js                # Dashboard frontend (single-page app)
-│   │   ├── auth-guard.js         # Clerk session guard and user sync
-│   │   ├── index.html            # Dashboard shell
-│   │   ├── auth.html             # Auth redirect handler
-│   │   ├── landing.html          # Landing page entry point
-│   │   ├── style.css             # Dashboard styles
-│   │   └── README.md             # Prototype 3 setup and configuration reference
-│   ├── prototype_1/              # Archived - original prototype
-│   └── prototype_2/              # Archived - second iteration
-│
-├── tests/
-│   ├── e2e/                      # Playwright end-to-end tests
-│   ├── unit/                     # Jest unit tests
-│   └── README.md                 # Testing overview
-│
-├── .env.example                  # Environment variable template (copy to .env)
-├── .gitignore
-├── CHANGELOG.md
-├── package.json                  # npm scripts: start, test:unit, test:e2e, docs:js
-├── package-lock.json
-├── playwright.config.js
-├── README.md
-└── SECURITY.md
+docs/
+├── README.md                    # Documentation index (updated)
+├── architecture/                # System design, schemas, contracts
+│   ├── README.md
+│   ├── system-overview.md       # Technology stack and dependencies
+│   ├── auth-workflow.md         # Clerk authentication flow (Prototype 3)
+│   ├── api-contract-v1.md       # Baseline API contract (add v2 addendum)
+│   ├── event-schema-v1.md       # Baseline event schema (add v2 addendum)
+│   └── external-test-app-plan.md
+├── adr/                         # Architecture Decision Records (append-only)
+│   ├── README.md
+│   └── ADR-0001..0009.md
+├── product/                     # Product vision and requirements
+│   ├── project-brief.md
+│   ├── mvp.md
+│   ├── requirements.md
+│   └── user-stories.md
+├── planning/                    # Sprint plans and retrospectives
+│   ├── sprint-1-planning.md
+│   ├── sprint-2-planning.md
+│   ├── backlog-issues.md
+│   └── retrospectives/
+├── process/                     # Workflow, standards, planning docs
+│   ├── workflow.md
+│   ├── git-workflow.md
+│   ├── genai-usage.md
+│   ├── jsdoc-standards.md
+│   ├── docs-redundancy-review.md 
+│   ├── future-repo-structure-proposal.md
+│   └── jsdoc-wiki-plan.md
+├── design/                      # Wireframes, UI decisions, media
+│   ├── Wireframe.md
+│   ├── User-Interface-Decisions.md
+│   └── media/
+├── research/                    # Individual research notes
+│   ├── README.md
+│   └── *.md
+├── meetings/                    # Standup and decision records
+│   ├── decision-log.md
+│   ├── Readme.md
+│   └── Sprint/
+├── sprint/                      # Sprint readouts and comparison docs
+│   └── sprint-2-comparison-readout.md
+├── archive/                     # Historical docs moved here after cleanup
+│   ├── event-storage-prototype1.md
+│   ├── tasks-tracking-prototype2.md
+│   ├── legacy-prototype-impact-check.md
+│   └── design-event-schema-v1-duplicate.md
+└── api/                         # Generated JSDoc output (gitignored)
+
 ```
 
 For a detailed breakdown of the documentation structure, see [docs/README.md](docs/README.md).
