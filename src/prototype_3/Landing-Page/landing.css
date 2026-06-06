@@ -901,6 +901,55 @@
   font-size: 14px;
 }
 
+.privacy-modal,
+.terms-modal {
+  width: min(980px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+}
+
+.privacy-modal .modal-header,
+.terms-modal .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: -1px 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.privacy-modal .privacy-updated,
+.terms-modal .privacy-updated {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.privacy-policy-body,
+.terms-policy-body {
+  padding-right: 6px;
+}
+
+.privacy-policy-body .modal-copy,
+.terms-policy-body .modal-copy {
+  max-width: 78ch;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.privacy-policy-body .privacy-section h3,
+.terms-policy-body .privacy-section h3 {
+  font-size: 17px;
+}
+
+.privacy-policy-body .privacy-section p,
+.terms-policy-body .privacy-section p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
 .modal-close {
   width: 40px;
   height: 40px;
