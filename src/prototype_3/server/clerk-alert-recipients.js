@@ -1,9 +1,5 @@
 "use strict";
 
-async function getClerkAlertRecipients() {
-  return [];
-}
-
 function resetRecipientCache() {
   // Reserved for the future Clerk-backed recipient cache.
 }
