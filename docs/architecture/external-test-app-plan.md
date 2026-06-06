@@ -110,3 +110,20 @@ For now, continue using the in-repo demo setup for development, testing, and pro
 ## Conclusion
 
 Keeping the demo app inside the repository is the right short-term choice for speed and simplicity. Separating it later will make the WatchTower demo more realistic and better aligned with the product goal of monitoring external websites.
+
+---
+
+## Addendum: Prototype 3 External Test App
+
+The external monitored test app has been created for Prototype 3.
+
+The test app is hosted on GitHub Pages and sends telemetry to the Render-hosted
+Prototype 3 backend. This validates the intended external monitoring flow:
+
+1. A separately hosted site loads the WatchTower SDK
+2. The SDK captures events from that external site
+3. Events are sent to the deployed Prototype 3 backend on Render
+4. The Prototype 3 dashboard displays the monitored activity
+
+This changes the separation plan from a future recommendation into an implemented
+Prototype 3 integration path.
