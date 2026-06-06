@@ -29,6 +29,7 @@ Define what we're building and for whom.
 Track progress, manage the backlog, and run sprints effectively.
 - [backlog-issues.md](planning/backlog-issues.md) – Prioritized list of features and bug fixes
 - [sprint-1-planning.md](planning/sprint-1-planning.md) – Sprint 1 goals, tasks, and role assignments
+- [sprint-2-planning.md](planning/sprint-2-planning.md) – Sprint 2 goals, tasks, and role assignments
 - [retrospectives/](planning/retrospectives/) – Lessons learned and improvements from each sprint
 
 ### 🔨 Process ([process/](process/))
@@ -55,15 +56,16 @@ Images, diagrams, and visual assets for documentation and project materials.
 Record major technical decisions and trade-offs.
 - [Architectural Decision Records (ADRs)](adr/) – Documented reasoning for system design choices
 - [system-overview.md](architecture/system-overview.md) - overview of the system architecture
-- [api-contract-v1.md](architecture/api-contract-v1.md) - Documented usage of APIs
-- [event-schema-v1.md](architecture/event-schema-v1.md) - Documented event schemas
+- [api-contract-v1.md](architecture/api-contract-v1.md) - old documented usage of APIs
+- [event-schema-v1.md](architecture/event-schema-v1.md) - old documented event schemas
+- [api-contract-v2.md](architecture/api-contract-v2.md) - current documented usage of APIs
+- [event-schema-v2.md](architecture/event-schema-v2.md) - current documented event schemas
 - [external-test-app-plan.md](architecture/external-test-app-plan.md) - Plan for using external app for testing
 
 ### 💬 Meetings ([meetings/](meetings/))
 Preserve team discussions and decisions.
 - [decision-log.md](meetings/decision-log.md) – Key decisions and their rationale
-- [planning.md](meetings/planning.md) – Planning session notes
-- [standups.md](meetings/standups.md) – Daily standup summaries and blockers
+- [Sprint/](meetings/Sprint/README.md) – Daily standup summaries and blockers
 
 ---
 

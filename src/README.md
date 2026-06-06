@@ -3,7 +3,8 @@
 This directory contains all WatchTower implementation code. During Sprint 2 the team built two parallel prototypes; they are compared in [`docs/sprint/sprint-2-comparison-readout.md`](../docs/sprint/sprint-2-comparison-readout.md).
 
 ## Structure
-
+**Archived prototypes see in ../archive**
+```
 ### `prototype_1/` – Static Frontend Candidate
 
 A standalone static dashboard (no backend, no SDK) modeled after the WatchTower wireframes. Useful for trying out UI layouts and accessibility controls.
@@ -23,13 +24,19 @@ A working capture → ingest → display loop:
 
 See [`prototype_2/README.md`](prototype_2/README.md) for details.
 
+
+```
+### `prototype_3/` - final candidate and product for WatchTower
+
+read [README.md](../README.md) for more information about WatchTower and how to use it 
+
 ### `shared/` – Cross-prototype utilities
 
-Code that both prototypes (and any Sprint 3 hybrid) can rely on:
+Code that current product relies on:
 
-- `shared/utils/event-utils.js` – pure helpers for event validation, normalization, averaging, and percentile calculation. This is the source of truth; the prototype 2 path is a re-export shim.
+- `shared/utils/event-utils.js` – pure helpers for event validation, normalization, averaging, and percentile calculation. This is the source of truth.
 
-**Technologies:** HTML, CSS, JavaScript, Node.js
+**Technologies:** HTML, CSS, JavaScript, Node.js, PostGreSQL, Supabase, Render, Clerk, Beacon, Navigation Timing
 
 ## Development Guidelines
 
