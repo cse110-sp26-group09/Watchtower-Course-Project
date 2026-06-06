@@ -182,3 +182,11 @@
 - **Scale:** src/prototype_3/server/event-store.js, src/prototype_3/server/server.js, src/prototype_3/app.js, src/prototype_3/index.html, src/prototype_3/README.md
 - **Description:** Asked codex to add database integration for the analytics charts and most-clicked features so that they can display persistent, historical data. Also asked to set limits to the tab heights.
 - **Prompt:** please review the logic for the user count, user activity, issues, and response latency charts, which have suffered from dropping some values in the past. Make sure that they use database information from server/event-store.js, so that they show historical data from all time. Also, please apply the same fix to the most-clicked features tabs on the home page. For analytics, can you configure a peak height for the issues chart and user activity? By default, set the peak for issues to 100 and the peak for user activity to 500. The idea is to have the height for values that go beyond these peaks to be the same so that the difference between heights isn't so dramatic. Also, please make this value easily editable and point me to where it is
+
+- **Name:** Josh Victoria
+- **Date:** 6/5/26
+- **Sprint #:** 5
+- **Model:** Codex 5.5 low reasoning
+- **LOC:** 509
+- **Scale:** `api-contract-v2.md`
+- **Description:** based off of ADRs, explain how the apis work together using ADRs in a way that is helpful for creating an API-contract
