@@ -40,6 +40,38 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #13a1a3;
   box-shadow: 0 7px 18px rgba(15, 139, 141, 0.24);
+  white-space: nowrap;
+}
+
+.cta-label-short {
+  display: none;
+}
+
+.github-link {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.github-link:hover,
+.github-link:focus-visible {
+  border-color: rgba(101, 217, 218, 0.38);
+  background: rgba(101, 217, 218, 0.12);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.github-link svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
 }
 
 .landing-main {
@@ -1046,12 +1078,52 @@
 }
 
 @media (max-width: 540px) {
+  .landing .landing-topbar {
+    height: 68px;
+    padding: 10px 12px;
+  }
+
+  .landing .landing-topbar .brand-mark {
+    width: 36px;
+    height: 44px;
+  }
+
+  .landing .landing-topbar .brand-label {
+    display: none;
+  }
+
+  .landing .landing-topbar .landing-cta {
+    min-height: 38px;
+    padding: 0 13px;
+    font-size: 13px;
+  }
+
   .landing-section {
     width: min(var(--landing-max), calc(100% - 28px));
   }
 
   .landing-topbar-actions {
     gap: 8px;
+    margin-left: auto;
+  }
+
+  .github-link {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .github-link svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cta-label-full {
+    display: none;
+  }
+
+  .cta-label-short {
+    display: inline;
   }
 }
 
@@ -1064,7 +1136,19 @@
   align-items: center;
   gap: 24px;
   margin-left: auto;
-  margin-right: 22px;
+  margin-right: 0;
+}
+
+.landing-topbar-actions {
+  gap: 14px;
+  margin-left: 24px;
+}
+
+@media (max-width: 540px) {
+  .landing-topbar-actions {
+    gap: 8px;
+    margin-left: auto;
+  }
 }
 
 .landing-nav a {
