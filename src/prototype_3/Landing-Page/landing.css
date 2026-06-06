@@ -585,6 +585,26 @@
   font-weight: 700;
 }
 
+.recording-gif-showcase {
+  display: grid;
+  grid-template-rows: 1fr;
+  place-items: center;
+  padding: 18px;
+  border-color: rgba(101, 217, 218, 0.22);
+  background:
+    radial-gradient(circle at 80% 12%, rgba(37, 90, 122, 0.18), transparent 24rem),
+    #08151b;
+  box-shadow: 0 24px 58px rgba(8, 21, 27, 0.28);
+}
+
+.workflow-showcase-gif {
+  display: block;
+  width: min(100%, 920px);
+  border: 1px solid rgba(101, 217, 218, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+}
+
 .capabilities-grid {
   display: grid;
   gap: 16px;
@@ -779,6 +799,24 @@
 .audience-placeholder p {
   max-width: 580px;
   color: rgba(255, 255, 255, 0.66);
+}
+
+.audience-gif-showcase {
+  align-content: center;
+  gap: 18px;
+  padding: 24px;
+  border-color: rgba(101, 217, 218, 0.22);
+  background:
+    radial-gradient(circle at 82% 14%, rgba(37, 90, 122, 0.18), transparent 24rem),
+    #08151b;
+}
+
+.audience-showcase-gif {
+  display: block;
+  width: min(100%, 920px);
+  border: 1px solid rgba(101, 217, 218, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
 }
 
 .cta-section {
