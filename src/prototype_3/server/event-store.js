@@ -29,6 +29,14 @@ const DEFAULT_MAX_EVENTS = 10000;
 loadEnv({ quiet: true });
 loadEnv({ path: path.join(REPO_ROOT, ".env"), quiet: true });
 
+// Run this ALTER TABLE once against the Supabase project to add the timezone
+// column to app_users. The default empty string keeps existing rows valid so
+// the migration is non-destructive and can be applied without downtime.
+const APP_USERS_TIMEZONE_MIGRATION_SQL = `
+alter table public.app_users
+  add column if not exists timezone text not null default '';
+`;
+
 const EVENTS_TABLE_SCHEMA_SQL = `
 create table if not exists public.prototype3_events (
   id text primary key,
@@ -622,6 +630,9 @@ function createSupabaseEventStore(client, options) {
       clerk_user_id: clerkUserId,
       email: input.email || "",
       display_name: input.displayName || "",
+      // Empty string rather than null so the NOT NULL column constraint is
+      // satisfied even when the user has not selected a timezone yet.
+      timezone: input.timezone || "",
       last_seen_at: new Date().toISOString(),
     };
     const result = await client
@@ -746,6 +757,7 @@ module.exports = {
   DEFAULT_TABLE,
   DEFAULT_USERS_TABLE,
   EVENTS_TABLE_SCHEMA_SQL,
+  APP_USERS_TIMEZONE_MIGRATION_SQL,
   hasSupabaseConfig,
   generateEventId,
   normalizeForStorage,
