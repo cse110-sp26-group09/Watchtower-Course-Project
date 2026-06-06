@@ -1,12 +1,14 @@
 "use strict";
 
 function resetRecipientCache() {
-  // Reserved for the future Clerk-backed recipient cache.
+  cachedRecipients = null;
+  cacheExpiresAt = 0;
 }
 
 const https = require("https");
 const CLERK_USERS_URL = "https://api.clerk.com/v1/users";
 const DEFAULT_CACHE_MS = 300000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 4000;
 
 let cachedRecipients = null;
 let cacheExpiresAt = 0;
@@ -51,7 +53,7 @@ function selectAlertRecipients(users) {
   }, []);
 }
 
-function requestJson(url, secretKey) {
+function requestJson(url, secretKey, timeoutMs) {
   return new Promise(function (resolve, reject) {
     let request = https.request(url, {
       method: "GET",
@@ -78,19 +80,22 @@ function requestJson(url, secretKey) {
         resolve(body);
       });
     });
+    request.setTimeout(timeoutMs, function () {
+      request.destroy(new Error("Clerk users request timed out"));
+    });
     request.on("error", reject);
     request.end();
   });
 }
 
-async function fetchClerkUsers(secretKey) {
+async function fetchClerkUsers(secretKey, timeoutMs) {
   let users = [];
   let offset = 0;
   let limit = 100;
   let totalCount = null;
   do {
     let url = CLERK_USERS_URL + "?limit=" + limit + "&offset=" + offset;
-    let payload = await requestJson(url, secretKey);
+    let payload = await requestJson(url, secretKey, timeoutMs);
     let page = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
     totalCount = typeof payload.total_count === "number" ? payload.total_count : payload.totalCount;
     users = users.concat(page);
@@ -105,8 +110,9 @@ async function getClerkAlertRecipients(now) {
   if (cachedRecipients && currentTime < cacheExpiresAt) return cachedRecipients.slice();
   let secretKey = process.env.CLERK_SECRET_KEY;
   let cacheMs = positiveInteger(process.env.CLERK_ALERT_RECIPIENT_CACHE_MS, DEFAULT_CACHE_MS);
+  let timeoutMs = positiveInteger(process.env.CLERK_ALERT_RECIPIENT_TIMEOUT_MS, DEFAULT_REQUEST_TIMEOUT_MS);
   if (!secretKey) return [];
-  let users = await fetchClerkUsers(secretKey);
+  let users = await fetchClerkUsers(secretKey, timeoutMs);
   cachedRecipients = selectAlertRecipients(users);
   cacheExpiresAt = currentTime + cacheMs;
   return cachedRecipients.slice();
