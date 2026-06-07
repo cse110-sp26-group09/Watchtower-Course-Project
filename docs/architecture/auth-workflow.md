@@ -7,7 +7,7 @@ delegates identity, sessions, sign-in, sign-up, password reset, and sign-out to
 Clerk.
 
 > **Decision record:** see
-> [`docs/adr/ADR-0006-use-clerk-for-dashboard-auth.md`](../adr/ADR-0006-use-clerk-for-dashboard-auth.md).
+> [`docs/adr/ADR-0006.md`](../adr/ADR-0006.md).
 
 ---
 
@@ -15,16 +15,16 @@ Clerk.
 
 ```
 Landing Page (public)
-   src/prototype_3/Landing-Page/index.html
+   src/frontend/landing/index.html
         │  "Get Started" / Login
         ▼
 Login / Signup (our shell + Clerk component)
-   src/prototype_3/Log-In-Page/login.html   → #clerk-sign-in
-   src/prototype_3/Log-In-Page/signup.html  → #clerk-sign-up
+   src/frontend/auth/login.html   → #clerk-sign-in
+   src/frontend/auth/signup.html  → #clerk-sign-up
         │  Clerk authenticates and starts a session
         ▼
 Protected WatchTower UI
-   src/prototype_3/index.html   (guarded by auth-guard.js)
+   src/frontend/dashboard/index.html   (guarded by auth-guard.js)
         │  Logout
         ▼
 Back to Landing Page (public)
@@ -34,12 +34,12 @@ Back to Landing Page (public)
 
 ## Page-by-page responsibilities
 
-### 1. Public landing page — `src/prototype_3/Landing-Page/index.html`
+### 1. Public landing page — `src/frontend/landing/index.html`
 - Fully public. No authentication is required or attempted here.
 - The "Get Started" / primary CTA routes to the login page (`/login` when served
-  by the Node server, or `../Log-In-Page/login.html` in the static/file flow).
+  by the Node server, or `../auth/login.html` in the static/file flow).
 
-### 2. Login / signup pages — `src/prototype_3/Log-In-Page/`
+### 2. Login / signup pages — `src/frontend/auth/`
 - We keep our own branding, header, and card layout (the "UI shell").
 - The previous **fake** password forms have been removed. They never performed
   real authentication and never sent passwords anywhere — they only did
@@ -49,24 +49,24 @@ Back to Landing Page (public)
 - Load order on both pages:
   1. `./clerk-config.js` — exposes `window.CLERK_PUBLISHABLE_KEY`.
   2. `./auth.js` — loads Clerk, mounts the component, handles redirects.
-- After a successful sign-in or sign-up, Clerk redirects to `../index.html`
-  (the Prototype 3 dashboard).
+- After a successful sign-in or sign-up, Clerk redirects to the dashboard
+  (`/dashboard` when served by the Node server).
 - If an already-signed-in user opens login/signup, `auth.js` redirects them
   straight to the dashboard.
 - `forgot-password.html` no longer pretends to send reset emails; it points
   users to the "Forgot password?" link inside Clerk's sign-in box.
 
-### 3. Protected dashboard — `src/prototype_3/index.html`
+### 3. Protected dashboard — `src/frontend/dashboard/index.html`
 - Load order:
-  1. `./Log-In-Page/clerk-config.js` — publishable key.
-  2. `./auth-guard.js` — client-side route guard (in `<head>`).
-  3. `app.js` — the existing dashboard logic (unchanged).
+  1. `/login/clerk-config.js` — publishable key (generated into `src/frontend/auth`).
+  2. `/dashboard/auth-guard.js` — client-side route guard (in `<head>`).
+  3. `/dashboard/app.js` — the existing dashboard logic (unchanged).
 - `auth-guard.js` hides the dashboard shell until Clerk confirms a session.
   - **Signed in:** the shell is revealed, the user label
     (`#auth-user-label`) is populated, logout controls are wired, and the guard
     upserts the user into Supabase via `POST /api/users/sync` (see below).
   - **Signed out / Clerk fails to load / key missing:** the guard *fails
-    closed* and redirects to `./Log-In-Page/login.html`.
+    closed* and redirects to `/login/`.
 - All dashboard data fetches in `app.js` (`/api/events`, `/api/stats`,
   `/api/developer/stream`, `/api/developer/insights`, `/api/developer/query`)
   send an `X-Clerk-User-Id` header so the backend returns only that user's data.
@@ -180,8 +180,7 @@ valid token is rejected with 401.
 ## Logout behavior
 - A `#logout-button` lives in the dashboard topbar; the existing Settings →
   "Sign out" button (`#sign-out-button`) is also wired.
-- Both call `Clerk.signOut()` and then redirect to the public landing page
-  (`./Landing-Page/index.html`).
+- Both call `Clerk.signOut()` and then redirect to the login page (`/login/`).
 
 ---
 
@@ -242,7 +241,7 @@ These are **two different authentication problems** and must not be conflated:
 | Requires a user login? | Yes | **No** — must work headless/server-side |
 | Implemented today | Clerk (this work) | Not yet — ingestion is currently open |
 
-The browser SDK (`src/prototype_3/sdk/watchtower.js`) and the ingestion endpoint
+The browser SDK (`src/sdk/watchtower.js`) and the ingestion endpoint
 should **never** require a normal Clerk user login. A separate app/project key
 or signed token is the correct future mechanism so that monitored apps can send
 telemetry without a human signing in.
@@ -251,7 +250,7 @@ telemetry without a human signing in.
 
 ## Configuration & secrets
 - The only Clerk value in the frontend is the **publishable key**, written at
-  runtime to `src/prototype_3/Log-In-Page/clerk-config.js` by
+  runtime to `src/frontend/auth/clerk-config.js` by
   `npm run config:clerk` from the `CLERK_PUBLISHABLE_KEY` environment variable
   (see `.env.example`).
 - `clerk-config.js` is **gitignored** — set the key in a local `.env` file or in
@@ -260,27 +259,27 @@ telemetry without a human signing in.
   keys belong only on a backend, in environment variables, when backend
   verification is added later.
 
-### Running via the Prototype 3 Node server
+### Running via the WatchTower Node server
 ```bash
-npm run start:prototype3   # runs config:clerk, then boots the prototype_3 server
+npm start   # runs config:clerk, then boots src/backend/server.js
 ```
-The Prototype 3 server serves the dashboard at `/` and `/dashboard`, the login
-shell at `/login`, and the landing page at `/landing/`. Because the Landing-Page
-and Log-In-Page now live inside `src/prototype_3/`, the server resolves all three
-from the prototype_3 directory, so the full Clerk flow works end to end through
-the Node server (not just the static file flow).
+The backend serves the dashboard at `/dashboard`, the login shell at `/login/`,
+and the landing page at `/landing/`. The landing, auth, and dashboard pages live
+under `src/frontend/` and the server resolves all three from there, so the full
+Clerk flow works end to end through the Node server (not just the static file
+flow).
 
 ---
 
 ## Manual verification steps
 
-1. Set `CLERK_PUBLISHABLE_KEY` in `.env`, then run `npm run start:prototype3`.
+1. Set `CLERK_PUBLISHABLE_KEY` in `.env`, then run `npm start`.
 2. Open `http://localhost:3000/landing/`.
 3. Click **Get Started / Login**.
 4. Confirm the login page loads at `/login`.
 5. Confirm the Clerk **sign-in** UI appears inside the card.
 6. Sign in through Clerk.
-7. Confirm redirect to the Prototype 3 dashboard (`/` or `/index.html`).
+7. Confirm redirect to the dashboard (`/dashboard`).
 8. Refresh the dashboard while signed in.
 9. Confirm you stay on the WatchTower UI (no bounce to login) and the user
    label shows your email/username.

@@ -10,7 +10,7 @@ const {
   rowToEvent,
   createMemoryEventStore,
   createSupabaseEventStore,
-} = require("../../src/prototype_3/server/event-store");
+} = require("../../src/backend/event-store");
 
 function createFakeSupabaseClient(initialRows) {
   const rows = (initialRows || []).slice();

@@ -19,7 +19,7 @@ const {
   queryEventsWithFilters,
   getRecentEvents,
   computeMaxConcurrentUsers,
-} = require("../../src/prototype_3/server/server-helpers");
+} = require("../../src/backend/server-helpers");
 
 describe("isValidEvent (Prototype 3)", () => {
   test("accepts objects with a string type", () => {

@@ -14,20 +14,28 @@ GitHub Actions automate testing, building, and deployment tasks to:
 
 ## Current Workflows
 
-### Git CI Workflow
+### `ci.yml` — CI
 
 The primary CI workflow for WatchTower.
 
-**Trigger:** On push to any branch and pull requests
+**Triggers:** push and pull requests targeting `main` (path-filtered to `src/**`,
+`tests/**`, selected `docs/**`, and root config files), plus manual
+`workflow_dispatch`. Runs on Node.js 24.
 
-**Steps:**
-- Install dependencies
-- Run linting (if configured)
-- Run test suite
-- Generate coverage reports
-- Build project
+**Jobs:**
 
-**Status:** *(In development)*
+| Job | What it checks |
+|---|---|
+| Repository Structure Checks | Prints/validates expected repo layout. |
+| HTML Validation | Validates frontend HTML. |
+| CSS Validation | Validates stylesheets. |
+| JavaScript Lint | Lints JS sources. |
+| Unit Tests | `npm run test:unit` (Jest). |
+| End-to-End Tests | `npm run test:e2e` (Playwright); uploads the `playwright-report` artifact. |
+| JSDoc Check | `npm run docs:js` generates API docs without errors. |
+| Dependency Security Audit | Audits dependencies for known vulnerabilities. |
+
+> Update this table if you add, remove, or rename a job in `ci.yml`.
 
 ## Workflow Structure
 

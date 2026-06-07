@@ -3,7 +3,7 @@
 /**
  * WatchTower end-to-end smoke tests for Prototype 3.
  *
- * Targets the server started by `npm start` (src/prototype_3/server/server.js):
+ * Targets the server started by `npm start` (src/backend/server.js):
  *   - Public landing page at /landing/
  *   - Clerk-guarded dashboard at /dashboard
  *   - Monitored ShopDemo at /demo/

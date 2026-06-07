@@ -1,6 +1,6 @@
 "use strict";
 
-const { evaluateErrorThreshold } = require("../../src/prototype_3/server/alert-threshold");
+const { evaluateErrorThreshold } = require("../../src/backend/alert-threshold");
 
 const NOW = Date.parse("2026-06-03T12:00:00.000Z");
 const WINDOW_MS = 300000;

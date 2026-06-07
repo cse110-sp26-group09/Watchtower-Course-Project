@@ -3,7 +3,7 @@
 const {
   buildAlertEmail,
   normalizeRecipients,
-} = require("../../src/prototype_3/server/mailer");
+} = require("../../src/backend/mailer");
 
 describe("Prototype 3 alert mailer helpers", () => {
   test("normalizes recipient arrays and strings", () => {
