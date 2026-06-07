@@ -7,8 +7,6 @@
 ![Backend](https://img.shields.io/badge/backend-Render-46E3B7?logo=render&logoColor=black)
 ![Database](https://img.shields.io/badge/database-Supabase-3ECF8E?logo=supabase&logoColor=white)
 ![Auth](https://img.shields.io/badge/auth-Clerk-6C47FF?logo=clerk&logoColor=white)
-![SDK](https://img.shields.io/badge/sdk-browser%20tracking-orange)
-![Docs](https://img.shields.io/badge/docs-onboarding-blue)
 
 WatchTower is a lightweight observability platform for web applications. A small browser SDK embedded in a monitored app captures JavaScript errors, user interactions, and performance metrics and streams them to a Node.js backend, which persists them to Postgres (Supabase) and renders them in a real-time, per-user dashboard. It is built by CSE 110 Team 09 as a course project, but it is structured and documented to run as a real, deployable product.
 
@@ -229,11 +227,6 @@ WatchTower is the CSE 110 (Spring 2026) Team 09 course project. Roles:
 
 - **Team status video:** [YouTube](https://youtu.be/9Bn4ElbA7Js)
 - **Task tracking:** [Google Sheets](https://docs.google.com/spreadsheets/d/1YbTkdP8IoodHzIj99lgunic5pRqk6BzqM248CaaaCRw/)
-
-## Handoff / Private Video
-
-This repository is prepared for CSE 110 project handoff. The private handoff video should be uploaded as an unlisted YouTube video and linked here before submission.
-
 - **Private handoff video:** TODO - add unlisted YouTube link
 - **Onboarding guide:** [docs/onboard.md](docs/onboard.md)
 - **Documentation index:** [docs/README.md](docs/README.md)
