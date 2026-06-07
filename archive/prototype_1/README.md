@@ -68,7 +68,7 @@ Events are persisted to a single SQLite file via
 - **Path:** `data/prototype_1/watchtower.sqlite` (created automatically).
 - **Override:** `WATCHTOWER_P1_DB=/abs/path/file.sqlite`.
 - **Schema and verification flow:** see
-  [`docs/architecture/event-storage.md`](../../docs/architecture/event-storage.md).
+  [`docs/archive/event-storage.md`](../../docs/archive/event-storage.md).
 
 The legacy SQLite spike at `server/server-1.1.js` and the legacy
 `app.db` file are kept in the repo for reference and are **not** used

@@ -1,27 +1,76 @@
 # Sprint Retrospective 5
 
 
+> _The reflection sections below were filled in from the Sprint 5 decision log
+> and completed issues (see below), plus the carry-over action items from
+> Retrospectives 3 and 4. Sprint 5 was the final build sprint that turned the
+> MVP into a hosted, authenticated, persistent product._
+
 ### What Went Well ✨
-- Positive aspects of the sprint
-- Successes and achievements
-- Effective processes or decisions
-- Great team moments or collaboration
+- **Production stack came together:** The prototype became a real hosted product
+  this sprint — Clerk authentication (#95), a SQLite→PostgreSQL migration on
+  Supabase (#96, #119), Render hosting, and Beacon + Navigation Timing capture
+  (#97). The new-technology ADRs were updated to match (#108).
+- **Email alerting shipped:** After researching a custom sending domain and DNS
+  setup (#109), we implemented Gmail + Nodemailer OAuth2 threshold alerts so
+  WatchTower emails the team when error counts cross a threshold (#114, #118).
+- **Real per-user data:** The dashboard now shows the signed-in user's actual
+  profile instead of a hardcoded name (#117), and user records are created/synced
+  into Supabase on sign-in (#119).
+- **Dashboard credibility pass:** Health-status logic with a reliability
+  explanation (#122), threshold-based status colors for errors/latency/health
+  (#126), a Critical/Warning/Info severity legend and correct active-issue counts
+  (#125), fixed graphs and Y-axis labels (#124), and the "Top 3" → "Latest
+  Issues" rename to match real behavior (#123).
+- **Landing page leveled up:** Centered hero/layout (#130, #131), a product
+  preview section with a dashboard mockup (#132), and a real Privacy Policy page
+  describing tracked data (#133).
+- **Polish + responsiveness:** Removed AI-looking emojis and tightened copy
+  across the dashboard (#127), and validated responsive behavior across desktop,
+  tablet, and phone viewports (#128).
 
 ### What Didn't Go Well 🚧
-- Challenges encountered
-- Blockers or frustrations
-- Process breakdowns
-- Incomplete work or scope issues
+- **Shared display-name bug (privacy/correctness):** The profile name was stored
+  under one generic `localStorage` key shared by every user on a browser, so
+  user A's name leaked to user B, and custom names were overwritten on each login
+  (#149, #129). A real multi-user bug caught late.
+- **Misleading dev widgets:** Several developer-dashboard widgets (most-clicked
+  features, severity/diagnostic controls, custom activity-over-time) were static,
+  broken, or showing placeholder data and needed backend/data fixes (#120).
+- **Documentation drift:** A lot of the docs no longer reflected the current
+  product/architecture and required a dedicated catch-up pass (#143) — the same
+  cadence problem flagged in Retrospective 3.
+- **Dependency-heavy finish:** Landing Clerk, Supabase, Render, and Gmail
+  alerting all in one sprint meant juggling several external services, API keys,
+  and `.env`/secret handling under code-freeze pressure.
 
 ### Action Items 🎯
-| Specific Improvement | Owner  | Success Metric / Connection |
+| Specific Improvement | Owner | Success Metric / Connection |
 | :--- | :--- | :--- |
+| Key per-user UI state by user identity, not a shared browser key | Frontend + Backend | Display name no longer leaks/overwrites across users on the same browser (#149, #129) |
+| Make dev-dashboard widgets show real tracked data (or remove if not backed by data) | Backend | Most-clicked / severity / activity widgets are accurate, not static or misleading (#120) |
+| Treat docs as part of Definition of Done | Whole team | Docs/ADRs reflect the shipped product; no end-of-project doc catch-up needed (#143) |
+| Document secrets/`.env` and deployment steps for handoff | Aditya / Backend | A new maintainer can configure Clerk/Supabase/Render/Gmail from docs alone |
+
+> Owners are attributed where the standups/decision log make them clear (auth +
+> database: Aditya and Jason; Beacon/Navigation: Daniel and Woosik); team-level
+> owners are used where specific assignment is not explicitly documented.
 
 ### Lessons Learned 💡
-- Key takeaways for the team
-- Technical insights or discoveries
-- Process improvements to try
-- Dependencies or constraints to remember
+- **Managed services let a small team ship a production stack fast:** Clerk,
+  Supabase, Render, and Gmail/Nodemailer let us deliver auth, persistence,
+  hosting, and alerting in a single sprint — reinforcing Retrospective 4's point
+  that dependencies accelerate delivery but add secret-management and
+  service-dependency risk.
+- **Multi-user assumptions matter even on the client:** Browser-local state must
+  be scoped to the authenticated user; a single shared key is a correctness *and*
+  privacy bug.
+- **Dashboards need meaning, not just numbers:** Threshold-based colors, severity
+  legends, and labeled axes are what make telemetry readable and trustworthy.
+- **Beacon + Navigation Timing beat ad-hoc event listeners:** Moving capture onto
+  browser-native APIs improved telemetry reliability and reduced latency overhead.
+- **Documentation is a live habit, not a final task:** Letting docs drift created
+  a large end-of-project cleanup; keeping them current per-PR avoids the debt.
 
 ---
 

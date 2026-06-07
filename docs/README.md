@@ -2,6 +2,10 @@
 
 Welcome to the WatchTower documentation index. This folder contains all project documentation needed to understand, develop, and maintain the WatchTower observability platform.
 
+> **New here?** Start with the [Onboarding Guide](onboard.md) for a hands-on
+> quick start, repo tour, and build/test walkthrough, then come back to this
+> index for the deep dives.
+
 ## Purpose
 
 This documentation directory serves as the single source of truth for:
@@ -26,46 +30,50 @@ Define what we're building and for whom.
 - [user-stories.md](product/user-stories.md) – User-centered features and acceptance criteria
 
 ### 📋 Planning ([planning/](planning/))
-Track progress, manage the backlog, and run sprints effectively.
+Track progress, manage the backlog, and run sprints effectively. See the
+[planning index](planning/README.md) for all sprint docs.
 - [backlog-issues.md](planning/backlog-issues.md) – Prioritized list of features and bug fixes
 - [sprint-1-planning.md](planning/sprint-1-planning.md) – Sprint 1 goals, tasks, and role assignments
 - [sprint-2-planning.md](planning/sprint-2-planning.md) – Sprint 2 goals, tasks, and role assignments
-- [retrospectives/](planning/retrospectives/) – Lessons learned and improvements from each sprint
+- [sprint-3-planning.md](planning/sprint-3-planning.md) – Sprint 3 summary (reconstructed from notes)
+- [sprint-4-planning.md](planning/sprint-4-planning.md) – Sprint 4 summary (reconstructed from notes)
+- [retrospectives/](planning/retrospectives/) – Lessons learned and improvements from each sprint (1–5)
 
 ### 🔨 Process ([process/](process/))
 Establish and document how we work together.
 - [workflow.md](process/workflow.md) – Daily development workflow and best practices
 - [git-workflow.md](process/git-workflow.md) – Branching strategy and commit conventions
 - [genai-usage.md](process/genai-usage.md) – Guidelines for using generative AI tools responsibly
-- [jsdoc-standards.md](process/jsdoc-standards.md) - Guidelines for using JSdocs 
+- [jsdoc-standards.md](process/jsdoc-standards.md) - Guidelines for using JSdocs
+- [code-review-feedback.md](process/code-review-feedback.md) – External team code-review feedback (preserved for grading)
 
 ### 🔍 Research ([research/](research/))
-Document discovery, experimentation, and design thinking.
+Document discovery, experimentation, and design thinking. See the
+[research index](research/README.md).
 - Team research findings and competitive analysis
-- Technology exploration and proof-of-concept learnings
+- Technology exploration and proof-of-concept learnings (these are research notes, not active implementation)
 
 ### 🎨 Design ([design/](design/))
-Visual and interactive design specifications.
-- [Wireframe/](design/Wireframe/) – UI mockups and user interface layouts
+Visual and interactive design specifications. See the [design index](design/README.md).
+- [Wireframe.md](design/Wireframe.md) – UI mockups and user interface layouts
+- [User-Interface-Decisions.md](design/User-Interface-Decisions.md) – UI/UX decisions
+- Images and mockups live in [design/media/](design/media/)
 
-### 📸 Media ([media/](media/))
-Images, diagrams, and visual assets for documentation and project materials.
-- Project logos, screenshots, and referenced images
-
-### 🏗️ Architecture ([Architecture/](Architecture/))
-Record major technical decisions and trade-offs.
+### 🏗️ Architecture ([architecture/](architecture/))
+Record major technical decisions and trade-offs. See the
+[architecture index](architecture/README.md).
 - [Architectural Decision Records (ADRs)](adr/) – Documented reasoning for system design choices
 - [system-overview.md](architecture/system-overview.md) - overview of the system architecture
-- [api-contract-v1.md](architecture/api-contract-v1.md) - old documented usage of APIs
-- [event-schema-v1.md](architecture/event-schema-v1.md) - old documented event schemas
-- [api-contract-v2.md](architecture/api-contract-v2.md) - current documented usage of APIs
-- [event-schema-v2.md](architecture/event-schema-v2.md) - current documented event schemas
+- [api-contract-v2.md](architecture/api-contract-v2.md) - **current** documented usage of APIs
+- [event-schema-v2.md](architecture/event-schema-v2.md) - **current** documented event schema
+- [auth-workflow.md](architecture/auth-workflow.md) - Clerk auth + dashboard data ownership flow
+- [api-contract-v1.md](architecture/api-contract-v1.md) / [event-schema-v1.md](architecture/event-schema-v1.md) - historical (superseded)
 - [external-test-app-plan.md](architecture/external-test-app-plan.md) - Plan for using external app for testing
 
 ### 💬 Meetings ([meetings/](meetings/))
 Preserve team discussions and decisions.
 - [decision-log.md](meetings/decision-log.md) – Key decisions and their rationale
-- [Sprint/](meetings/Sprint/README.md) – Daily standup summaries and blockers
+- [Sprint/](meetings/Sprint/) – Daily standup summaries and blockers by sprint
 
 ---
 
@@ -73,6 +81,7 @@ Preserve team discussions and decisions.
 
 | Document | Purpose |
 |----------|---------|
+| [Onboarding Guide](onboard.md) | Hands-on quick start, repo tour, build/test walkthrough |
 | [Project Brief](product/project-brief.md) | Get up to speed on what WatchTower is |
 | [Requirements](product/requirements.md) | Understand detailed feature specifications |
 | [Sprint Planning](planning/sprint-1-planning.md) | See current sprint goals and assignments |
@@ -98,7 +107,7 @@ To keep our documentation useful and maintainable, please follow these standards
 ### 3. **Link Related Work**
    - Reference GitHub issues: `[#123](https://github.com/org/repo/issues/123)`
    - Reference pull requests: `[PR #456](https://github.com/org/repo/pull/456)`
-   - Cross-link related documents using relative paths: `[See Product Brief](../product/project-brief.md)`
+   - Cross-link related documents using relative paths: `[See Product Brief](product/project-brief.md)`
 
 ### 4. **Document Major Decisions**
    - Create an ADR in [adr/](adr/) for significant technical or product decisions
@@ -106,7 +115,7 @@ To keep our documentation useful and maintainable, please follow these standards
    - Use ADRs to build institutional knowledge
 
 ### 5. **Organize Meeting Notes**
-   - Add new entries to existing meeting docs (e.g., `standups.md`, `decision-log.md`)
+   - Add new standups under [meetings/Sprint/](meetings/Sprint/) and key decisions to [decision-log.md](meetings/decision-log.md)
    - Include date, attendees, and key outcomes
    - Link to related GitHub issues or PRs for context
 
@@ -128,7 +137,7 @@ To keep our documentation useful and maintainable, please follow these standards
 | Completing a sprint | [Retrospectives](planning/retrospectives/), backlog |
 | Discovering something new | [Research folder](research/) or relevant document |
 | Changing the workflow | [Process docs](process/) |
-| Blocked or discovering an issue | [Standups](meetings/standups.md) |
+| Blocked or discovering an issue | [Standups](meetings/Sprint/) |
 
 ---
 
@@ -158,7 +167,7 @@ Every team member contributes to documentation as part of their work:
 
 ## How to Navigate
 
-- **New to WatchTower?** Start with [project-brief.md](product/project-brief.md)
+- **New to WatchTower?** Start with the [Onboarding Guide](onboard.md), then [project-brief.md](product/project-brief.md)
 - **Joining the team?** Read the [workflow guide](process/workflow.md) and [git workflow](process/git-workflow.md)
 - **Starting a task?** Check [requirements](product/requirements.md) and [sprint planning](planning/sprint-1-planning.md)
 - **Making a design decision?** Review [decision log](meetings/decision-log.md) and relevant ADRs

@@ -42,12 +42,15 @@ Each retrospective should capture:
 - Process improvements to try
 - Dependencies or constraints to remember
 
-## Retrospective Schedule
+## Retrospectives
 
-| Sprint | Target Date | Status |
-|--------|-------------|--------|
-| Sprint 1 | *(To be scheduled)* | *(Pending)* |
-| Sprint 2 | *(To be scheduled)* | *(Pending)* |
+| Sprint | Document | Status |
+|--------|----------|--------|
+| Sprint 1 | [Retrospective 1.md](Retrospective%201.md) | Complete |
+| Sprint 2 | [Retrospective 2.md](Retrospective%202.md) | Complete |
+| Sprint 3 | [Retrospective 3.md](Retrospective%203.md) | Complete |
+| Sprint 4 | [Retrospective 4.md](Retrospective%204.md) | Complete |
+| Sprint 5 | [Retrospective 5.md](Retrospective%205.md) | Complete (reflection sections reconstructed from the Sprint 5 decision log) |
 
 ## Guidelines
 
@@ -79,12 +82,9 @@ Each retrospective should capture:
 3. Reference action items in the next sprint planning
 4. Track progress on improvements
 
-## Current Retrospectives
-
-*(Will be populated as sprints complete)*
-
 ## Related Documentation
 
+- [Planning Index](../README.md)
 - [Sprint Planning](../sprint-1-planning.md)
 - [Decision Log](../../meetings/decision-log.md)
 - [Meeting Notes](../../meetings/)

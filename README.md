@@ -1,66 +1,148 @@
 # WatchTower
 
-A lightweight observability platform that captures and visualizes real user events, JavaScript errors, performance metrics, and user interactions through an intuitive real-time dashboard.
+[![CI](https://github.com/cse110-sp26-group09/Watchtower-Course-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/cse110-sp26-group09/Watchtower-Course-Project/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/node-24.x-339933?logo=node.js&logoColor=white)
+![Playwright](https://img.shields.io/badge/e2e-Playwright-45ba4b?logo=playwright&logoColor=white)
+![Jest](https://img.shields.io/badge/unit-Jest-C21325?logo=jest&logoColor=white)
+![Backend](https://img.shields.io/badge/backend-Render-46E3B7?logo=render&logoColor=black)
+![Database](https://img.shields.io/badge/database-Supabase-3ECF8E?logo=supabase&logoColor=white)
+![Auth](https://img.shields.io/badge/auth-Clerk-6C47FF?logo=clerk&logoColor=white)
+![SDK](https://img.shields.io/badge/sdk-browser%20tracking-orange)
+![Docs](https://img.shields.io/badge/docs-onboarding-blue)
 
-## About WatchTower
+WatchTower is a lightweight observability platform for web applications. A small browser SDK embedded in a monitored app captures JavaScript errors, user interactions, and performance metrics and streams them to a Node.js backend, which persists them to Postgres (Supabase) and renders them in a real-time, per-user dashboard. It is built by CSE 110 Team 09 as a course project, but it is structured and documented to run as a real, deployable product.
 
-WatchTower helps development teams understand what's happening in production. By capturing user events, tracking errors, and monitoring performance, teams gain visibility into application health and user experience in real time.
+## Overview
 
-### Key Features
+Modern web teams need to know what is actually happening in production: which errors users hit, how fast pages load, which routes are slow, and what users do. WatchTower provides that visibility without a heavy agent or vendor lock-in. Drop the SDK into any web page, point it at a WatchTower backend, and the dashboard fills with live error feeds, latency charts, active-user counts, and deploy-version breakdowns. Dashboard access is authenticated with Clerk and data is scoped per user.
 
-- **JavaScript Error Tracking** – Automatically capture and categorize unhandled errors
-- **Performance Monitoring** – Track page load times and latency per route
-- **User Interaction Capture** – Record user actions and session events
-- **Real-Time Dashboard** – View error feeds, latency charts, and active user counts
-- **Version Tracking** – Tie errors to specific deployments for faster debugging
-- **Event Storage & Filtering** – Query and analyze historical events
+## Project Links
 
-## Quick Start
+- **Live WatchTower backend (Render):** https://watchtower-course-project-g8dv.onrender.com
+- **External GitHub Pages test app:** https://cse110-sp26-group09.github.io/Watchtower-test-app/
+- **Team status video:** [YouTube](https://youtu.be/9Bn4ElbA7Js)
+- **Private handoff video:** TODO - add unlisted YouTube link before submission
+- **Documentation index:** [docs/README.md](docs/README.md)
+- **Onboarding guide:** [docs/onboard.md](docs/onboard.md)
 
-`npm start`
+> Demo GIF/Screenshot: TODO - add short GIF or screenshot before final submission if available.
 
-### Running Prototype 3 (Current)
+## Key Features
 
-**Prerequisites:** Node.js 18 or later, npm.
+- **JavaScript error tracking** – automatically capture unhandled errors and group them by signature, release, and affected sessions.
+- **Event & user-interaction tracking** – record clicks, custom events, route transitions, and session activity.
+- **Performance & latency monitoring** – page-load timing, Navigation Timing breakdowns, web-vitals-style metrics, and p95 latency per route.
+- **Deploy / version visibility** – tie errors and metrics to specific deploy versions for faster regression hunting.
+- **User-scoped dashboard data** – every dashboard read is scoped to the signed-in Clerk user, so users only see their own telemetry.
+- **Supabase / Postgres persistence** – events and users are stored in Postgres; the server falls back to in-memory storage when no database is configured.
+- **Email alerts** – optional threshold-based alerting. The current implementation was validated locally; production alert routing is documented as future work.
+- **SDK integration** – a dependency-free browser SDK that any external monitored app can embed.
 
-**1. Clone the repository**
+## Architecture
 
-```bash
-git clone https://github.com/cse110-sp26-group09/Watchtower-Course-Project.git
-cd Watchtower-Course-Project
+```
+External monitored app
+   │  (embeds src/sdk/watchtower.js)
+   ▼
+WatchTower SDK  ──POST /api/events──►  Node.js backend (Render)
+                                          │  src/backend/server.js
+                                          ▼
+                                 Supabase / Postgres
+                                          │
+                                          ▼
+                          WatchTower dashboard (Clerk-authenticated)
 ```
 
-**2. Install dependencies**
+- **Clerk** handles all dashboard authentication (login, signup, sessions, sign-out). The backend verifies Clerk session JWTs against Clerk's public JWKS; WatchTower stores no passwords.
+- **Supabase / Postgres** is the application database (events + users). With no Supabase credentials configured, the server runs fully in-memory for local development.
+- **Render** hosts the Node.js backend in production.
+- **GitHub Pages** hosts a separate [external test app](https://cse110-sp26-group09.github.io/Watchtower-test-app/) that embeds the SDK and sends real cross-origin telemetry to the Render backend. GitHub Pages serves only that static demo — it does **not** run the backend or database.
+- **`DEFAULT_INGEST_OWNER_USER_ID`** is a *temporary* prototype mapping: because the external test app has no Clerk session, its otherwise-anonymous events are attributed to one demo owner so they appear on a dashboard. The long-term replacement is a **per-app/project key** ingestion model so each monitored app maps to the correct owner without a human login.
 
-```bash
-npm install
+See [`docs/architecture/auth-workflow.md`](docs/architecture/auth-workflow.md) for the full authentication and data-scoping flow.
+
+## Repository Structure
+
+```
+.github/        # Issue templates, Dependabot, and CI workflows
+archive/        # Historical Prototype 1 & 2 code (kept for project history)
+docs/           # Product, architecture, ADRs, process, research, sprint docs
+scripts/        # Build/startup helpers (e.g. Clerk config generation)
+src/
+├── backend/    # Node.js HTTP server, event store, mailer, alert logic
+├── frontend/   # dashboard/, landing/, auth/, demo/, dashboard-demo/, assets/
+├── sdk/         # Browser SDK (watchtower.js)
+└── shared/      # Shared utilities (event-utils.js)
+tests/          # unit/ (Jest) and e2e/ (Playwright)
 ```
 
-**3. Set up environment variables**
+See [`src/README.md`](src/README.md) for the source layout and [`docs/README.md`](docs/README.md) for the documentation index.
 
-```bash
-cp .env.example .env
-```
+## Getting Started
 
-Open `.env` and fill in the required values:
+**Prerequisites:** Node.js 18 or later and npm.
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/cse110-sp26-group09/Watchtower-Course-Project.git
+   cd Watchtower-Course-Project
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Create your environment file**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Configure Clerk / Supabase / alerts as needed** (all optional for a basic local run — see [Environment Variables](#environment-variables)). Without Supabase the server uses in-memory storage; without a real Clerk key it runs in prototype/header-trust mode so tests and local development work.
+
+5. **Start the server**
+
+   ```bash
+   npm start
+   ```
+
+   The `start` script runs `npm run config:clerk` to generate `src/frontend/auth/clerk-config.js` from `CLERK_PUBLISHABLE_KEY`, then boots `src/backend/server.js`.
+
+6. **Open the app**
+
+   | URL | Description |
+   |---|---|
+   | `http://localhost:3000/` | Redirects to the landing page |
+   | `http://localhost:3000/landing/` | Public landing page |
+   | `http://localhost:3000/dashboard` | Dashboard (requires Clerk sign-in) |
+   | `http://localhost:3000/demo/` | Monitored demo app that sends events |
+   | `http://localhost:3000/dashboard-demo/` | Static dashboard preview (no sign-in) |
+
+## Environment Variables
+
+All configuration is via environment variables. Copy [`.env.example`](.env.example) to `.env` and fill in the values you need — it documents every variable with comments. Highlights:
 
 | Variable | Required | Description |
 |---|---|---|
-| `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key (`pk_test_...`). Found in the Clerk dashboard under Configure > API Keys. |
-| `SUPABASE_URL` | For persistence | Your Supabase project URL. |
-| `SUPABASE_SERVICE_ROLE_KEY` | For persistence | Supabase service role key. |
-| `SUPABASE_P3_EVENTS_TABLE` | No | Events table name. Defaults to `prototype3_events`. |
-| `ACTIVE_USER_WINDOW_MS` | No | Active session window in ms. Defaults to `30000`. |
-| `PORT` | No | Server port. Defaults to `3000`. |
+| `CLERK_PUBLISHABLE_KEY` | For real auth | Clerk publishable key (`pk_test_...` / `pk_live_...`). |
+| `SUPABASE_URL` | For persistence | Supabase project URL. |
+| `SUPABASE_SERVICE_ROLE_KEY` | For persistence | Supabase service-role key. |
+| `SUPABASE_ANON_KEY` | Optional | Supabase anon key (fallback when no service-role key). |
+| `SUPABASE_P3_EVENTS_TABLE` | No | Events table name (default `prototype3_events`). |
+| `DEFAULT_INGEST_OWNER_USER_ID` | No | **Temporary** demo-only owner for unauthenticated external events. Replace with project/app keys for production. |
+| `GMAIL_ADDRESS` / `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` / `GMAIL_REFRESH_TOKEN` | For alerts | Gmail OAuth credentials for threshold alert emails. |
+| `PORT` | No | Server port (Render sets this automatically; default `3000`). |
 
-See `.env.example` for all optional variables including Gmail alert settings and CORS.
+> Never commit `.env` or a generated `clerk-config.js` containing a real key. Only `.env.example` and `clerk-config.example.js` carry placeholders.
 
-**4. Set up the database (Supabase only)**
+### Database setup (Supabase only)
 
-If using Supabase, run these SQL statements once in the Supabase SQL editor:
+If using Supabase, run the SQL in [`docs/architecture/auth-workflow.md`](docs/architecture/auth-workflow.md) (or the snippet below) once in the Supabase SQL editor to create the `prototype3_events` and `app_users` tables and grant the service role access:
 
 ```sql
--- Events table
 create table if not exists public.prototype3_events (
   id text primary key,
   type text not null,
@@ -76,14 +158,9 @@ create table if not exists public.prototype3_events (
   data jsonb default '{}'::jsonb,
   received_at timestamptz not null
 );
-
 create index if not exists idx_prototype3_events_type on public.prototype3_events(type);
-create index if not exists idx_prototype3_events_received_at on public.prototype3_events(received_at);
+create index if not exists idx_prototype3_events_user_received_at on public.prototype3_events(user_id, received_at);
 
-grant usage on schema public to service_role;
-grant select, insert, update, delete on public.prototype3_events to service_role;
-
--- Users table
 create table if not exists public.app_users (
   clerk_user_id text primary key,
   email text not null default '',
@@ -92,139 +169,89 @@ create table if not exists public.app_users (
   last_seen_at timestamptz not null
 );
 
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.prototype3_events to service_role;
 grant select, insert, update, delete on public.app_users to service_role;
 ```
 
-If the `app_users` table already exists without the `timezone` column, run this migration:
-
-```sql
-alter table public.app_users
-  add column if not exists timezone text not null default '';
-```
-
-**5. Start the server**
+## Running Tests
 
 ```bash
-npm run start:prototype3
+npm run test:unit   # Jest unit tests for src/backend pure modules (no server needed)
+npm run test:e2e    # Playwright end-to-end tests (start the server first; see below)
+npm run docs:js     # Generate JSDoc API docs into docs/api/ (gitignored)
 ```
 
-The start script automatically generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` before launching.
+The end-to-end tests target a running server. Start it in one terminal (`npm start`) and run `npm run test:e2e` in another, or set `BASE_URL` to point at a different host. CI starts the server in the background automatically — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which also runs HTML/CSS/JS validation and a dependency audit. More detail in [`tests/README.md`](tests/README.md).
 
-**6. Open in the browser**
+## Deployment
 
-| URL | Description |
-|---|---|
-| `http://localhost:3000/` | Main dashboard (requires Clerk sign-in) |
-| `http://localhost:3000/demo` | Demo app that sends events to the dashboard |
-| `http://localhost:3000/dashboard-demo` | Static dashboard demo (no sign-in required) |
+- **Backend (Render):** the Render service runs `npm start`, which generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` and boots `src/backend/server.js`. Set `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` variables, and any alert/`DEFAULT_INGEST_OWNER_USER_ID` values under Render → Environment.
+- **Database (Supabase):** provision the `prototype3_events` and `app_users` tables (see above). The backend uses the service-role key server-side only.
+- **External test app (GitHub Pages):** a static page embeds the SDK pointed at the Render `/api/events` endpoint. GitHub Pages serves static files only and runs neither the backend nor the database.
+- **Clerk:** add `CLERK_PUBLISHABLE_KEY` to the backend environment; the publishable key is the only Clerk value exposed to the browser.
 
-> Without Supabase credentials the server runs with in-memory storage. Events are lost on restart but everything else works for local development.
+## Documentation
 
-### For Documentation & Project Info
-- **Project Overview** - See [Documentation](docs/README.md)
-- **Requirements** - See [Requirements](docs/product/requirements.md)
-- **Sprint Planning** - See [Sprint 1 Planning](docs/planning/sprint-1-planning.md)
-- **Security Policy** - See [Security Policy](SECURITY.md)
+Start at the documentation index: [`docs/README.md`](docs/README.md).
 
-## Project Structure
+- **Architecture:** [`docs/architecture/`](docs/architecture/) (system overview, API contracts, event schemas, auth workflow)
+- **Decisions:** [`docs/adr/`](docs/adr/) (Architecture Decision Records)
+- **Process & onboarding:** [`docs/process/`](docs/process/) (workflow, git workflow, JSDoc standards, [code-review feedback](docs/process/code-review-feedback.md))
+- **Product & planning:** [`docs/product/`](docs/product/), [`docs/planning/`](docs/planning/) (sprint plans + retrospectives)
+- **Generated API docs:** run `npm run docs:js` to produce `docs/api/` (gitignored)
+- **Security policy:** [`SECURITY.md`](SECURITY.md)
 
-```
-docs/
-├── README.md                    # Documentation index (updated)
-├── architecture/                # System design, schemas, contracts
-│   ├── README.md
-│   ├── system-overview.md       # Technology stack and dependencies
-│   ├── auth-workflow.md         # Clerk authentication flow (Prototype 3)
-│   ├── api-contract-v1.md       # Baseline API contract (add v2 addendum)
-│   ├── event-schema-v1.md       # Baseline event schema (add v2 addendum)
-│   └── external-test-app-plan.md
-├── archive/                         # Place to store old/unaccurate documentation 
-├── adr/                         # Architecture Decision Records (append-only)
-│   ├── README.md
-│   └── ADR-0001..0009.md
-├── product/                     # Product vision and requirements
-│   ├── project-brief.md
-│   ├── mvp.md
-│   ├── requirements.md
-│   └── user-stories.md
-├── planning/                    # Sprint plans and retrospectives
-│   ├── sprint-1-planning.md
-│   ├── sprint-2-planning.md
-│   ├── backlog-issues.md
-│   └── retrospectives/
-├── process/                     # Workflow, standards, planning docs
-│   ├── workflow.md
-│   ├── git-workflow.md
-│   ├── genai-usage.md
-│   ├── jsdoc-standards.md
-│   ├── docs-redundancy-review.md 
-│   ├── future-repo-structure-proposal.md
-│   └── jsdoc-wiki-plan.md
-├── design/                      # Wireframes, UI decisions, media
-│   ├── Wireframe.md
-│   ├── User-Interface-Decisions.md
-│   └── media/
-├── research/                    # Individual research notes
-│   ├── README.md
-│   └── *.md
-├── meetings/                    # Standup and decision records
-│   ├── decision-log.md
-│   ├── Readme.md
-│   └── Sprint/
-├── sprint/                      # Sprint readouts and comparison docs
-│   └── sprint-2-comparison-readout.md
-├── archive/                     # Historical docs moved here after cleanup
-│   ├── event-storage-prototype1.md
-│   ├── tasks-tracking-prototype2.md
-│   ├── legacy-prototype-impact-check.md
-│   └── design-event-schema-v1-duplicate.md
-└── api/                         # Generated JSDoc output (gitignored)
+## Known Limitations / Future Work
 
-```
+- **Temporary demo owner mapping.** `DEFAULT_INGEST_OWNER_USER_ID` hard-maps all unauthenticated external events to one owner. This should be replaced with a multi-tenant **project/app key** ingestion model.
+- **Archived prototypes.** Prototype 1 and 2 remain under `archive/` for history only; they are not part of the active product.
+- **Production hardening.** Further defense-in-depth (e.g. Supabase RLS scoped to the Clerk `sub` claim) is recommended before broad production use.
+- **Alerting.** Alerting is threshold-based and email-only today; richer routing and recipient management are future work.
 
-For a detailed breakdown of the documentation structure, see [docs/README.md](docs/README.md).
+## Team / Course Context
 
-## Working Guidelines
+WatchTower is the CSE 110 (Spring 2026) Team 09 course project. Roles:
 
-We follow these standards to keep our work organized and clear:
+| Role | Member |
+|------|--------|
+| Technical Lead / CI-CD / Architecture | Aditya |
+| Product / Process / Sprint Documentation Lead | Fahad |
+| Frontend Lead | James |
+| UI/UX Lead | Hieu |
+| Instrumentation / Backend Prototype Lead | Daniel |
+| JavaScript Instrumentation Owner | Jason |
+| Data / Backend Logic Owner | Waleed |
+| Documentation / Communication / Requirements Support | Josh |
+| Research / QA / AI Tools Support | Woosik |
+| Frontend Prototype Support | Alex |
+| Frontend Components / Styling Support | Hemendra |
 
-- **Conventional Commits** – Use clear, structured commit messages
-- **Feature Branches** – Create branches for all work
-- **Documentation First** – Update docs as you change code
-- **Code Review** – All changes require review before merging
-- **ADRs for Decisions** – Major decisions documented in [docs/adr/](docs/adr/)
+- **Team status video:** [YouTube](https://youtu.be/9Bn4ElbA7Js)
+- **Task tracking:** [Google Sheets](https://docs.google.com/spreadsheets/d/1YbTkdP8IoodHzIj99lgunic5pRqk6BzqM248CaaaCRw/)
 
-## Team Roles
+## Handoff / Private Video
 
-| Role | Responsibility |
-|------|----------------|
-| **Technical Lead / CI-CD / Architecture** (Aditya) | Repo setup, branch/commit guidelines, GitHub Actions, architecture and technical decisions |
-| **Product / Process / Sprint Documentation Lead** (Fahad) | MVP definition, sprint planning, requirements, sprint tracking, TA communication |
-| **Frontend Lead** (James) | Dashboard frontend structure, UI pages/components, responsive layout, frontend coordination |
-| **UI/UX Lead** (Hieu) | Wireframes, user flow, dashboard design, user-centered design artifacts |
-| **Instrumentation / Backend Prototype Lead** (Daniel) | Error/performance event capture, event schemas, data flow, prototype-to-dashboard integration |
-| **JavaScript Instrumentation Owner** (Jason) | Browser-side error capture, client-side logging prototype, performance tracking, demo page behavior |
-| **Data / Backend Logic Owner** (Waleed) | Data schemas, normalization, storage approach, event flow with Daniel and Jason |
-| **Documentation / Communication / Requirements Support** (Josh) | Research docs, MVP and user story docs, meeting notes, GitHub documentation organization |
-| **Research / QA / AI Tools Support** (Woosik) | Observability and security research, QA checklists, GenAI contribution documentation |
-| **Frontend Prototype Support** (Alex) | Dashboard cards, tables, UI sections, responsiveness and usability testing |
-| **Frontend Components / Styling Support** (Hemendra) | Reusable components, styling consistency, dashboard layout, component documentation |
+This repository is prepared for CSE 110 project handoff. The private handoff video should be uploaded as an unlisted YouTube video and linked here before submission.
 
-See [docs/planning/sprint-1-planning.md](docs/planning/sprint-1-planning.md) for the full team structure and task assignments.
+- **Private handoff video:** TODO - add unlisted YouTube link
+- **Onboarding guide:** [docs/onboard.md](docs/onboard.md)
+- **Documentation index:** [docs/README.md](docs/README.md)
 
-## Resources
+The video should cover:
 
-- **Task Tracking**: [Google Sheets](https://docs.google.com/spreadsheets/d/1YbTkdP8IoodHzIj99lgunic5pRqk6BzqM248CaaaCRw/)
-- **Documentation**: [docs/](docs/README.md)
-- **Decisions & Logs**: [docs/meetings/](docs/meetings/)
-- **Research**: [docs/research/](docs/research/)
-- **Team Status Video** :[Youtube](https://youtu.be/9Bn4ElbA7Js) , [docs/videos](docs\videos\statusvideo1.mp4)
+- Team name and number
+- How to access the repo
+- Repo organization
+- How to run WatchTower
+- A small change demo and build/test process
+- CI/CD pipeline explanation
+- Agile retrospective: what worked, what did not, and what the team learned
+- Future work for the next team
+
 ## Contributing
 
-Before you start work:
-
-1. Review the [workflow guidelines](docs/process/workflow.md)
-2. Check the [git workflow](docs/process/git-workflow.md)
-3. Understand your role and sprint goals in [planning docs](docs/planning/)
-
-See [docs/README.md](docs/README.md) for complete documentation guidance.
+1. Review the [workflow guidelines](docs/process/workflow.md).
+2. Follow the [git workflow](docs/process/git-workflow.md) and Conventional Commits.
+3. Update documentation in the same PR as the code change.
+4. Major decisions get an ADR in [`docs/adr/`](docs/adr/).

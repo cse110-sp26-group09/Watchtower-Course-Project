@@ -1,6 +1,6 @@
 # API Contract v2
 
-**Applies to:** `src/prototype_3`  
+**Applies to:** `src/backend` (active WatchTower source)  
 **Status:** Accepted  
 **Sprint:** 5
 **Supersedes:** [API Contract v1](api-contract-v1.md)

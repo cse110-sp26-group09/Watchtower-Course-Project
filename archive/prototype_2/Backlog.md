@@ -12,7 +12,7 @@ Owners are best-guesses based on the Sprint 2 team table; reassign
 freely as Sprint 3 starts.
 
 Related docs:
-- [Sprint 2 comparison readout](../../docs/sprint/sprint-2-comparison-readout.md)
+- [Prototype comparison rubric](../../docs/process/prototype-comparison-rubric.md)
 - [Shared API contract v1](../../docs/architecture/api-contract-v1.md)
 - [Shared event schema v1](../../docs/architecture/event-schema-v1.md)
 - [Legacy prototype impact check](../../docs/process/legacy-prototype-impact-check.md)

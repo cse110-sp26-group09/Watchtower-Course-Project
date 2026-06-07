@@ -7,8 +7,12 @@ This directory contains the WatchTower unit and end-to-end tests for **Prototype
 ```
 tests/
 ├── README.md
-├── unit/
-│   └── prototype3-server-helpers.test.js # Prototype 3 server pure helpers
+├── unit/                                    # Jest tests for src/backend pure modules
+│   ├── prototype3-server-helpers.test.js    # Ingestion/stream/query helpers
+│   ├── prototype3-event-store.test.js       # Event store normalization & scoping
+│   ├── prototype3-alert-threshold.test.js   # Error-rate threshold evaluation
+│   ├── prototype3-mailer.test.js            # Alert email composition
+│   └── prototype3-clerk-alert-recipients.test.js # Clerk recipient lookup
 └── e2e/
     ├── watchtower.spec.js               # Landing, dashboard, demo, API smoke tests
     └── api-events-filters.spec.js       # /api/events and /api/developer/stream filters
@@ -42,7 +46,7 @@ CI starts the server in the background before running the suite; see `.github/wo
 
 ## What the Unit Tests Verify
 
-`tests/unit/prototype3-server-helpers.test.js` covers the Prototype 3 ingestion and developer-stream helpers in `src/prototype_3/server/server-helpers.js`: event validation, average/percentile math, environment normalization, event-name derivation, incoming-event normalization, stream filter parsing, paginated `queryEventsWithFilters`, recency sorting, and timestamp/clamp utilities.
+`tests/unit/prototype3-server-helpers.test.js` covers the ingestion and developer-stream helpers in `src/backend/server-helpers.js`: event validation, average/percentile math, environment normalization, event-name derivation, incoming-event normalization, stream filter parsing, paginated `queryEventsWithFilters`, recency sorting, and timestamp/clamp utilities.
 
 ## What the E2E Tests Verify
 

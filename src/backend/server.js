@@ -1,0 +1,1440 @@
+/**
+ * WatchTower Prototype 3 - Core Production Infrastructure Server
+ * Orchestrates multi-tenant analytical ingestion profiles, dynamically maps schemas,
+ * and maintains reactive Server-Sent-Events streams.
+ *
+ * @module backend/server
+ */
+
+const { sendAlert } = require("./mailer");
+const { getClerkAlertRecipients } = require("./clerk-alert-recipients");
+const { evaluateErrorThreshold } = require("./alert-threshold");
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const { createRemoteJWKSet, jwtVerify } = require("jose");
+const eventStoreModule = require("./event-store");
+const {
+  isFiniteNumber,
+  isValidEvent,
+  calculateAverage,
+  calculatePercentile,
+  parseTimestamp,
+  safeString,
+  clampNumber,
+  normalizeEnvironment,
+  deriveEventName,
+  deriveIngestionLatency,
+  normalizeStreamFilters,
+  toInspectorEvent,
+  queryEventsWithFilters,
+  getRecentEvents,
+  computeMaxConcurrentUsers,
+} = require("./server-helpers");
+
+const PORT = process.env.PORT || 3000;
+const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
+  ? parseInt(process.env.MAX_EVENTS, 10)
+  : 10000;
+const ACTIVE_USER_WINDOW = Number.isFinite(parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10))
+  ? parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10)
+  : 30000;
+const ERROR_ALERT_THRESHOLD = Number.isFinite(parseInt(process.env.ERROR_ALERT_THRESHOLD, 10))
+  ? parseInt(process.env.ERROR_ALERT_THRESHOLD, 10)
+  : 5;
+const ERROR_ALERT_WINDOW_MS = Number.isFinite(parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10))
+  ? parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10)
+  : 300000;
+const ALERT_COOLDOWN_MS = Number.isFinite(parseInt(process.env.ALERT_COOLDOWN_MS, 10))
+  ? parseInt(process.env.ALERT_COOLDOWN_MS, 10)
+  : 900000;
+// Window for the "active issues" error count. Counted directly against the
+// store (not the capped event feed) so it does not shrink as non-error
+// traffic pushes errors out of the recent-events window. 0 = count all errors.
+const ERROR_WINDOW_MS = Number.isFinite(parseInt(process.env.ERROR_WINDOW_MS, 10))
+  ? parseInt(process.env.ERROR_WINDOW_MS, 10)
+  : 24 * 60 * 60 * 1000;
+const FEATURE_FLAG_DEFINITIONS = [
+  {
+    key: "new-checkout-ui",
+    description: "Swap checkout flow to the modular v2 UI.",
+    rolloutPercent: 35,
+    environments: ["production", "staging", "preview"],
+    ruleSummary: ["Production rules validation.", "Rollout slice matching < 35%."]
+  },
+  {
+    key: "fraud-guard-ml",
+    description: "Attach fraud-score signals to checkout events.",
+    rolloutPercent: 20,
+    environments: ["production", "staging"],
+    ruleSummary: ["Geographic restriction matching applied."]
+  }
+];
+
+const GOVERNANCE_MASKING_RULES = [
+  { field: "email", action: "hash" },
+  { field: "phone", action: "partial-mask" },
+  { field: "token", action: "redact" },
+  { field: "password", action: "drop" }
+];
+
+const sseClients = new Set();
+const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
+let lastErrorAlertSentAt = 0;
+// Manually registered alert recipient (POST /api/alert-recipient). Kept as a
+// first-class recipient source alongside the Clerk-sourced recipients so the
+// dashboard's "register my email" flow keeps working.
+let registeredAlertRecipient = "";
+
+// ─── Clerk session-token verification ─────────────────────────────────────────
+// Production security: instead of trusting the X-Clerk-User-Id header, verify the
+// Clerk session JWT against Clerk's public JWKS and read the user id from the
+// signed `sub` claim. The issuer is the Clerk Frontend API origin, which is
+// base64-encoded inside the publishable key (or set explicitly via env).
+//
+// When no real Clerk instance is configured (placeholder/empty key, e.g. CI and
+// local memory-store runs), verification is disabled and we fall back to trusting
+// the header so the prototype/tests keep working. Set
+// WATCHTOWER_TRUST_USER_HEADER=true to force the header fallback even when a real
+// key is present (useful for header-only API tests).
+const TRUST_USER_HEADER = safeString(process.env.WATCHTOWER_TRUST_USER_HEADER).trim() === "true";
+
+function resolveClerkIssuer() {
+  const explicit = safeString(process.env.CLERK_JWT_ISSUER).trim();
+  if (explicit) {return explicit.replace(/\/+$/, "");}
+  const pk = safeString(process.env.CLERK_PUBLISHABLE_KEY).trim();
+  if (!pk || !/^pk_(test|live)_/.test(pk) || pk.indexOf("REPLACE_ME") !== -1) {return "";}
+  const encoded = pk.replace(/^pk_(test|live)_/, "");
+  try {
+    const host = Buffer.from(encoded, "base64").toString("utf8").replace(/\$+$/, "");
+    return host ? "https://" + host : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+const CLERK_ISSUER = resolveClerkIssuer();
+let clerkJwks = null;
+if (CLERK_ISSUER) {
+  try {
+    clerkJwks = createRemoteJWKSet(new URL(CLERK_ISSUER + "/.well-known/jwks.json"));
+  } catch (error) {
+    console.error("[prototype_3] Could not initialize Clerk JWKS:", error.message);
+  }
+}
+const CLERK_VERIFICATION_ENABLED = Boolean(clerkJwks);
+
+/**
+ * Verify a Clerk session JWT and return its subject (the Clerk user id).
+ * @param {string} token - Raw JWT from the Authorization header.
+ * @returns {Promise<string>} The verified `sub`, or "" if verification fails.
+ */
+async function verifyClerkToken(token) {
+  if (!clerkJwks || !token) {return "";}
+  try {
+    const { payload } = await jwtVerify(token, clerkJwks, { issuer: CLERK_ISSUER });
+    return safeString(payload && payload.sub).trim();
+  } catch (error) {
+    console.warn("[prototype_3] Clerk token verification failed:", error.message);
+    return "";
+  }
+}
+
+const MIME = {
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "application/javascript",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".svg": "image/svg+xml"
+};
+
+function streamAbsoluteFile(res, targetPath) {
+  responseWithMime(res, targetPath);
+  fs.createReadStream(targetPath).pipe(res);
+}
+
+function responseWithMime(res, targetPath) {
+  res.writeHead(200, { "Content-Type": MIME[path.extname(targetPath)] || "application/octet-stream" });
+}
+
+function inferValueType(v) {
+  if (v === null || v === undefined) {return "null";}
+  if (Array.isArray(v)) {return "array";}
+  return typeof v;
+}
+
+function flattenObject(obj, prefix, target) {
+  if (!obj || typeof obj !== "object") {return target;}
+  Object.keys(obj).forEach(function (k) {
+    const p = prefix ? prefix + "." + k : k;
+    if (obj[k] && typeof obj[k] === "object" && !Array.isArray(obj[k])) {
+      flattenObject(obj[k], p, target);
+    } else {
+      target[p] = obj[k];
+    }
+  });
+  return target;
+}
+
+function hashString(str) {
+  const s = safeString(str);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h) + s.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function getEventColumnValue(ev, col) {
+  const c = safeString(col).trim().toLowerCase();
+  if (c === "type") {return ev.type;}
+  if (c === "eventname") {return ev.eventName || deriveEventName(ev);}
+  if (c === "userid") {return ev.userId || null;}
+  if (c === "sessionid") {return ev.sessionId || null;}
+  if (c === "route") {return ev.route || "/";}
+  if (c === "timestamp") {return ev.timestamp || null;}
+  if (c === "receivedat") {return ev.receivedAt || null;}
+  if (c === "deployversion") {return ev.deployVersion || "unknown";}
+  if (c === "environment") {return ev.environment || "production";}
+  if (c === "sdkversion") {return ev.sdkVersion || "unknown";}
+  if (c === "ingestionlatencyms") {return deriveIngestionLatency(ev);}
+  if (c.indexOf("data.") === 0) {
+    let target = ev.data;
+    const parts = col.slice(5).split(".");
+    for (let i = 0; i < parts.length; i++) {
+      if (target === null || target === undefined) {return null;}
+      target = target[parts[i]];
+    }
+    return target;
+  }
+  return ev[col] || null;
+}
+
+function incrementMap(target, key, amount) {
+  const resolvedKey = safeString(key || "unknown") || "unknown";
+  target[resolvedKey] = (target[resolvedKey] || 0) + (amount || 1);
+}
+
+function mapToCountRows(map, keyName, countName) {
+  return Object.keys(map).map(function (key) {
+    const row = {};
+    row[keyName] = key;
+    row[countName] = map[key];
+    return row;
+  }).sort(function (a, b) { return b[countName] - a[countName]; });
+}
+
+function getNumericDataValue(eventRecord, keys) {
+  for (let i = 0; i < keys.length; i++) {
+    const value = eventRecord && eventRecord.data ? Number(eventRecord.data[keys[i]]) : NaN;
+    if (Number.isFinite(value)) {return value;}
+  }
+  return null;
+}
+
+function summarizeNumeric(values) {
+  const valid = (values || []).filter(isFiniteNumber);
+  return {
+    p95: Math.round(calculatePercentile(valid, 95) * 100) / 100,
+    avg: Math.round(calculateAverage(valid) * 100) / 100,
+    sampleCount: valid.length
+  };
+}
+
+function detectPiiFields(eventRecord) {
+  const flat = flattenObject(eventRecord.data || {}, "", {});
+  const detections = [];
+  Object.keys(flat).forEach(function (field) {
+    const lowerField = field.toLowerCase();
+    const value = safeString(flat[field]);
+    let signal = "";
+    if (lowerField.indexOf("email") !== -1 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {signal = "email";}
+    else if (lowerField.indexOf("phone") !== -1 || /\+?\d[\d\s().-]{7,}/.test(value)) {signal = "phone";}
+    else if (lowerField.indexOf("token") !== -1 || lowerField.indexOf("password") !== -1 || lowerField.indexOf("secret") !== -1) {signal = "secret";}
+    if (signal) {
+      detections.push({
+        field: field,
+        signal: signal,
+        eventName: eventRecord.eventName || deriveEventName(eventRecord),
+        timestamp: eventRecord.timestamp
+      });
+    }
+  });
+  return detections;
+}
+
+function getAllowedCorsOrigin(origin) {
+  const configured = safeString(process.env.CORS_ALLOWED_ORIGINS).trim();
+  if (!configured || configured === "*") {return "*";}
+  const allowedOrigins = configured.split(",").map(function (value) {
+    return value.trim();
+  }).filter(Boolean);
+  return allowedOrigins.indexOf(origin) !== -1 ? origin : "";
+}
+
+function applyCors(res, req) {
+  const origin = req && req.headers ? safeString(req.headers.origin) : "";
+  const allowedOrigin = getAllowedCorsOrigin(origin);
+  if (allowedOrigin) {res.setHeader("Access-Control-Allow-Origin", allowedOrigin);}
+  if (allowedOrigin && allowedOrigin !== "*") {res.setHeader("Vary", "Origin");}
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Clerk-User-Id, Authorization");
+}
+
+function sendJson(res, status, payload, req) {
+  applyCors(res, req);
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(payload));
+}
+
+/**
+ * Read the raw `X-Clerk-User-Id` header (trusted only when JWT verification is
+ * not enforced - see resolveCurrentUserId).
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {string} Trimmed Clerk user id header value, or "" when absent.
+ */
+function getCurrentUserIdHeader(request) {
+  const raw = request && request.headers ? request.headers["x-clerk-user-id"] : "";
+  return safeString(raw).trim();
+}
+
+/**
+ * Extract a Bearer token from the Authorization header.
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {string} The token, or "" when absent.
+ */
+function getBearerToken(request) {
+  const raw = request && request.headers ? safeString(request.headers["authorization"]).trim() : "";
+  // Linear string parsing (no regex) to avoid polynomial-time ReDoS on the
+  // user-controlled Authorization header. Equivalent to /^Bearer\s+(.+)$/i.
+  const scheme = "bearer";
+  if (raw.length <= scheme.length || raw.slice(0, scheme.length).toLowerCase() !== scheme) {
+    return "";
+  }
+  const rest = raw.slice(scheme.length);
+  // Require at least one whitespace separator after the scheme.
+  if (rest[0] !== " " && rest[0] !== "\t") {
+    return "";
+  }
+  return rest.trim();
+}
+
+/**
+ * Resolve the current Clerk user id for a request.
+ *
+ * Preference order:
+ *   1. A verified Clerk session JWT (Authorization: Bearer ...) - authoritative.
+ *   2. The `X-Clerk-User-Id` header, but ONLY when JWT verification is not
+ *      enforced (no real Clerk instance configured, or the header-trust escape
+ *      hatch is enabled). This keeps the prototype/tests working.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {Promise<string>} The Clerk user id, or "" when unauthenticated.
+ */
+async function resolveCurrentUserId(request) {
+  if (CLERK_VERIFICATION_ENABLED) {
+    const token = getBearerToken(request);
+    if (token) {
+      const verified = await verifyClerkToken(token);
+      if (verified) {return verified;}
+    }
+    // A real Clerk instance is configured: do not trust the raw header unless
+    // the explicit escape hatch is on.
+    return TRUST_USER_HEADER ? getCurrentUserIdHeader(request) : "";
+  }
+  // No verifiable Clerk instance configured (prototype/CI): trust the header.
+  return getCurrentUserIdHeader(request);
+}
+
+/**
+ * Resolve the current Clerk user or fail the request with a 401.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @param {http.ServerResponse} response - HTTP response (used to send 401).
+ * @returns {Promise<string>} The Clerk user id, or "" after a 401 has been sent.
+ */
+async function requireCurrentUser(request, response) {
+  const userId = await resolveCurrentUserId(request);
+  if (!userId) {
+    sendJson(response, 401, { error: "Authentication required" }, request);
+    return "";
+  }
+  return userId;
+}
+
+function readJsonBody(req) {
+  return new Promise(function (resolve, reject) {
+    const chunks = [];
+    req.on("data", c => chunks.push(c));
+    req.on("end", () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString() || "{}")); }
+      catch (e) { reject(e); }
+    });
+    req.on("error", reject);
+  });
+}
+
+function broadcastEvents(batch) {
+  const str = JSON.stringify(batch);
+  sseClients.forEach(c => c.write("data: " + str + "\n\n"));
+}
+
+function buildLatencySummary(events) {
+  const routes = {};
+  (events || []).forEach(function (e) {
+    if (e.type === "pageload" && e.data && e.data.duration !== null && e.data.duration !== undefined) {
+      if (!routes[e.route]) {routes[e.route] = [];}
+      routes[e.route].push(Number(e.data.duration));
+    } else if (e.type === "performance" && e.data) {
+      const val = Number(e.data.value || e.data.duration || e.data.latency);
+      if (Number.isFinite(val) && val > 0) {
+        const route = e.route || "/";
+        if (!routes[route]) {routes[route] = [];}
+        routes[route].push(val);
+      }
+    }
+  });
+  return Object.keys(routes).reduce(function (acc, r) {
+    acc[r] = {
+      count: routes[r].length,
+      p95: Math.round(calculatePercentile(routes[r], 95)),
+      avg: Math.round(calculateAverage(routes[r]))
+    };
+    return acc;
+  }, {});
+}
+
+function getDashboardStats(events) {
+  const sourceEvents = events || [];
+  const activeSessions = new Set();
+  const errorsByVersion = {};
+  const recentErrors = [];
+  let totalErrors = 0;
+  const cutoff = Date.now() - ACTIVE_USER_WINDOW;
+
+  for (let i = sourceEvents.length - 1; i >= 0; i--) {
+    const e = sourceEvents[i];
+    if (parseTimestamp(e.timestamp) >= cutoff) {activeSessions.add(e.sessionId);}
+    if (e.type === "error") {
+      totalErrors += 1;
+      errorsByVersion[e.deployVersion] = (errorsByVersion[e.deployVersion] || 0) + 1;
+      if (recentErrors.length < 10000) {recentErrors.push(e);}
+    }
+  }
+
+  return {
+    activeUsers: activeSessions.size,
+    maxUsers: computeMaxConcurrentUsers(sourceEvents, ACTIVE_USER_WINDOW),
+    totalEvents: sourceEvents.length,
+    totalErrors: totalErrors,
+    errorsByVersion: errorsByVersion,
+    latencyByRoute: buildLatencySummary(sourceEvents),
+    recentErrors: recentErrors,
+    recentActivity: sourceEvents.slice(-20)
+  };
+}
+
+function buildSchemaRegistry(events) {
+  const grouped = {};
+  events.forEach(function (e) {
+    const name = e.eventName || deriveEventName(e);
+    if (!grouped[name]) {
+      grouped[name] = {
+        eventName: name,
+        count: 0,
+        firstSeen: e.timestamp,
+        lastSeen: e.timestamp,
+        malformedEvents: 0,
+        missingRequiredFields: {},
+        propertyMap: {}
+      };
+    }
+    const b = grouped[name];
+    b.count += 1;
+    if ((parseTimestamp(e.timestamp) || 0) < (parseTimestamp(b.firstSeen) || 0)) {b.firstSeen = e.timestamp;}
+    if ((parseTimestamp(e.timestamp) || 0) > (parseTimestamp(b.lastSeen) || 0)) {b.lastSeen = e.timestamp;}
+    ["type", "eventName", "timestamp", "sessionId", "environment", "sdkVersion"].forEach(function (field) {
+      if (!e[field]) {
+        b.malformedEvents += 1;
+        incrementMap(b.missingRequiredFields, field, 1);
+      }
+    });
+    const flat = flattenObject(e.data || {}, "", {});
+    if (e.type === "custom" && !flat.name && name === "custom") {
+      b.malformedEvents += 1;
+      incrementMap(b.missingRequiredFields, "data.name", 1);
+    }
+    Object.keys(flat).forEach(p => {
+      if (!b.propertyMap[p]) {b.propertyMap[p] = { types: {}, samples: 0 };}
+      const t = inferValueType(flat[p]);
+      b.propertyMap[p].types[t] = (b.propertyMap[p].types[t] || 0) + 1;
+      b.propertyMap[p].samples += 1;
+    });
+  });
+
+  return Object.keys(grouped).map(k => {
+    const b = grouped[k];
+    const properties = Object.keys(b.propertyMap).map(p => ({
+      path: p,
+      types: Object.keys(b.propertyMap[p].types),
+      coveragePct: Math.round((b.propertyMap[p].samples / b.count) * 100),
+      drift: Object.keys(b.propertyMap[p].types).length > 1
+    }));
+    const drift = properties.filter(function (prop) { return prop.drift; }).map(function (prop) { return prop.path; });
+    return {
+      eventName: k,
+      volume: b.count,
+      firstSeen: b.firstSeen,
+      lastSeen: b.lastSeen,
+      properties: properties.sort(function (a, b) { return a.path.localeCompare(b.path); }),
+      schemaDriftProperties: drift,
+      malformedEvents: b.malformedEvents,
+      missingRequiredFields: mapToCountRows(b.missingRequiredFields, "field", "count")
+    };
+  }).sort(function (a, b) { return b.volume - a.volume; });
+}
+
+function buildSessionReplayModel(events) {
+  const sessions = {};
+  events.forEach(function (e) {
+    if (!sessions[e.sessionId]) {
+      sessions[e.sessionId] = {
+        sessionId: e.sessionId,
+        userId: e.userId,
+        environment: e.environment,
+        timeline: [],
+        errors: 0,
+        networkFailures: 0,
+        featureFlags: new Set(),
+        routeTransitions: 0,
+        performanceSamples: 0,
+        startedAt: e.timestamp,
+        lastSeen: e.timestamp
+      };
+    }
+    const s = sessions[e.sessionId];
+    if (e.userId) {s.userId = e.userId;}
+    if ((parseTimestamp(e.timestamp) || 0) < (parseTimestamp(s.startedAt) || 0)) {s.startedAt = e.timestamp;}
+    if ((parseTimestamp(e.timestamp) || 0) > (parseTimestamp(s.lastSeen) || 0)) {s.lastSeen = e.timestamp;}
+    s.timeline.push({
+      timestamp: e.timestamp,
+      eventName: e.eventName || deriveEventName(e),
+      type: e.type,
+      route: e.route,
+      latencyMs: deriveIngestionLatency(e)
+    });
+    if (e.type === "error") {s.errors += 1;}
+    if (e.type === "route_transition") {s.routeTransitions += 1;}
+    if (e.type === "pageload" || e.type === "performance") {s.performanceSamples += 1;}
+    if (e.type === "network" || (e.data && Number(e.data.status) >= 400) || safeString(e.eventName).toLowerCase().indexOf("network") !== -1) {s.networkFailures += 1;}
+    if (e.data && e.data.flagKey) {s.featureFlags.add(e.data.flagKey);}
+  });
+  return {
+    sessions: Object.keys(sessions).map(k => ({
+      sessionId: k,
+      userId: sessions[k].userId,
+      environment: sessions[k].environment,
+      eventCount: sessions[k].timeline.length,
+      consoleErrorCount: sessions[k].errors,
+      networkFailureCount: sessions[k].networkFailures,
+      featureFlags: Array.from(sessions[k].featureFlags),
+      routeTransitionCount: sessions[k].routeTransitions,
+      performanceSampleCount: sessions[k].performanceSamples,
+      startedAt: sessions[k].startedAt,
+      lastSeen: sessions[k].lastSeen,
+      timeline: sessions[k].timeline.sort(function (a, b) { return (parseTimestamp(a.timestamp) || 0) - (parseTimestamp(b.timestamp) || 0); })
+    })).sort(function (a, b) { return (parseTimestamp(b.lastSeen) || 0) - (parseTimestamp(a.lastSeen) || 0); }),
+    sessionCount: Object.keys(sessions).length
+  };
+}
+
+function buildSdkDiagnostics(events) {
+  const sdkEvents = events.filter(function (e) { return e.type === "sdk_diagnostic"; });
+  const versionCounts = {};
+  let dropped = 0;
+  let retries = 0;
+  let successes = 0;
+  let failures = 0;
+  let offlineBuffered = 0;
+  const queueDepths = [];
+  events.forEach(function (e) { incrementMap(versionCounts, e.sdkVersion || "unknown", 1); });
+  sdkEvents.forEach(function (e) {
+    const action = safeString(e.data && e.data.action).toLowerCase();
+    const count = Number(e.data && e.data.count) || 1;
+    if (action === "drop") {dropped += count;}
+    if (action === "retry") {retries += count;}
+    if (action === "delivery-success") {successes += count;}
+    if (action === "delivery-failure") {failures += count;}
+    if (action === "offline-buffer") {offlineBuffered += count;}
+    if (Number.isFinite(Number(e.data && e.data.queueDepth))) {queueDepths.push(Number(e.data.queueDepth));}
+  });
+  const deliveryTotal = successes + failures;
+  const oneMinuteAgo = Date.now() - 60000;
+  const throughputPerMinute = events.filter(function (e) {
+    const t = parseTimestamp(e.receivedAt || e.timestamp);
+    return t !== null && t >= oneMinuteAgo;
+  }).length;
+  return {
+    droppedEvents: dropped,
+    retryQueueHealth: retries > 3 || calculateAverage(queueDepths) > 100 ? "degraded" : "stable",
+    retryAttempts: retries,
+    deliverySuccessRate: deliveryTotal ? Math.round((successes / deliveryTotal) * 100) : 100,
+    offlineBufferedEvents: offlineBuffered,
+    adblockDetected: failures > successes && failures > 2,
+    sdkVersionAdoption: mapToCountRows(versionCounts, "sdkVersion", "eventVolume"),
+    throughputPerMinute: throughputPerMinute,
+    queueDepthP95: summarizeNumeric(queueDepths).p95
+  };
+}
+
+function buildPerformanceInsights(events) {
+  const pageLoad = [];
+  const ttfb = [];
+  const navigationFetchStartToResponse = [];
+  const dns = [];
+  const tcp = [];
+  const tls = [];
+  const redirect = [];
+  const domInteractive = [];
+  const domComplete = [];
+  const resourceCount = [];
+  const lcp = [];
+  const cls = [];
+  const inp = [];
+  const apiLatency = [];
+  const bundleCost = [];
+  const routeTransitions = {};
+  events.forEach(function (e) {
+    if (e.type === "pageload") {
+      const duration = getNumericDataValue(e, ["duration", "loadComplete"]);
+      if (duration !== null) {pageLoad.push(duration);}
+      const ttfbValue = getNumericDataValue(e, ["ttfb"]);
+      if (ttfbValue !== null) {ttfb.push(ttfbValue);}
+      const navigationFetchValue = getNumericDataValue(e, ["navigationFetchStartToResponse"]);
+      if (navigationFetchValue !== null) {navigationFetchStartToResponse.push(navigationFetchValue);}
+      const dnsValue = getNumericDataValue(e, ["dns"]);
+      if (dnsValue !== null) {dns.push(dnsValue);}
+      const tcpValue = getNumericDataValue(e, ["tcp"]);
+      if (tcpValue !== null) {tcp.push(tcpValue);}
+      const tlsValue = getNumericDataValue(e, ["tls"]);
+      if (tlsValue !== null) {tls.push(tlsValue);}
+      const redirectValue = getNumericDataValue(e, ["redirect"]);
+      if (redirectValue !== null) {redirect.push(redirectValue);}
+      const domInteractiveValue = getNumericDataValue(e, ["domInteractive"]);
+      if (domInteractiveValue !== null) {domInteractive.push(domInteractiveValue);}
+      const domCompleteValue = getNumericDataValue(e, ["domComplete"]);
+      if (domCompleteValue !== null) {domComplete.push(domCompleteValue);}
+      const resourceCountValue = getNumericDataValue(e, ["resourceCount"]);
+      if (resourceCountValue !== null) {resourceCount.push(resourceCountValue);}
+      const transferSize = getNumericDataValue(e, ["transferSize", "encodedBodySize"]);
+      if (transferSize !== null) {bundleCost.push(Math.round(transferSize / 1024));}
+    }
+    const metricName = safeString(e.data && (e.data.metricName || e.data.name)).toLowerCase();
+    const metricValue = getNumericDataValue(e, ["value", "duration", "latencyMs"]);
+    if (metricValue !== null && (e.type === "performance" || metricName)) {
+      if (metricName.indexOf("lcp") !== -1) {lcp.push(metricValue);}
+      else if (metricName.indexOf("cls") !== -1) {cls.push(metricValue);}
+      else if (metricName.indexOf("inp") !== -1) {inp.push(metricValue);}
+      else if (metricName.indexOf("api") !== -1 || metricName.indexOf("fetch") !== -1) {apiLatency.push(metricValue);}
+    }
+    if (e.type === "route_transition") {
+      const duration = getNumericDataValue(e, ["durationMs", "duration"]);
+      const route = safeString(e.data && e.data.to) || e.route || "/";
+      if (!routeTransitions[route]) {routeTransitions[route] = [];}
+      if (duration !== null) {routeTransitions[route].push(duration);}
+    }
+  });
+  return {
+    pageLoad: summarizeNumeric(pageLoad),
+    ttfb: summarizeNumeric(ttfb),
+    navigationFetchStartToResponse: summarizeNumeric(navigationFetchStartToResponse),
+    dns: summarizeNumeric(dns),
+    tcp: summarizeNumeric(tcp),
+    tls: summarizeNumeric(tls),
+    redirect: summarizeNumeric(redirect),
+    domInteractive: summarizeNumeric(domInteractive),
+    domComplete: summarizeNumeric(domComplete),
+    resourceCount: summarizeNumeric(resourceCount),
+    lcp: summarizeNumeric(lcp),
+    cls: summarizeNumeric(cls),
+    inp: summarizeNumeric(inp),
+    apiLatencyMs: summarizeNumeric(apiLatency),
+    jsBundleCostKb: summarizeNumeric(bundleCost),
+    routeTransitions: Object.keys(routeTransitions).map(function (route) {
+      const summary = summarizeNumeric(routeTransitions[route]);
+      return { route: route, p95: summary.p95, sampleCount: summary.sampleCount };
+    }).sort(function (a, b) { return b.p95 - a.p95; })
+  };
+}
+
+function getErrorSignature(e) {
+  const msg = safeString(e.data && e.data.message) || "Runtime error";
+  return msg.split("\n")[0].slice(0, 140);
+}
+
+function buildErrorMonitoring(events) {
+  const grouped = {};
+  events.filter(function (e) { return e.type === "error"; }).forEach(function (e) {
+    const signature = getErrorSignature(e);
+    if (!grouped[signature]) {
+      grouped[signature] = {
+        signature: signature,
+        count: 0,
+        users: {},
+        sessions: {},
+        release: e.deployVersion || "unknown",
+        lastSeen: e.timestamp,
+        stack: e.data && e.data.stack ? e.data.stack : "",
+        route: e.route || "/"
+      };
+    }
+    const group = grouped[signature];
+    group.count += 1;
+    if (e.userId) {incrementMap(group.users, e.userId, 1);}
+    incrementMap(group.sessions, e.sessionId, 1);
+    if ((parseTimestamp(e.timestamp) || 0) > (parseTimestamp(group.lastSeen) || 0)) {group.lastSeen = e.timestamp;}
+  });
+  const groupedErrors = Object.keys(grouped).map(function (key) {
+    const group = grouped[key];
+    return {
+      signature: group.signature,
+      count: group.count,
+      affectedUsers: Object.keys(group.users).length,
+      affectedSessions: Object.keys(group.sessions).length,
+      release: group.release,
+      lastSeen: group.lastSeen,
+      route: group.route,
+      stack: group.stack,
+      sourcemapStatus: group.release === "unknown" ? "missing release" : "mapped",
+      linkedSessionReplay: Object.keys(group.sessions)[0] || ""
+    };
+  }).sort(function (a, b) { return b.count - a.count; });
+  const trendMap = {};
+  events.filter(function (e) { return e.type === "error"; }).forEach(function (e) {
+    const hour = new Date(parseTimestamp(e.timestamp) || Date.now()).toISOString().slice(0, 13) + ":00";
+    incrementMap(trendMap, hour, 1);
+  });
+  return {
+    groupedErrors: groupedErrors,
+    trend: mapToCountRows(trendMap, "bucket", "count"),
+    latest: getRecentEvents(events.filter(function (e) { return e.type === "error"; }), 8).map(toInspectorEvent)
+  };
+}
+
+function buildPipelineObservability(events) {
+  const sdk = buildSdkDiagnostics(events);
+  const latencies = events.map(deriveIngestionLatency).filter(isFiniteNumber);
+  const retryEvents = events.filter(function (e) {
+    return e.type === "sdk_diagnostic" && safeString(e.data && e.data.action).toLowerCase() === "retry";
+  });
+  const failures = events.filter(function (e) {
+    const action = safeString(e.data && e.data.action).toLowerCase();
+    return action === "delivery-failure" || action === "webhook-failure";
+  });
+  return {
+    queueDepth: sdk.queueDepthP95 || 0,
+    processingLatencyMs: summarizeNumeric(latencies),
+    webhookFailures: failures.length,
+    retryAttempts: retryEvents.length,
+    warehouseSync: { status: failures.length > 2 ? "degraded" : "healthy", lastSync: new Date().toISOString() },
+    throughputPerMinute: sdk.throughputPerMinute,
+    destinationLogs: getRecentEvents(events, 30).map(function (e) {
+      const isFailure = e.type === "error" || safeString(e.data && e.data.action).indexOf("failure") !== -1;
+      return {
+        timestamp: e.receivedAt || e.timestamp,
+        channel: e.environment || "production",
+        status: isFailure ? "warning" : "delivered",
+        message: (e.eventName || deriveEventName(e)) + " routed to warehouse"
+      };
+    })
+  };
+}
+
+function buildIdentityResolution(events) {
+  const nodes = {};
+  const edges = {};
+  const sessionUsers = {};
+  const mergeHistory = [];
+  events.forEach(function (e) {
+    const sessionId = e.sessionId || "unknown-session";
+    const sessionNode = "session:" + sessionId;
+    nodes[sessionNode] = { id: sessionNode, type: "anonymous", label: sessionId.slice(0, 10), eventCount: (nodes[sessionNode] && nodes[sessionNode].eventCount || 0) + 1 };
+    if (e.userId) {
+      const userNode = "user:" + e.userId;
+      nodes[userNode] = { id: userNode, type: "user", label: e.userId, eventCount: (nodes[userNode] && nodes[userNode].eventCount || 0) + 1 };
+      edges[sessionNode + "->" + userNode] = { from: sessionNode, to: userNode, type: "session_stitch", count: (edges[sessionNode + "->" + userNode] && edges[sessionNode + "->" + userNode].count || 0) + 1 };
+      if (!sessionUsers[sessionId]) {sessionUsers[sessionId] = {};}
+      sessionUsers[sessionId][e.userId] = true;
+      if (e.type === "login") {mergeHistory.push({ timestamp: e.timestamp, sessionId: sessionId, userId: e.userId, action: "anonymous to authenticated" });}
+    }
+  });
+  const duplicates = Object.keys(sessionUsers).filter(function (sid) {
+    return Object.keys(sessionUsers[sid]).length > 1;
+  }).map(function (sid) {
+    return { sessionId: sid, users: Object.keys(sessionUsers[sid]) };
+  });
+  return {
+    nodes: Object.keys(nodes).map(function (id) { return nodes[id]; }),
+    edges: Object.keys(edges).map(function (id) { return edges[id]; }),
+    duplicateIdentities: duplicates,
+    mergeHistory: mergeHistory.slice(-20)
+  };
+}
+
+function evaluateFlagsForUser(userId, environment, country) {
+  const identityKey = safeString(userId || "anonymous") + "|" + safeString(environment || "production") + "|" + safeString(country || "");
+  return FEATURE_FLAG_DEFINITIONS.map(function (flag) {
+    const envAllowed = flag.environments.indexOf(environment || "production") !== -1;
+    const bucket = hashString(identityKey + "|" + flag.key) % 100;
+    const matched = envAllowed && bucket < flag.rolloutPercent;
+    const reasons = [];
+    reasons.push(envAllowed ? "Environment allowed." : "Environment excluded.");
+    reasons.push("Bucket " + bucket + " compared with rollout " + flag.rolloutPercent + "%.");
+    if (country) {reasons.push("Country override context: " + country + ".");}
+    return {
+      key: flag.key,
+      rolloutPercent: flag.rolloutPercent,
+      matched: matched,
+      reasons: reasons.concat(flag.ruleSummary || []),
+      targetingLogic: flag.environments.join(", ")
+    };
+  });
+}
+
+function buildFeatureFlagInsights(events) {
+  const users = {};
+  events.forEach(function (e) {
+    if (e.userId) {users[e.userId] = e.environment || "production";}
+  });
+  let userIds = Object.keys(users);
+  if (userIds.length === 0) {userIds = ["anonymous"];}
+  return {
+    definitions: FEATURE_FLAG_DEFINITIONS,
+    evaluations: userIds.slice(0, 40).map(function (userId) {
+      return { userId: userId, environment: users[userId] || "production", flags: evaluateFlagsForUser(userId, users[userId] || "production", "") };
+    }),
+    exposureHistory: getRecentEvents(events.filter(function (e) {
+      return safeString(e.eventName).toLowerCase().indexOf("flag") !== -1 || Boolean(e.data && e.data.flagKey);
+    }), 30).map(function (e) {
+      return { userId: e.userId || "anonymous", eventName: e.eventName || deriveEventName(e), timestamp: e.timestamp, flagKey: e.data && e.data.flagKey };
+    })
+  };
+}
+
+function buildGovernance(events) {
+  const piiDetections = [];
+  const envCounts = {};
+  events.forEach(function (e) {
+    detectPiiFields(e).forEach(function (detection) { piiDetections.push(detection); });
+    incrementMap(envCounts, e.environment || "production", 1);
+  });
+  return {
+    retentionDays: 30,
+    piiDetections: piiDetections.slice(-60).reverse(),
+    maskingRules: GOVERNANCE_MASKING_RULES,
+    auditLogs: getRecentEvents(events, 20).map(function (e) {
+      return { timestamp: e.receivedAt || e.timestamp, actor: "ingestion-api", action: "accepted " + (e.eventName || deriveEventName(e)) };
+    }),
+    accessControls: [
+      { role: "Admin", scope: "all environments" },
+      { role: "Developer", scope: "raw events, schemas, replay diagnostics" },
+      { role: "Manager", scope: "aggregated dashboards only" }
+    ],
+    environments: mapToCountRows(envCounts, "environment", "eventVolume")
+  };
+}
+
+function buildDeveloperInsights(events) {
+  const schemaRegistry = buildSchemaRegistry(events);
+  const queryFields = ["type", "eventName", "userId", "sessionId", "route", "timestamp", "receivedAt", "deployVersion", "environment", "sdkVersion", "ingestionLatencyMs"];
+  schemaRegistry.forEach(function (schema) {
+    (schema.properties || []).forEach(function (prop) {
+      const field = "data." + prop.path;
+      if (queryFields.indexOf(field) === -1) {queryFields.push(field);}
+    });
+  });
+  return {
+    schemaRegistry: schemaRegistry,
+    sessionReplay: buildSessionReplayModel(events),
+    sdkDiagnostics: buildSdkDiagnostics(events),
+    performance: buildPerformanceInsights(events),
+    errorMonitoring: buildErrorMonitoring(events),
+    pipeline: buildPipelineObservability(events),
+    identityResolution: buildIdentityResolution(events),
+    featureFlags: buildFeatureFlagInsights(events),
+    governance: buildGovernance(events),
+    queryExplorer: { fields: queryFields }
+  };
+}
+
+function parseSelectFields(text) {
+  return text.split(",").map(t => {
+    const tr = t.trim();
+    const aliasMatch = tr.match(/^(.+?)\s+as\s+([a-zA-Z_][\w]*)$/i);
+    const expr = aliasMatch ? aliasMatch[1].trim() : tr;
+    const alias = aliasMatch ? aliasMatch[2].trim() : expr;
+    if (expr.toLowerCase() === "count(*)") {return { type: "count", alias: alias === "count(*)" ? "count" : alias };}
+    return { type: "field", field: expr, alias: alias };
+  });
+}
+
+function parseWhereClause(whereText) {
+  if (!whereText) {return null;}
+  const match = whereText.match(/^([\w.]+)\s*(=|!=|contains)\s*['"]?(.+?)['"]?$/i);
+  if (!match) {return null;}
+  return { field: match[1], operator: match[2].toLowerCase(), value: match[3].toLowerCase() };
+}
+
+function eventPassesWhere(eventRecord, where) {
+  if (!where) {return true;}
+  const value = safeString(getEventColumnValue(eventRecord, where.field)).toLowerCase();
+  if (where.operator === "=") {return value === where.value;}
+  if (where.operator === "!=") {return value !== where.value;}
+  if (where.operator === "contains") {return value.indexOf(where.value) !== -1;}
+  return true;
+}
+
+// Processing subset query operations inside server.js
+function executeDeveloperQuery(queryText, events) {
+  const startedAt = Date.now();
+  const compactQuery = safeString(queryText).trim().replace(/\s+/g, " ");
+  const parsed = compactQuery.match(/^select (.+?) from events(?: where (.+?))?(?: group by (.+?))?(?: order by (.+?))?(?: limit (\d+))?$/i);
+
+  if (!parsed) {
+    return {
+      error: "Syntax error. Supported: SELECT field, count(*) FROM events [WHERE field = 'val'] [GROUP BY field]",
+      rows: [],
+      columns: []
+    };
+  }
+
+  const selectText = parsed[1];
+  const whereClause = parseWhereClause(parsed[2]);
+  const groupByField = parsed[3] ? parsed[3].trim() : "";
+  const orderByField = parsed[4] ? parsed[4].trim().split(/\s+/)[0] : "";
+  const orderDescending = parsed[4] ? parsed[4].toLowerCase().indexOf(" asc") === -1 : true;
+  const limit = clampNumber(parseInt(parsed[5] || "50", 10) || 50, 1, 250);
+  const selectFields = parseSelectFields(selectText);
+
+  if (parsed[2] && !whereClause) {
+    return { error: "Unsupported WHERE clause. Use field = 'value', field != 'value', or field contains 'value'.", rows: [], columns: [] };
+  }
+
+  const filteredEvents = (events || []).filter(function (eventRecord) { return eventPassesWhere(eventRecord, whereClause); });
+  let rows;
+  if (groupByField) {
+    const groupedRows = {};
+    filteredEvents.forEach(function (eventRecord) {
+      const groupValue = safeString(getEventColumnValue(eventRecord, groupByField)) || "unknown";
+      if (!groupedRows[groupValue]) {groupedRows[groupValue] = { __events: [] };}
+      groupedRows[groupValue].__events.push(eventRecord);
+    });
+    rows = Object.keys(groupedRows).map(function (groupValue) {
+      const row = {};
+      selectFields.forEach(function (f) {
+        if (f.type === "count") {row[f.alias] = groupedRows[groupValue].__events.length;}
+        else {row[f.alias] = f.field === groupByField ? groupValue : getEventColumnValue(groupedRows[groupValue].__events[0], f.field);}
+      });
+      if (!selectFields.some(function (f) { return f.field === groupByField; })) {row[groupByField] = groupValue;}
+      return row;
+    });
+  } else {
+    rows = filteredEvents.map(function (eventRecord) {
+      const row = {};
+      selectFields.forEach(function (f) {
+        if (f.type === "count") {row[f.alias] = 1;}
+        else {row[f.alias] = getEventColumnValue(eventRecord, f.field);}
+      });
+      return row;
+    });
+  }
+
+  if (orderByField) {
+    rows.sort(function (a, b) {
+      const left = a[orderByField];
+      const right = b[orderByField];
+      if (typeof left === "number" && typeof right === "number") {return orderDescending ? right - left : left - right;}
+      return orderDescending ? safeString(right).localeCompare(safeString(left)) : safeString(left).localeCompare(safeString(right));
+    });
+  }
+
+  return {
+    error: null,
+    durationMs: Date.now() - startedAt,
+    rowCount: rows.length,
+    columns: Object.keys(rows[0] || selectFields.reduce(function (acc, field) { acc[field.alias] = true; return acc; }, {})),
+    rows: rows.slice(0, limit)
+  };
+}
+function evaluateFeatureFlagsForIdentity(identity) {
+  const userId = safeString(identity && (identity.userId || identity.user || identity.id)) || "anonymous";
+  const environment = normalizeEnvironment(identity && identity.environment, "");
+  const country = safeString(identity && identity.country);
+  return {
+    userId: userId,
+    environment: environment,
+    flags: evaluateFlagsForUser(userId, environment, country)
+  };
+}
+
+function getIncomingEvents(body) {
+  if (body && Array.isArray(body.events)) {return body.events;}
+  if (Array.isArray(body)) {return body;}
+  return [body];
+}
+
+function isEmailLike(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeString(value).trim());
+}
+
+async function maybeSendErrorThresholdAlert() {
+  const now = Date.now();
+  const events = await eventStore.allEvents(MAX_EVENTS);
+  const evaluation = evaluateErrorThreshold(events, {
+    now: now,
+    threshold: ERROR_ALERT_THRESHOLD,
+    windowMs: ERROR_ALERT_WINDOW_MS,
+    cooldownMs: ALERT_COOLDOWN_MS,
+    lastSentAt: lastErrorAlertSentAt
+  });
+
+  if (!evaluation.shouldSend) {return;}
+
+  const recipients = [];
+  if (registeredAlertRecipient) {
+    recipients.push(registeredAlertRecipient);
+  }
+
+  // Clerk recipient discovery is a fallback source. Do not let a slow or failed
+  // Clerk lookup block an already registered dashboard recipient.
+  if (!recipients.length) {
+    try {
+      const clerkRecipients = await getClerkAlertRecipients(now);
+      clerkRecipients.forEach(function (recipient) {
+        if (recipients.indexOf(recipient) === -1) {
+          recipients.push(recipient);
+        }
+      });
+    } catch (error) {
+      console.warn("[mailer] Clerk alert recipient lookup skipped:", error.message);
+    }
+  }
+  if (!recipients.length) {return;}
+
+  lastErrorAlertSentAt = now;
+  sendAlert(evaluation.alert, recipients).catch(err => console.error("[mailer] Failed to send alert:", err));
+}
+
+/**
+ * Read the configured temporary default ingest owner.
+ *
+ * DEFAULT_INGEST_OWNER_USER_ID is a temporary prototype-only fallback for
+ * unauthenticated external SDK events (e.g. the public GitHub Pages test app,
+ * which has no Clerk session and therefore sends no user id / no
+ * X-Clerk-User-Id header). When it is set, those otherwise-anonymous events are
+ * attributed to this demo owner's Clerk user id so they appear on that owner's
+ * scoped dashboard. Production should replace this with a project/app key
+ * ownership system rather than a single hard-coded demo owner.
+ *
+ * @returns {string} The configured demo owner Clerk user id, or "" when unset.
+ */
+function getDefaultIngestOwnerUserId() {
+  return safeString(process.env.DEFAULT_INGEST_OWNER_USER_ID).trim();
+}
+
+/**
+ * Resolve which user id (if any) should own the events on an ingest request.
+ *
+ * Preference order:
+ *   1. The authenticated dashboard user - a verified Clerk session JWT, or the
+ *      X-Clerk-User-Id header when token verification is not enforced (see
+ *      resolveCurrentUserId). This is authoritative.
+ *   2. DEFAULT_INGEST_OWNER_USER_ID - a temporary fallback for unauthenticated
+ *      external SDK events. Not authoritative.
+ *   3. None - the request stays anonymous and events keep whatever userId they
+ *      carry (which may be null). Current behavior is preserved.
+ *
+ * @param {http.IncomingMessage} request - Incoming HTTP request.
+ * @returns {Promise<{ownerUserId: string, authoritative: boolean}>} The owner
+ *   to stamp and whether it came from an authenticated user.
+ */
+async function getIngestOwnerUserId(request) {
+  const authedUserId = await resolveCurrentUserId(request);
+  if (authedUserId) {
+    return { ownerUserId: authedUserId, authoritative: true };
+  }
+  const fallbackOwner = getDefaultIngestOwnerUserId();
+  if (fallbackOwner) {
+    return { ownerUserId: fallbackOwner, authoritative: false };
+  }
+  return { ownerUserId: "", authoritative: false };
+}
+
+async function ingestEventsBody(body, ownerUserId, options) {
+  const opts = options || {};
+  // When the owner is authoritative (an authenticated dashboard user) we stamp
+  // every event with their Clerk user id so a client cannot spoof another
+  // user's id. When the owner is only the temporary default fallback we fill in
+  // just the events that arrive without a userId, so the same-origin demo's own
+  // per-user tagging (and any future client-supplied owner) is preserved.
+  const fillOnlyMissing = Boolean(opts.fillOnlyMissing);
+  let arr = getIncomingEvents(body).filter(isValidEvent);
+  if (ownerUserId) {
+    arr = arr.map(function (event) {
+      if (fillOnlyMissing && event && event.userId) {
+        return event;
+      }
+      return Object.assign({}, event, { userId: ownerUserId });
+    });
+  }
+  const norm = await eventStore.insertEvents(arr);
+  await eventStore.pruneOldest(MAX_EVENTS);
+
+  if (norm.length) {
+    broadcastEvents(norm);
+
+    if (norm.some(function (eventRecord) { return eventRecord.type === "error"; })) {
+      maybeSendErrorThresholdAlert().catch(err => console.error("[mailer] Failed to evaluate alert threshold:", err));
+    }
+  }
+
+  return norm;
+}
+
+const server = http.createServer(async function (request, response) {
+  const parsedUrl = new URL(request.url, "http://localhost");
+  const pathname = parsedUrl.pathname;
+  // The backend serves the frontend from src/frontend and the browser SDK from
+  // src/sdk. Both are siblings of src/backend, so __dirname is src/backend.
+  const frontendRoot = path.join(__dirname, "..", "frontend");
+  const landingRoot = path.join(frontendRoot, "landing");
+  const loginRoot = path.join(frontendRoot, "auth");
+  const dashboardRoot = path.join(frontendRoot, "dashboard");
+  const sdkRoot = path.join(__dirname, "..", "sdk");
+
+  if (request.method === "OPTIONS") {
+    applyCors(response, request); response.writeHead(204); response.end(); return;
+  }
+  if (request.method === "POST" && pathname === "/api/alert-recipient") {
+    try {
+      const body = await readJsonBody(request);
+      const email = safeString(body && body.email).trim();
+      if (!isEmailLike(email)) {
+        sendJson(response, 400, { error: "Valid email is required" }, request);
+        return;
+      }
+      registeredAlertRecipient = email;
+      console.log("[mailer] Registered alert recipient " + registeredAlertRecipient);
+      sendJson(response, 200, { ok: true }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to register alert recipient:", error);
+      sendJson(response, 500, { error: "Failed to register alert recipient" }, request);
+    }
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/users/sync") {
+    try {
+      const body = await readJsonBody(request);
+      // Prefer the verified token subject; fall back to the body/header id when
+      // verification is not enforced (prototype/tests).
+      const clerkUserId = (await resolveCurrentUserId(request)) || safeString(body && body.clerkUserId).trim();
+      if (!clerkUserId) {
+        sendJson(response, 400, { error: "clerkUserId is required" }, request);
+        return;
+      }
+      const user = await eventStore.syncUser({
+        clerkUserId: clerkUserId,
+        email: safeString(body && body.email).trim(),
+        displayName: safeString(body && body.displayName).trim(),
+        // Pass through so the DB row reflects the user's timezone preference.
+        // An empty string means "use the server/browser default" - never null.
+        timezone: safeString(body && body.timezone).trim(),
+      });
+      sendJson(response, 200, { ok: true, user: user }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to sync user:", error);
+      sendJson(response, 500, { error: "Failed to sync user" }, request);
+    }
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/events") {
+    try {
+      const body = await readJsonBody(request);
+      // External SDK events may be unauthenticated for now, so we never reject
+      // a missing user id here. Ownership is the authenticated dashboard user
+      // when present, else the temporary DEFAULT_INGEST_OWNER_USER_ID fallback,
+      // else anonymous (user_id stays null).
+      const owner = await getIngestOwnerUserId(request);
+      const norm = await ingestEventsBody(body, owner.ownerUserId || null, {
+        fillOnlyMissing: !owner.authoritative,
+      });
+      sendJson(response, 200, { accepted: norm.length }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to ingest events:", error);
+      sendJson(response, 500, { error: "Failed to store events" }, request);
+    }
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/beacon") {
+    try {
+      const body = await readJsonBody(request);
+      // Same owner resolution as POST /api/events (auth user → default owner →
+      // anonymous) so beacon-flushed events from the external test app are
+      // attributed to the same demo owner.
+      const owner = await getIngestOwnerUserId(request);
+      await ingestEventsBody(body, owner.ownerUserId || null, {
+        fillOnlyMissing: !owner.authoritative,
+      });
+    } catch (_error) {
+      // Beacon callers ignore response bodies, so keep this endpoint fail-closed.
+    }
+    applyCors(response, request);
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/events") {
+    try {
+      const userId = await requireCurrentUser(request, response);
+      if (!userId) {return;}
+      const requestedLimit = parseInt(parsedUrl.searchParams.get("limit") || "100", 10);
+      const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), MAX_EVENTS);
+      const events = await eventStore.listEvents(limit, { userId: userId });
+      sendJson(response, 200, { events: events }, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to list events:", error);
+      sendJson(response, 500, { error: "Failed to fetch events" }, request);
+    }
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/developer/stream") {
+    try {
+      const userId = await requireCurrentUser(request, response);
+      if (!userId) {return;}
+      const events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
+      const f = normalizeStreamFilters(parsedUrl.searchParams);
+      sendJson(response, 200, queryEventsWithFilters(events, f), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to load developer stream:", error);
+      sendJson(response, 500, { error: "Failed to fetch developer stream" }, request);
+    }
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/developer/insights") {
+    try {
+      const userId = await requireCurrentUser(request, response);
+      if (!userId) {return;}
+      const events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
+      sendJson(response, 200, buildDeveloperInsights(events), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to build developer insights:", error);
+      sendJson(response, 500, { error: "Failed to fetch developer insights" }, request);
+    }
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/developer/query") {
+    try {
+      const userId = await requireCurrentUser(request, response);
+      if (!userId) {return;}
+      const body = await readJsonBody(request);
+      const events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
+      sendJson(response, 200, executeDeveloperQuery(body.query, events), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to execute developer query:", error);
+      sendJson(response, 500, { error: "Failed to execute developer query" }, request);
+    }
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/developer/feature-flags/evaluate") {
+    try {
+      const body = await readJsonBody(request);
+      sendJson(response, 200, evaluateFeatureFlagsForIdentity(body), request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to evaluate feature flags:", error);
+      sendJson(response, 500, { error: "Failed to evaluate feature flags" }, request);
+    }
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/stats") {
+    try {
+      const userId = await requireCurrentUser(request, response);
+      if (!userId) {return;}
+      const errorSinceMs = ERROR_WINDOW_MS > 0 ? Date.now() - ERROR_WINDOW_MS : null;
+      const stats = typeof eventStore.getAnalyticsSnapshot === "function"
+        ? await eventStore.getAnalyticsSnapshot({
+          userId: userId,
+          maxEvents: MAX_EVENTS,
+          activeUserWindowMs: ACTIVE_USER_WINDOW,
+          errorSinceMs: errorSinceMs,
+        })
+        : getDashboardStats(await eventStore.allEvents(MAX_EVENTS, { userId: userId }));
+      sendJson(response, 200, stats, request);
+    } catch (error) {
+      console.error("[prototype_3] Failed to fetch stats:", error);
+      sendJson(response, 500, { error: "Failed to fetch stats" }, request);
+    }
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/events/stream") {
+    applyCors(response, request);
+    response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+    response.write(":\n\n"); sseClients.add(response);
+    request.on("close", () => sseClients.delete(response)); return;
+  }
+
+  if (request.method === "GET" && pathname === "/") {
+    response.writeHead(302, { Location: "/landing/" });
+    response.end();
+    return;
+  }
+
+  if (request.method === "GET" && (pathname === "/landing" || pathname === "/landing/")) {
+    streamAbsoluteFile(response, path.join(landingRoot, "index.html"));
+    return;
+  }
+
+  if (request.method === "GET" && pathname.indexOf("/landing/") === 0) {
+    const requestedLanding = pathname.slice("/landing/".length);
+    const landingPath = path.normalize(path.join(landingRoot, requestedLanding));
+    if (landingPath.indexOf(landingRoot) !== 0) {
+      response.writeHead(403);
+      response.end("Forbidden");
+      return;
+    }
+    fs.stat(landingPath, function (landingErr, landingStats) {
+      if (landingErr || !landingStats.isFile()) {
+        response.writeHead(404);
+        response.end("Not found");
+        return;
+      }
+      streamAbsoluteFile(response, landingPath);
+    });
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/login") {
+    response.writeHead(302, { Location: "/login/" });
+    response.end();
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/login/") {
+    streamAbsoluteFile(response, path.join(loginRoot, "login.html"));
+    return;
+  }
+
+  if (request.method === "GET" && pathname.indexOf("/login/") === 0) {
+    const requestedLogin = pathname.slice("/login/".length);
+    const loginPath = path.normalize(path.join(loginRoot, requestedLogin));
+    if (loginPath.indexOf(loginRoot) !== 0) {
+      response.writeHead(403);
+      response.end("Forbidden");
+      return;
+    }
+    fs.stat(loginPath, function (loginErr, loginStats) {
+      if (loginErr || !loginStats.isFile()) {
+        response.writeHead(404);
+        response.end("Not found");
+        return;
+      }
+      streamAbsoluteFile(response, loginPath);
+    });
+    return;
+  }
+
+  if (request.method === "GET" && pathname.indexOf("/sdk/") === 0) {
+    const requestedSdk = pathname.slice("/sdk/".length);
+    const sdkPath = path.normalize(path.join(sdkRoot, requestedSdk));
+    if (sdkPath.indexOf(sdkRoot) !== 0) {
+      response.writeHead(403);
+      response.end("Forbidden");
+      return;
+    }
+    fs.stat(sdkPath, function (sdkErr, sdkStats) {
+      if (sdkErr || !sdkStats.isFile()) {
+        response.writeHead(404);
+        response.end("Not found");
+        return;
+      }
+      streamAbsoluteFile(response, sdkPath);
+    });
+    return;
+  }
+
+  if (request.method === "GET" && (pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/product" || pathname === "/product/")) {
+    streamAbsoluteFile(response, path.join(dashboardRoot, "index.html"));
+    return;
+  }
+
+  if (request.method === "GET" && pathname.indexOf("/dashboard/") === 0) {
+    const requestedDashboard = pathname.slice("/dashboard/".length);
+    const dashboardPath = path.normalize(path.join(dashboardRoot, requestedDashboard));
+    if (dashboardPath.indexOf(dashboardRoot) !== 0) {
+      response.writeHead(403);
+      response.end("Forbidden");
+      return;
+    }
+    fs.stat(dashboardPath, function (dashErr, dashStats) {
+      if (dashErr || !dashStats.isFile()) {
+        response.writeHead(404);
+        response.end("Not found");
+        return;
+      }
+      streamAbsoluteFile(response, dashboardPath);
+    });
+    return;
+  }
+
+  // Fallback static routing: shared assets (/assets/...), the monitored demo
+  // (/demo/), and the dashboard demo (/dashboard-demo/) all live under
+  // src/frontend.
+  const root = frontendRoot;
+  const file = pathname === "/" ? "/index.html" : pathname;
+  const fPath = path.join(root, file);
+
+  function streamStaticFile(targetPath) {
+    streamAbsoluteFile(response, targetPath);
+  }
+
+  fs.stat(fPath, (err, stats) => {
+    if (err) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      const indexPath = path.join(fPath, "index.html");
+      fs.stat(indexPath, (indexErr, indexStats) => {
+        if (indexErr || !indexStats.isFile()) {
+          response.writeHead(404);
+          response.end("Not found");
+          return;
+        }
+        streamStaticFile(indexPath);
+      });
+      return;
+    }
+
+    if (!stats.isFile()) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+
+    streamStaticFile(fPath);
+  });
+});
+
+server.listen(PORT, function () {
+  console.log("Observability dashboard shell active at http://localhost:" + PORT);
+  console.log("Prototype 3 event storage: " + eventStore.type + (eventStore.tableName ? " (" + eventStore.tableName + ")" : ""));
+  if (CLERK_VERIFICATION_ENABLED) {
+    console.log("Clerk session verification: ENABLED (issuer " + CLERK_ISSUER + ")" + (TRUST_USER_HEADER ? " + header escape hatch" : ""));
+  } else {
+    console.log("Clerk session verification: DISABLED (trusting X-Clerk-User-Id header - prototype/test mode)");
+  }
+});

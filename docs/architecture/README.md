@@ -1,11 +1,25 @@
 # Architecture Documentation
 
-This is the WatchTower documentation index for WatchTower's Architecture. This folder contains all project documentation needed to understand, develop, and maintain the architecture for WatchTower observability platform.
+Architecture index for WatchTower. This folder documents how the current product
+(`src/backend`, `src/frontend`, `src/sdk`, `src/shared`) is designed.
 
-# Purpose 
-This documentation directory serves as the source of truth for 
-- [api-contract-v1.md](api-contract-v1.md): - This explains what APIs we are using 
-- [event-schema-v1.md](event-schema-v1.md) - This provides a template for backend about how events should do in order to keep some cannonicity between candidates in order for front-end candiates to be universal
-- [event-storage.md](event-storage.md) - Prototype 1 SQLite event storage layer, schema, and the local verification flow used before promoting the script to external pages.
-- [external-test-app-plan.md](external-test-app-plan.md) - This is a plan for how to mantain and expand the test application for WatchTower to test features.
-- [system-overview.md](architecture/system-overview.md) - This gives an overview of what dependencies WatchTower uses
+## Current (active)
+
+These describe the system as it is built today:
+
+- [system-overview.md](system-overview.md) — high-level architecture and the dependencies WatchTower uses.
+- [api-contract-v2.md](api-contract-v2.md) — current API contract (applies to `src/backend`).
+- [event-schema-v2.md](event-schema-v2.md) — current event schema (applies to `src/backend`).
+- [auth-workflow.md](auth-workflow.md) — Clerk authentication and dashboard data-ownership flow.
+- [external-test-app-plan.md](external-test-app-plan.md) — plan for the external GitHub Pages test app.
+
+## Historical (superseded)
+
+Kept for context; **not** the current design:
+
+- [api-contract-v1.md](api-contract-v1.md) — first-draft API contract.
+- [event-schema-v1.md](event-schema-v1.md) — first-draft event schema (kept canonical across early prototype candidates).
+- Prototype 1 SQLite storage notes now live in [../archive/event-storage.md](../archive/event-storage.md).
+
+Up: [../README.md](../README.md). Decisions behind these docs are recorded in
+[../adr/](../adr/).

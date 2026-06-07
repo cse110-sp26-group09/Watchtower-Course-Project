@@ -1,73 +1,65 @@
 # Source Code
 
-This directory contains all WatchTower implementation code. During Sprint 2 the team built two parallel prototypes; they are compared in [`docs/sprint/sprint-2-comparison-readout.md`](../docs/sprint/sprint-2-comparison-readout.md).
+This directory contains the active WatchTower implementation (the current
+product, formerly "Prototype 3"). Historical prototypes live in
+[`../archive/`](../archive/).
 
-## Structure
-**Archived prototypes see in ../archive**
-```
-### `prototype_1/` – Static Frontend Candidate
-
-A standalone static dashboard (no backend, no SDK) modeled after the WatchTower wireframes. Useful for trying out UI layouts and accessibility controls.
-
-- Open `src/prototype_1/index.html` directly in a browser.
-- See [`prototype_1/README.md`](prototype_1/README.md) for details.
-
-### `prototype_2/` – Full Vertical Slice (used by `npm start`)
-
-A working capture → ingest → display loop:
-
-- `index.html`, `dashboard.js`, `style.css` – three-view dashboard (Home, Analytics, Alerts).
-- `sdk.js` – client-side SDK that auto-captures `window.onerror` and Navigation Timing metrics and POSTs to `/api/events` in 2-second batches.
-- `server/server.js` – framework-free Node.js HTTP server that exposes `POST /api/events`, `GET /api/events`, `GET /api/stats`, and `GET /api/events/stream` (SSE) on port 3000.
-- `hosted_demo/` – static ShopDemo page for traffic checks.
-- `utils/event-utils.js` – thin re-export of the canonical `src/shared/utils/event-utils.js` for backwards compatibility.
-
-See [`prototype_2/README.md`](prototype_2/README.md) for details.
-
+## Layout
 
 ```
-### `prototype_3/` - final candidate and product for WatchTower
+src/
+├── backend/        # Framework-free Node.js HTTP server + data layer
+│   ├── server.js               # Routing, API endpoints, static serving, SSE
+│   ├── server-helpers.js       # Pure ingestion/stream/query helpers (unit-tested)
+│   ├── event-store.js          # Supabase/Postgres store with in-memory fallback
+│   ├── mailer.js               # Gmail-OAuth threshold alert emails
+│   ├── alert-threshold.js      # Error-rate threshold evaluation
+│   └── clerk-alert-recipients.js # Optional Clerk-sourced alert recipients
+│
+├── frontend/       # Browser UI served by the backend
+│   ├── dashboard/              # Authenticated dashboard (index.html, app.js, auth-guard.js, style.css)
+│   ├── landing/                # Public landing page (served at /landing/)
+│   ├── auth/                   # Clerk login/signup/forgot pages (served at /login/)
+│   ├── demo/                   # Monitored ShopDemo app (served at /demo/)
+│   ├── dashboard-demo/         # Static dashboard preview (served at /dashboard-demo/)
+│   └── assets/                 # Shared images, logos, team photos (served at /assets/)
+│
+├── sdk/            # Browser SDK that monitored apps embed
+│   └── watchtower.js           # Served at /sdk/watchtower.js
+│
+└── shared/         # Cross-cutting utilities
+    └── utils/event-utils.js    # Event validation/normalization (source of truth)
+```
 
-read [README.md](../README.md) for more information about WatchTower and how to use it 
+## Running
 
-### `shared/` – Cross-prototype utilities
+From the repository root:
 
-Code that current product relies on:
+```bash
+npm start    # runs config:clerk, then boots src/backend/server.js on :3000
+```
 
-- `shared/utils/event-utils.js` – pure helpers for event validation, normalization, averaging, and percentile calculation. This is the source of truth.
+Served routes:
 
-**Technologies:** HTML, CSS, JavaScript, Node.js, PostGreSQL, Supabase, Render, Clerk, Beacon, Navigation Timing
+| URL | Page |
+|---|---|
+| `/` | Redirects to `/landing/` |
+| `/landing/` | Public landing page |
+| `/login/` | Clerk login / signup |
+| `/dashboard` | Authenticated dashboard |
+| `/demo/` | Monitored ShopDemo |
+| `/dashboard-demo/` | Static dashboard preview |
+| `/sdk/watchtower.js` | Browser SDK |
+| `/api/*` | JSON ingestion & dashboard APIs |
 
-## Development Guidelines
+See the root [README](../README.md) for full setup, environment variables, and
+deployment details, and [`docs/architecture/auth-workflow.md`](../docs/architecture/auth-workflow.md)
+for the authentication flow.
 
-### Code Organization
-- Keep code modular and single-responsibility
-- Use clear, descriptive variable and function names
-- Comment complex logic and non-obvious design decisions
+## Technologies
 
-### Testing
-- Write tests for new features (see [../../tests/](../../tests/))
-- Run all tests before committing
-- Aim for meaningful coverage, not just high percentages
-
-### Documentation
-- Update code comments when logic changes
-- Document APIs and their parameters
-- Add examples for complex features
-
-### Building & Deployment
-- Follow the build process outlined in each prototype's README
-- Test locally before pushing
-- Follow conventional commit messages
-
-## Next Steps
-
-As the project grows, this directory may include:
-
-- `shared/sdk/` – SDK extracted from prototype 2 once both prototypes share it
-- `shared/server/` – Backend API as a shared module
-- `shared/components/` – Reusable UI components
-- `app/` – The chosen hybrid (renamed from prototype_2) after Sprint 3 kickoff
+HTML, CSS, JavaScript, Node.js, PostgreSQL/Supabase, Render, Clerk, the Beacon
+API, and Navigation Timing.
 
 ## Related Documentation
 

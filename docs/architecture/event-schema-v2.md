@@ -1,6 +1,6 @@
 # Shared Event Schema v2
 
-**Applies to:** `src/prototype_3`  
+**Applies to:** `src/backend` (active WatchTower source)  
 **Status:** Accepted  
 **Sprint:** 5
 **Supersedes:** [event-schema-v1](event-schema-v1.md)

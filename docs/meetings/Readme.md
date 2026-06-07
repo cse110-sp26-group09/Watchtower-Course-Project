@@ -8,9 +8,9 @@ Standup notes are important because they provide a quick record of what each tea
 We also keep a rolling documentation of decision we have made connect to our github issues
 
 ## Table of Contents:
-- [Sprint 0](/docs/meetings/Sprint/0)
-- [Sprint 1](/docs/meetings/Sprint/1)
-- [Sprint 2](/docs/meetings/Sprint/2)
-- [Sprint 3](/docs/meetings/Sprint/3)
-- [Sprint 4](/docs/meetings/Sprint/4)
-- [Decision log](/docs/meetings/decision-log.md)
+- [Sprint 0](Sprint/0)
+- [Sprint 1](Sprint/1)
+- [Sprint 2](Sprint/2)
+- [Sprint 3](Sprint/3)
+- [Sprint 4](Sprint/4)
+- [Decision log](decision-log.md)

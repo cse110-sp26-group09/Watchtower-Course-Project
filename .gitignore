@@ -18,7 +18,7 @@ coverage/
 .env.*.local
 
 # Generated Clerk config (contains publishable key from CLERK_PUBLISHABLE_KEY)
-src/prototype_3/Log-In-Page/clerk-config.js
+src/frontend/auth/clerk-config.js
 
 # Logs
 logs/

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log In — WatchTower</title>
+  <link rel="icon" type="image/png" href="../assets/fav.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top brand header -->
+  <header class="auth-header">
+    <a href="/landing/" class="header-brand">
+      <img src="assets/watchtower-transparent.png" alt="" class="header-logo">
+      <span>WatchTower</span>
+    </a>
+    <a href="/landing/" class="back-link">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
+      Back to landing
+    </a>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-clerk-shell">
+
+      <!-- Status banner — used by auth.js to surface Clerk/config messages -->
+      <div class="status-banner" id="status-banner" role="alert" aria-live="polite"></div>
+
+      <!-- Clerk mounts the hosted sign-in component here (it renders its own
+           branded card, heading, and sign-up link). Our header bar + page
+           background remain the WatchTower shell; Clerk owns auth, sessions,
+           and passwords. No password form lives in our markup. -->
+      <div id="clerk-sign-in"></div>
+
+      <p class="auth-footer auth-legal-links">
+        <button class="auth-link-button" type="button" data-action="open-privacy">
+          Privacy Policy
+        </button>
+      </p>
+
+    </div>
+  </main>
+
+  <div class="auth-modal-overlay" id="privacy-modal" hidden>
+    <div class="privacy-policy-body">
+      <p class="modal-copy">
+        WatchTower is a lightweight observability platform that helps development teams monitor application behavior,
+        diagnose errors, understand performance issues, and review user feedback through a real-time dashboard.
+      </p>
+
+      <section class="privacy-section">
+        <h3>Scope</h3>
+        <p>
+          This policy applies to the WatchTower website, dashboard, SDK, APIs, demos, documentation, and related services.
+          WatchTower may process account and service data from dashboard users, plus customer telemetry data submitted
+          through the SDK or API by monitored applications.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Information You Provide</h3>
+        <p>
+          We may collect account details, authentication identifiers, alert recipient email addresses, dashboard preferences,
+          support messages, feedback, project names, environment settings, deployment labels, and alert configuration values.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Telemetry Collected Through WatchTower</h3>
+        <p>
+          Customer applications may send JavaScript errors, stack traces, performance metrics, route timing, clicks,
+          navigation events, custom events, login or logout events, feature usage, session IDs, anonymous identifiers,
+          configured user IDs, browser context, SDK version, environment, deployment version, feedback ratings, feedback
+          messages, ingestion latency, and event validation details.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>What Should Not Be Sent</h3>
+        <p>
+          WatchTower is designed for observability and debugging, not for storing highly sensitive information. Customers
+          should avoid sending passwords, payment card numbers, government ID numbers, health records, secret keys, or other
+          sensitive data unless it is necessary, lawful, and protected by appropriate safeguards.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>How We Use Information</h3>
+        <p>
+          We use information to create and authenticate accounts, provide dashboard access, receive and display telemetry,
+          show error feeds and performance charts, build session timelines, send operational alerts, support filtering and
+          querying, maintain preferences, debug WatchTower, improve reliability, and protect against unauthorized access or
+          abuse.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>How We Share Information</h3>
+        <p>
+          We do not sell personal information in the ordinary sense of the word. We may share information with service
+          providers that help operate WatchTower, including authentication, database, hosting, email delivery, analytics,
+          monitoring, testing, cloud infrastructure, storage, logging, and security providers. Customer telemetry may be
+          visible to authorized users of the customer project or environment.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Customer Responsibilities</h3>
+        <p>
+          Customers control what telemetry their applications send to WatchTower. Customers are responsible for providing
+          privacy notices to their own users, obtaining any required consent or legal basis, reviewing custom event payloads,
+          honoring applicable access or deletion requests, and securing API keys, SDK configuration, and access credentials.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Cookies and Browser Storage</h3>
+        <p>
+          WatchTower may use cookies, local storage, session storage, and similar technologies to keep users signed in,
+          maintain secure sessions, remember dashboard preferences, generate or maintain session identifiers, improve
+          reliability, and support diagnostics. The SDK may use sessionStorage to group events into a browser-tab session
+          timeline.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Data Retention and Security</h3>
+        <p>
+          We retain personal information only as long as reasonably necessary for the purposes described in this policy,
+          unless a longer period is required or permitted by law. We use reasonable safeguards such as authentication, session
+          verification, user-scoped dashboard access, token-based authorization, database access controls, secure transport
+          where deployed over HTTPS, input validation, and event schema checks.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Your Privacy Choices</h3>
+        <p>
+          Depending on where you live, you may have rights to access, correct, delete, restrict, or object to processing of
+          personal information, request portability, withdraw consent where processing is based on consent, or opt out of
+          certain communications. If your information was collected through a customer application, you may need to contact
+          that customer directly.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Children, Transfers, and Third Parties</h3>
+        <p>
+          WatchTower is intended for developers, teams, and organizations, and is not directed to children under 13.
+          Information may be processed in the United States or other countries where WatchTower or its service providers
+          operate. The Services may rely on third-party providers such as Clerk, Supabase, Google services, email delivery
+          providers, and infrastructure vendors, each subject to their own privacy practices.
+        </p>
+      </section>
+
+      <section class="privacy-section">
+        <h3>Contact</h3>
+        <p>
+          Questions or requests about this policy can be sent to the WatchTower Privacy Team at
+          Hemendra.ande@gmail.com. We will respond to valid requests in accordance with applicable laws and our policies.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <!-- Clerk publishable key (frontend-safe) must load before auth.js -->
+  <script src="./clerk-config.js"></script>
+  <script src="./auth.js"></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const modal = document.getElementById("privacy-modal");
+
+      function setPrivacyOpen(isOpen) {
+        if (!modal) {
+          return;
+        }
+        modal.hidden = !isOpen;
+        document.body.style.overflow = isOpen ? "hidden" : "";
+        if (isOpen) {
+          const closeButton = modal.querySelector("[data-action='close-privacy']");
+          if (closeButton) {
+            closeButton.focus();
+          }
+        }
+      }
+
+      document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof window.Element)) {
+          return;
+        }
+
+        const actionElement = target.closest("[data-action]");
+        if (!actionElement) {
+          return;
+        }
+
+        const action = actionElement.getAttribute("data-action");
+        if (action === "open-privacy") {
+          setPrivacyOpen(true);
+        }
+        if (action === "close-privacy") {
+          setPrivacyOpen(false);
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal && !modal.hidden) {
+          setPrivacyOpen(false);
+        }
+      });
+
+      if (modal) {
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) {
+            setPrivacyOpen(false);
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

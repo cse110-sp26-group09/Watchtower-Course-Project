@@ -5,7 +5,7 @@
 | Project | WatchTower |
 | Document | `docs/process/legacy-prototype-impact-check.md` |
 | Purpose | Audit whether the legacy `src/Prototype1/` folder is still referenced anywhere, and recommend whether it is safe to keep, archive, or delete. |
-| Related docs | [`sprint-2-comparison-readout.md`](../sprint/sprint-2-comparison-readout.md), [`prototype-comparison-rubric.md`](./prototype-comparison-rubric.md) |
+| Related docs | [`prototype-comparison-rubric.md`](./prototype-comparison-rubric.md) |
 | Author | Tooling / repo audit |
 
 ---
@@ -106,4 +106,4 @@ This keeps the legacy snapshot accessible for the prototype comparison rubric an
 
 - The current `src/prototype_1/` (frontend-only candidate) is not legacy. It is actively maintained and referenced by CI, the top-level README, and the prototype comparison readout. **Do not touch it.**
 - The current `src/prototype_2/` (full vertical slice) is the working base for the recommended hybrid direction. **Do not touch it.**
-- Sprint 3 hybrid composition decisions belong in [`sprint-2-comparison-readout.md`](../sprint/sprint-2-comparison-readout.md), not in this audit.
+- Sprint 3 hybrid composition decisions belong with the prototype comparison work (see [`prototype-comparison-rubric.md`](./prototype-comparison-rubric.md)), not in this audit.
