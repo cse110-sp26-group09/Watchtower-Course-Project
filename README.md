@@ -54,7 +54,7 @@ WatchTower SDK  ──POST /api/events──►  Node.js backend (Render)
 - **Clerk** handles all dashboard authentication (login, signup, sessions, sign-out). The backend verifies Clerk session JWTs against Clerk's public JWKS; WatchTower stores no passwords.
 - **Supabase / Postgres** is the application database (events + users). With no Supabase credentials configured, the server runs fully in-memory for local development.
 - **Render** hosts the Node.js backend in production.
-- **GitHub Pages** hosts a separate [external test app](https://cse110-sp26-group09.github.io/Watchtower-test-app/) that embeds the SDK and sends real cross-origin telemetry to the Render backend. GitHub Pages serves only that static demo — it does **not** run the backend or database.
+- **GitHub Pages** hosts a separate [external test app](https://cse110-sp26-group09.github.io/Watchtower-test-app/) that embeds the SDK and sends real cross-origin telemetry to the Render backend. GitHub Pages serves only that static demo; it does **not** run the backend or database.
 - **`DEFAULT_INGEST_OWNER_USER_ID`** is a *temporary* prototype mapping: because the external test app has no Clerk session, its otherwise-anonymous events are attributed to one demo owner so they appear on a dashboard. The long-term replacement is a **per-app/project key** ingestion model so each monitored app maps to the correct owner without a human login.
 
 See [`docs/architecture/auth-workflow.md`](docs/architecture/auth-workflow.md) for the full authentication and data-scoping flow.
@@ -99,7 +99,7 @@ See [`src/README.md`](src/README.md) for the source layout and [`docs/README.md`
    cp .env.example .env
    ```
 
-4. **Configure Clerk / Supabase / alerts as needed** (all optional for a basic local run — see [Environment Variables](#environment-variables)). Without Supabase the server uses in-memory storage; without a real Clerk key it runs in prototype/header-trust mode so tests and local development work.
+4. **Configure Clerk / Supabase / alerts as needed** (all optional for a basic local run; see [Environment Variables](#environment-variables)). Without Supabase the server uses in-memory storage; without a real Clerk key it runs in prototype/header-trust mode so tests and local development work.
 
 5. **Start the server**
 
@@ -121,7 +121,7 @@ See [`src/README.md`](src/README.md) for the source layout and [`docs/README.md`
 
 ## Environment Variables
 
-All configuration is via environment variables. Copy [`.env.example`](.env.example) to `.env` and fill in the values you need — it documents every variable with comments. Highlights:
+All configuration is via environment variables. Copy [`.env.example`](.env.example) to `.env` and fill in the values you need; it documents every variable with comments. Highlights:
 
 | Variable | Required | Description |
 |---|---|---|
@@ -180,7 +180,7 @@ npm run test:e2e    # Playwright end-to-end tests (start the server first; see b
 npm run docs:js     # Generate JSDoc API docs into docs/api/ (gitignored)
 ```
 
-The end-to-end tests target a running server. Start it in one terminal (`npm start`) and run `npm run test:e2e` in another, or set `BASE_URL` to point at a different host. CI starts the server in the background automatically — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which also runs HTML/CSS/JS validation and a dependency audit. More detail in [`tests/README.md`](tests/README.md).
+The end-to-end tests target a running server. Start it in one terminal (`npm start`) and run `npm run test:e2e` in another, or set `BASE_URL` to point at a different host. CI starts the server in the background automatically; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which also runs HTML/CSS/JS validation and a dependency audit. More detail in [`tests/README.md`](tests/README.md).
 
 ## Deployment
 

@@ -158,7 +158,7 @@ Every team member contributes to documentation as part of their work:
 ## Notes for Future Maintainers
 
 - This documentation structure scales well as the project grows
-- Don't let documentation become stale—outdated docs are worse than no docs
+- Don't let documentation become stale; outdated docs are worse than no docs
 - When in doubt, add clarity rather than assume people will know context
 - Use this README as a guide for what should exist; create new docs when needed
 - Consider automating documentation where possible (e.g., API docs, changelogs)
