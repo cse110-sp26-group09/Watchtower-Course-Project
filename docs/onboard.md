@@ -98,7 +98,7 @@ breakdown.
 
 ## Making a Small Change
 
-A safe, demo-friendly change for the handoff video — for example, edit a piece of
+A safe, demo-friendly change for the handoff video, for example editing a piece of
 copy text on the landing page (`src/frontend/landing/index.html`) or a dashboard
 card label (`src/frontend/dashboard/index.html`):
 
@@ -162,7 +162,7 @@ full flow.
 - **Clerk config not generated.** If sign-in misbehaves, run `npm run config:clerk`
   (or just `npm start`, which runs it first). It writes
   `src/frontend/auth/clerk-config.js` from `CLERK_PUBLISHABLE_KEY`. The file is
-  gitignored — set the key in `.env` or in Render → Environment.
+  gitignored; set the key in `.env` or in Render → Environment.
 - **Supabase env vars missing.** With no `SUPABASE_URL` / key, the server falls
   back to **in-memory** storage; events are lost on restart but everything else
   works. The startup log prints which store is active.
