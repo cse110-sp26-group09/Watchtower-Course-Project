@@ -42,14 +42,24 @@
     </div>
   </main>
 
-  <div class="auth-modal-overlay" id="privacy-modal" hidden>
-    <div class="privacy-policy-body">
+  <div class="auth-modal-overlay" id="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" hidden>
+    <div class="auth-modal">
+      <div class="auth-modal-header">
+        <div>
+          <p class="auth-modal-label">Legal</p>
+          <h2 id="privacy-modal-title">Privacy Policy</h2>
+        </div>
+        <button class="auth-modal-close" type="button" data-action="close-privacy" aria-label="Close privacy policy">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
       <p class="modal-copy">
         WatchTower is a lightweight observability platform that helps development teams monitor application behavior,
         diagnose errors, understand performance issues, and review user feedback through a real-time dashboard.
       </p>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Scope</h3>
         <p>
           This policy applies to the WatchTower website, dashboard, SDK, APIs, demos, documentation, and related services.
@@ -58,7 +68,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Information You Provide</h3>
         <p>
           We may collect account details, authentication identifiers, alert recipient email addresses, dashboard preferences,
@@ -66,7 +76,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Telemetry Collected Through WatchTower</h3>
         <p>
           Customer applications may send JavaScript errors, stack traces, performance metrics, route timing, clicks,
@@ -76,7 +86,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>What Should Not Be Sent</h3>
         <p>
           WatchTower is designed for observability and debugging, not for storing highly sensitive information. Customers
@@ -85,7 +95,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>How We Use Information</h3>
         <p>
           We use information to create and authenticate accounts, provide dashboard access, receive and display telemetry,
@@ -95,7 +105,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>How We Share Information</h3>
         <p>
           We do not sell personal information in the ordinary sense of the word. We may share information with service
@@ -105,7 +115,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Customer Responsibilities</h3>
         <p>
           Customers control what telemetry their applications send to WatchTower. Customers are responsible for providing
@@ -114,7 +124,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Cookies and Browser Storage</h3>
         <p>
           WatchTower may use cookies, local storage, session storage, and similar technologies to keep users signed in,
@@ -124,7 +134,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Data Retention and Security</h3>
         <p>
           We retain personal information only as long as reasonably necessary for the purposes described in this policy,
@@ -134,7 +144,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Your Privacy Choices</h3>
         <p>
           Depending on where you live, you may have rights to access, correct, delete, restrict, or object to processing of
@@ -144,7 +154,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Children, Transfers, and Third Parties</h3>
         <p>
           WatchTower is intended for developers, teams, and organizations, and is not directed to children under 13.
@@ -154,7 +164,7 @@
         </p>
       </section>
 
-      <section class="privacy-section">
+      <section class="legal-section">
         <h3>Contact</h3>
         <p>
           Questions or requests about this policy can be sent to the WatchTower Privacy Team at
