@@ -21,6 +21,7 @@ Understand who uses WatchTower and what they need.
 - [Woosik Research](Woosik-research.md) – User needs and scenarios
 - [Jason Research](Jason-research.md) – Competitive analysis and features
 - [Hemendra Research](Hemendra-research.md) – Dashboard design and workflows
+- [Waleed Research](Waleed-research.md) – Technical features
 
 ### Key Topics Covered
 
