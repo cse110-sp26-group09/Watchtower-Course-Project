@@ -19,8 +19,8 @@ Modern web teams need to know what is actually happening in production: which er
 - **Live WatchTower backend (Render):** https://watchtower-course-project-g8dv.onrender.com
 - **External GitHub Pages test app:** https://cse110-sp26-group09.github.io/Watchtower-test-app/
 - **Team status video:** [YouTube](https://youtu.be/pZjOWi3A8KU)
-- **Private handoff video:** TODO - [YouTube](https://youtu.be/9Bn4ElbA7Js)
-- **Public video:** TODO - [YouTube](https://youtu.be/tCBGQJBaOEo)
+- **Private handoff video:** [YouTube](https://youtu.be/9Bn4ElbA7Js)
+- **Public video:** [YouTube](https://youtu.be/tCBGQJBaOEo)
 - **Documentation index:** [docs/README.md](docs/README.md)
 - **Onboarding guide:** [docs/onboard.md](docs/onboard.md)
 
