@@ -18,7 +18,7 @@
     "jsdoc": "^4.0.4"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.107.0",
+    "@supabase/supabase-js": "^2.108.2",
     "dotenv": "^17.4.2",
     "googleapis": "^173.0.0",
     "jose": "^6.2.3",
