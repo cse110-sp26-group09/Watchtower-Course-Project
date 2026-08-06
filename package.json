@@ -21,7 +21,7 @@
     "@supabase/supabase-js": "^2.107.0",
     "dotenv": "^17.4.2",
     "googleapis": "^173.0.0",
-    "jose": "^6.2.3",
+    "jose": "^6.2.8",
     "nodemailer": "^9.0.3",
     "pg": "^8.21.0"
   }
