@@ -1,5 +1,8 @@
 # API Contract v1
 
+> Historical prototype contract. See [api-contract-v2.md](api-contract-v2.md)
+> for the current server behavior; the v1 event stream is retired.
+
 **Applies to:** `src/prototype_1`, `src/prototype_2`  
 **Status:** Accepted  
 **Sprint:** 2

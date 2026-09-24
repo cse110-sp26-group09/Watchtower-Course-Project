@@ -14,6 +14,7 @@
   <script src="/dashboard/auth-guard.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <!--
     WatchTower Dashboard - Single-page monitoring app.
     All views live in the DOM; navigation shows/hides sections via data-view attributes.
@@ -101,7 +102,7 @@
     </aside>
 
     <!-- ===== 3. MAIN CONTENT - five views, one visible at a time ===== -->
-    <main class="content" id="main-content">
+    <main class="content" id="main-content" tabindex="-1">
 
       <!-- 3a. HOME VIEW
            KPI tiles (users, events, errors, deploys) link to other views.
@@ -889,7 +890,7 @@
                   <button class="ghost-button snooze-action" type="button" data-snooze="120">Mute 2h</button>
                   <button class="ghost-button snooze-action" type="button" data-snooze="0">Resume now</button>
                 </div>
-                <p class="inline-status" id="notification-status-line">Notifications are active.</p>
+                <p class="inline-status" id="notification-status-line" role="status" aria-live="polite">Notifications are active.</p>
               </div>
             </div>
           </section>

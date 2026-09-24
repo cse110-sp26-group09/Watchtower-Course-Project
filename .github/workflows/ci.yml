@@ -11,12 +11,16 @@ on:
       - "docs/planning/**"
       - "docs/process/**"
       - "docs/README.md"
+      - "README.md"
+      - "SECURITY.md"
+      - ".env.example"
       - "package.json"
       - "package-lock.json"
       - "playwright.config.js"
       - ".gitignore"
       - "CHANGELOG.md"
       - ".github/workflows/ci.yml"
+      - ".github/dependabot.yml"
 
   pull_request:
     branches:
@@ -28,12 +32,16 @@ on:
       - "docs/planning/**"
       - "docs/process/**"
       - "docs/README.md"
+      - "README.md"
+      - "SECURITY.md"
+      - ".env.example"
       - "package.json"
       - "package-lock.json"
       - "playwright.config.js"
       - ".gitignore"
       - "CHANGELOG.md"
       - ".github/workflows/ci.yml"
+      - ".github/dependabot.yml"
 
   workflow_dispatch:
 

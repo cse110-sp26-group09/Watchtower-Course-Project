@@ -9,13 +9,8 @@
  *   - For signed-in users: reveal the dashboard, surface basic user info, and
  *     wire the logout controls to Clerk's signOut().
  *
- * IMPORTANT - prototype limitation:
- *   This is *client-side* protection only. It hides the UI from anonymous users
- *   but does NOT secure the backend. The Prototype 3 event API (/api/events,
- *   /api/stats, /api/developer/*, ...) remains open and is intentionally
- *   untouched here. A production build MUST verify Clerk session tokens on the
- *   server for every protected route. SDK event ingestion is a separate concern
- *   and should authenticate with an app/project key, not a dashboard user login.
+ * The backend verifies Clerk tokens for protected APIs. Public SDK ingestion
+ * remains separate and needs project-level credentials for multi-tenant use.
  *
  * Security notes:
  *   - Only the PUBLISHABLE key is used here. Never reference a Clerk secret key.
@@ -137,20 +132,6 @@
       return user.emailAddresses[0].emailAddress || "";
     }
     return "";
-  }
-
-  function registerAlertRecipient(user) {
-    const email = userPrimaryEmail(user);
-    if (!email) return;
-
-    fetch("/api/alert-recipient", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-      keepalive: true,
-    }).catch((error) => {
-      console.error("[auth-guard] Failed to register alert recipient:", error);
-    });
   }
 
   const PROFILE_NAME_KEY_PREFIX = "watchtower_profile_";
@@ -337,7 +318,6 @@
       }
       revealApp();
       wireUi(clerk);
-      registerAlertRecipient(clerk.user);
       persistClerkUserId(clerk.user);
       // Ensure an app_users row exists before the dashboard issues scoped
       // API calls so a first-time user is recognized immediately.
@@ -349,7 +329,6 @@
           redirectToLogin();
           return;
         }
-        registerAlertRecipient(payload.user);
         persistClerkUserId(payload.user);
         syncCurrentUser(payload.user);
       });

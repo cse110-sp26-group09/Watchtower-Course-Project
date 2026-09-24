@@ -2856,16 +2856,6 @@
       });
   }
 
-  function initializeLiveEventStream() {
-    if (typeof EventSource === "undefined") return;
-    let sse = new EventSource("/api/events/stream");
-    sse.onopen = function () { setLiveConnectionState(true); };
-    sse.onmessage = function () { fetchDashboardStats(); };
-    sse.onerror = function () {
-      if (!uiState.latestStats) setLiveConnectionState(false);
-    };
-  }
-
   function initializeManualRefresh() {
     if (refreshDashboardButton) refreshDashboardButton.addEventListener("click", fetchDashboardStats);
   }
@@ -2896,7 +2886,6 @@
     initializeProfileControls();
     initializeManualRefresh();
     initializeDeveloperAnalyticsControls();
-    initializeLiveEventStream();
     activateView(availableViewNames.indexOf(hash) === -1 ? "home" : hash);
     // Wait for Clerk to confirm the signed-in user before the first scoped
     // fetch, then poll. The interval still self-guards via getClerkUserId().

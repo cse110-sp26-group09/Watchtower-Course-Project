@@ -9,12 +9,9 @@ product, formerly "Prototype 3"). Historical prototypes live in
 ```
 src/
 ├── backend/        # Framework-free Node.js HTTP server + data layer
-│   ├── server.js               # Routing, API endpoints, static serving, SSE
+│   ├── server.js               # Routing, API endpoints, static serving
 │   ├── server-helpers.js       # Pure ingestion/stream/query helpers (unit-tested)
-│   ├── event-store.js          # Supabase/Postgres store with in-memory fallback
-│   ├── mailer.js               # Gmail-OAuth threshold alert emails
-│   ├── alert-threshold.js      # Error-rate threshold evaluation
-│   └── clerk-alert-recipients.js # Optional Clerk-sourced alert recipients
+│   └── event-store.js          # Supabase/Postgres store with in-memory fallback
 │
 ├── frontend/       # Browser UI served by the backend
 │   ├── dashboard/              # Authenticated dashboard (index.html, app.js, auth-guard.js, style.css)

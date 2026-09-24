@@ -44,13 +44,14 @@ There are two separate auth concerns:
 | Concern | Current API behavior |
 |---|---|
 | Dashboard user auth | Clerk session. Protected read routes require a current user. |
-| SDK event ingestion auth | Not implemented yet. `POST /api/events`, `POST /api/beacon`, and `GET /api/events/stream` remain open. |
+| SDK event ingestion auth | Not implemented yet. `POST /api/events` and `POST /api/beacon` remain open. |
 
 Protected routes resolve the user in this order:
 
 1. `Authorization: Bearer <Clerk session JWT>` verified against Clerk JWKS.
 2. `X-Clerk-User-Id: <clerk_user_id>` only when token verification is not
-   configured or `WATCHTOWER_TRUST_USER_HEADER=true`.
+   configured or `WATCHTOWER_TRUST_USER_HEADER=true`. This mode binds to
+   loopback only and is forbidden when `NODE_ENV=production`.
 
 If a protected route cannot resolve a user, it returns `401 Unauthorized`.
 
@@ -89,7 +90,7 @@ Server normalization fills missing values:
 | `eventName` | Derived from `type` when absent. |
 | `timestamp` | Current server time when absent. |
 | `sessionId` | `unknown-session` when absent. |
-| `userId` | Authenticated ingest owner, `DEFAULT_INGEST_OWNER_USER_ID`, payload `userId`, or `null`. |
+| `userId` | Verified ingest owner, `DEFAULT_INGEST_OWNER_USER_ID`, or `null`. Local loopback prototype mode also accepts payload `userId` for ShopDemo. |
 | `deployVersion` | `unknown` when absent. |
 | `appName` | `shopdemo` when absent. |
 | `environment` | Normalized to `production`, `staging`, `development`, or `preview`. |
@@ -155,8 +156,8 @@ falls back to anonymous storage.
 { "error": "Failed to store events" }
 ```
 
-Accepted events are persisted through Supabase when configured, broadcast to
-SSE clients, and included in dashboard stats for their resolved owner.
+Accepted events are persisted through Supabase when configured, returned by
+the dashboard's scoped polling APIs, and included in stats for their resolved owner.
 
 ---
 
@@ -261,37 +262,12 @@ Return dashboard aggregates for the authenticated dashboard user.
 
 ---
 
-## GET /api/events/stream
-
-Server-Sent Events stream for newly ingested events.
-
-**Auth:** Open.
-
-**Response headers:**
-
-```text
-Content-Type: text/event-stream
-Cache-Control: no-cache
-Connection: keep-alive
-```
-
-**Stream format:**
-
-```text
-data: [{"type":"error","timestamp":"2026-06-05T18:00:01.234Z","data":{}}]
-```
-
-The server sends an initial keep-alive comment and removes clients on close.
-
----
-
 ## POST /api/users/sync
 
 Create or update the current application user in Supabase `app_users`.
 
-**Auth:** Current user is preferred from a verified Clerk token or trusted
-header. The body `clerkUserId` is accepted as a fallback in prototype/test
-environments.
+**Auth:** Required. The server derives the owner from a verified Clerk token,
+or a header in loopback-only development mode. The body `clerkUserId` is ignored.
 
 **Request body:**
 
@@ -318,10 +294,10 @@ environments.
 }
 ```
 
-**Response `400 Bad Request`:**
+**Response `401 Unauthorized`:**
 
 ```json
-{ "error": "clerkUserId is required" }
+{ "error": "Authentication required" }
 ```
 
 ---
@@ -440,7 +416,7 @@ SELECT field, count(*) FROM events [WHERE field = 'value'] [GROUP BY field] [ORD
 Evaluate feature flags for an identity payload. This route is used by the
 Prototype 3 dashboard.
 
-**Auth:** Not required by the current server route.
+**Auth:** Required; the identity payload is evaluated only for a signed-in user.
 
 **Request body:**
 
@@ -464,29 +440,6 @@ Prototype 3 dashboard.
 
 ---
 
-## POST /api/alert-recipient
-
-Register the email address that receives prototype alert emails.
-
-**Auth:** Not required by the current server route.
-
-**Request body:**
-
-```json
-{ "email": "dev@example.com" }
-```
-
-**Response `200 OK`:**
-
-```json
-{ "ok": true }
-```
-
-**Response `400 Bad Request`:**
-
-```json
-{ "error": "Valid email is required" }
-```
 
 ## Error Responses
 
@@ -494,9 +447,9 @@ Common errors:
 
 | Status | Example | Meaning |
 |---|---|---|
-| `400` | `{ "error": "clerkUserId is required" }` | Required field missing. |
-| `401` | `{ "error": "Unauthorized" }` | Protected route without a current user. |
-| `404` | `{ "error": "Not found" }` | Unknown API path. |
+| `400` | `{ "error": "Invalid JSON body" }` | Malformed JSON input. |
+| `401` | `{ "error": "Authentication required" }` | Protected route without a current user. |
+| `413` | `{ "error": "Request body too large" }` | Body exceeds the request limit. |
 | `500` | `{ "error": "Failed to fetch events" }` | Server/store failure. |
 
 ---

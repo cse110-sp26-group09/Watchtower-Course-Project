@@ -33,9 +33,9 @@ the documentation map, see [`docs/README.md`](README.md).
 
 4. **Fill in env vars if needed.** All are optional for a basic local run. Set
    `CLERK_PUBLISHABLE_KEY` for real sign-in, the `SUPABASE_*` vars for
-   persistence, and the `GMAIL_*` vars for alert emails. With none of these the
-   server runs in-memory with header-trust auth, which is enough for local
-   development and tests.
+   persistence. With neither configured, the server runs in-memory with
+   header-trust auth on loopback for local development and tests. Production
+   requires Clerk verification.
 
 5. **Start the server**
 
@@ -64,7 +64,7 @@ archive/        # Historical Prototype 1 & 2 code, kept for project history only
 docs/           # Product, architecture, ADRs, process, research, sprint docs (+ this guide)
 scripts/        # Build/startup helpers (e.g. generate-clerk-config.js)
 src/
-├── backend/    # Node.js HTTP server, event store, mailer, alert logic
+├── backend/    # Node.js HTTP server and event store
 ├── frontend/   # dashboard/, landing/, auth/, demo/, dashboard-demo/, shared assets/
 ├── sdk/        # Browser SDK (watchtower.js) that monitored apps embed
 └── shared/     # Cross-cutting utilities (event-utils.js)
@@ -89,7 +89,7 @@ breakdown.
   audit, and the Playwright e2e suite (CI starts the server in the background
   before running e2e).
 - **Render deployment** hosts the backend. The Render service runs `npm start`
-  with `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` vars, and any alert vars set
+  with `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` vars, and `CORS_ALLOWED_ORIGINS` set
   under Render → Environment.
 - **GitHub Pages external test app**
   (<https://cse110-sp26-group09.github.io/Watchtower-test-app/>) is a separate
@@ -193,10 +193,10 @@ full flow.
 
 - Replace `DEFAULT_INGEST_OWNER_USER_ID` with a proper project/app key model for
   multi-tenant ingestion.
-- Improve alerting (richer routing and recipient management beyond threshold
-  email).
-- Harden production auth and database security (e.g. Supabase RLS scoped to the
-  Clerk `sub` claim).
+- Reintroduce server-side alerting only if a real deployment needs it, with a
+  maintained delivery service and authenticated recipient management.
+- Add project keys for ingestion and database defense in depth (e.g. Supabase
+  RLS scoped to the Clerk `sub` claim).
 - Improve deployment documentation (Render + Supabase + Clerk setup runbooks).
 - Continue UI polish across the dashboard and landing pages.
 - Archive or remove stale historical docs only after a deliberate review.

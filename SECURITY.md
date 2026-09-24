@@ -2,11 +2,11 @@
 
 ## Project Status
 
-WatchTower is a course prototype created for CSE 110. The project is actively developed by the team during the quarter and is not intended for production use at this stage.
+WatchTower is a CSE 110 course project. The current `main` branch is the supported version; historical code in `archive/` is retained for reference and is not maintained.
 
 ## Reporting a Vulnerability
 
-If you find a security issue in WatchTower, please report it to the project team through the team’s course communication channel or by contacting one of the team leads directly.
+If you find a security issue, use GitHub's **Report a vulnerability** option on this repository's Security tab when private vulnerability reporting is enabled. If that option is unavailable, contact the maintainers privately through the team's course communication channel. Do not open a public issue containing exploit details.
 
 Please avoid publicly disclosing security issues until the team has reviewed the report and decided on the appropriate fix.
 
@@ -23,7 +23,8 @@ When reporting a vulnerability, please include:
 
 | Version | Supported |
 |---|---|
-| Current course prototype | Yes |
+| Current `main` branch | Yes |
+| Archived prototypes and older releases | No |
 
 ## Security Practices
 

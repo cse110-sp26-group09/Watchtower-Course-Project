@@ -9,13 +9,12 @@ tests/
 ├── README.md
 ├── unit/                                    # Jest tests for src/backend pure modules
 │   ├── prototype3-server-helpers.test.js    # Ingestion/stream/query helpers
-│   ├── prototype3-event-store.test.js       # Event store normalization & scoping
-│   ├── prototype3-alert-threshold.test.js   # Error-rate threshold evaluation
-│   ├── prototype3-mailer.test.js            # Alert email composition
-│   └── prototype3-clerk-alert-recipients.test.js # Clerk recipient lookup
+│   └── prototype3-event-store.test.js       # Event store normalization & scoping
 └── e2e/
     ├── watchtower.spec.js               # Landing, dashboard, demo, API smoke tests
-    └── api-events-filters.spec.js       # /api/events and /api/developer/stream filters
+    ├── api-events-filters.spec.js       # /api/events and /api/developer/stream filters
+    ├── security-boundaries.spec.js     # Auth, input-size, CORS, and query-limit boundaries
+    └── accessibility.spec.js           # Privacy dialog keyboard focus
 ```
 
 ## Running Tests

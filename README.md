@@ -34,7 +34,6 @@ Modern web teams need to know what is actually happening in production: which er
 - **Deploy / version visibility** – tie errors and metrics to specific deploy versions for faster regression hunting.
 - **User-scoped dashboard data** – every dashboard read is scoped to the signed-in Clerk user, so users only see their own telemetry.
 - **Supabase / Postgres persistence** – events and users are stored in Postgres; the server falls back to in-memory storage when no database is configured.
-- **Email alerts** – optional threshold-based alerting. The current implementation was validated locally; production alert routing is documented as future work.
 - **SDK integration** – a dependency-free browser SDK that any external monitored app can embed.
 
 ## Architecture
@@ -68,7 +67,7 @@ archive/        # Historical Prototype 1 & 2 code (kept for project history)
 docs/           # Product, architecture, ADRs, process, research, sprint docs
 scripts/        # Build/startup helpers (e.g. Clerk config generation)
 src/
-├── backend/    # Node.js HTTP server, event store, mailer, alert logic
+├── backend/    # Node.js HTTP server and event store
 ├── frontend/   # dashboard/, landing/, auth/, demo/, dashboard-demo/, assets/
 ├── sdk/         # Browser SDK (watchtower.js)
 └── shared/      # Shared utilities (event-utils.js)
@@ -100,7 +99,7 @@ See [`src/README.md`](src/README.md) for the source layout and [`docs/README.md`
    cp .env.example .env
    ```
 
-4. **Configure Clerk / Supabase / alerts as needed** (all optional for a basic local run; see [Environment Variables](#environment-variables)). Without Supabase the server uses in-memory storage; without a real Clerk key it runs in prototype/header-trust mode so tests and local development work.
+4. **Configure Clerk and Supabase as needed** (see [Environment Variables](#environment-variables)). Without Supabase the server uses in-memory storage; without a real Clerk key it runs in local-only header-trust mode for tests and development. Production requires Clerk verification.
 
 5. **Start the server**
 
@@ -132,7 +131,7 @@ All configuration is via environment variables. Copy [`.env.example`](.env.examp
 | `SUPABASE_ANON_KEY` | Optional | Supabase anon key (fallback when no service-role key). |
 | `SUPABASE_P3_EVENTS_TABLE` | No | Events table name (default `prototype3_events`). |
 | `DEFAULT_INGEST_OWNER_USER_ID` | No | **Temporary** demo-only owner for unauthenticated external events. Replace with project/app keys for production. |
-| `GMAIL_ADDRESS` / `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` / `GMAIL_REFRESH_TOKEN` | For alerts | Gmail OAuth credentials for threshold alert emails. |
+| `CORS_ALLOWED_ORIGINS` | For cross-origin SDKs | Comma-separated allowed origins; unset allows only same-origin requests. |
 | `PORT` | No | Server port (Render sets this automatically; default `3000`). |
 
 > Never commit `.env` or a generated `clerk-config.js` containing a real key. Only `.env.example` and `clerk-config.example.js` carry placeholders.
@@ -185,7 +184,7 @@ The end-to-end tests target a running server. Start it in one terminal (`npm sta
 
 ## Deployment
 
-- **Backend (Render):** the Render service runs `npm start`, which generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` and boots `src/backend/server.js`. Set `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` variables, and any alert/`DEFAULT_INGEST_OWNER_USER_ID` values under Render → Environment.
+- **Backend (Render):** the Render service runs `npm start`, which generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` and boots `src/backend/server.js`. Set `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` variables, and an explicit `CORS_ALLOWED_ORIGINS` value for external SDK clients under Render → Environment. Set `NODE_ENV=production` so startup rejects insecure authentication settings.
 - **Database (Supabase):** provision the `prototype3_events` and `app_users` tables (see above). The backend uses the service-role key server-side only.
 - **External test app (GitHub Pages):** a static page embeds the SDK pointed at the Render `/api/events` endpoint. GitHub Pages serves static files only and runs neither the backend nor the database.
 - **Clerk:** add `CLERK_PUBLISHABLE_KEY` to the backend environment; the publishable key is the only Clerk value exposed to the browser.
@@ -232,16 +231,9 @@ WatchTower is the CSE 110 (Spring 2026) Team 09 course project. Roles:
 - **Onboarding guide:** [docs/onboard.md](docs/onboard.md)
 - **Documentation index:** [docs/README.md](docs/README.md)
 
-The video should cover:
+## Security
 
-- Team name and number
-- How to access the repo
-- Repo organization
-- How to run WatchTower
-- A small change demo and build/test process
-- CI/CD pipeline explanation
-- Agile retrospective: what worked, what did not, and what the team learned
-- Future work for the next team
+Keep server credentials in deployment environment settings or an untracked `.env` file; only the Clerk publishable key belongs in browser configuration. Start from [`.env.example`](.env.example), set an explicit `CORS_ALLOWED_ORIGINS` for external SDK clients, and never commit secret values. Dependabot checks dependencies weekly; review and test security updates with `npm audit`, `npm test`, and the end-to-end suite. Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md).
 
 ## Contributing
 

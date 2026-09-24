@@ -92,6 +92,15 @@ test.describe("WatchTower dashboard", () => {
     await expect(page.locator('.sidebar button[data-view="issues"]')).toBeVisible();
   });
 
+  test("dashboard skip link moves keyboard focus to main content", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.keyboard.press("Tab");
+    const skip = page.getByRole("link", { name: "Skip to main content" });
+    await expect(skip).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#main-content")).toBeFocused();
+  });
+
   test("clicking Analytics in the sidebar reveals the analytics view", async ({ page }) => {
     await page.goto("/dashboard");
 

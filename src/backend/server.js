@@ -1,14 +1,11 @@
 /**
  * WatchTower Prototype 3 - Core Production Infrastructure Server
  * Orchestrates multi-tenant analytical ingestion profiles, dynamically maps schemas,
- * and maintains reactive Server-Sent-Events streams.
+ * and serves the dashboard API and static assets.
  *
  * @module backend/server
  */
 
-const { sendAlert } = require("./mailer");
-const { getClerkAlertRecipients } = require("./clerk-alert-recipients");
-const { evaluateErrorThreshold } = require("./alert-threshold");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -39,15 +36,6 @@ const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
 const ACTIVE_USER_WINDOW = Number.isFinite(parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10))
   ? parseInt(process.env.ACTIVE_USER_WINDOW_MS, 10)
   : 30000;
-const ERROR_ALERT_THRESHOLD = Number.isFinite(parseInt(process.env.ERROR_ALERT_THRESHOLD, 10))
-  ? parseInt(process.env.ERROR_ALERT_THRESHOLD, 10)
-  : 5;
-const ERROR_ALERT_WINDOW_MS = Number.isFinite(parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10))
-  ? parseInt(process.env.ERROR_ALERT_WINDOW_MS, 10)
-  : 300000;
-const ALERT_COOLDOWN_MS = Number.isFinite(parseInt(process.env.ALERT_COOLDOWN_MS, 10))
-  ? parseInt(process.env.ALERT_COOLDOWN_MS, 10)
-  : 900000;
 // Window for the "active issues" error count. Counted directly against the
 // store (not the capped event feed) so it does not shrink as non-error
 // traffic pushes errors out of the recent-events window. 0 = count all errors.
@@ -78,13 +66,26 @@ const GOVERNANCE_MASKING_RULES = [
   { field: "password", action: "drop" }
 ];
 
-const sseClients = new Set();
 const eventStore = eventStoreModule.createConfiguredEventStore({ maxEvents: MAX_EVENTS });
-let lastErrorAlertSentAt = 0;
-// Manually registered alert recipient (POST /api/alert-recipient). Kept as a
-// first-class recipient source alongside the Clerk-sourced recipients so the
-// dashboard's "register my email" flow keeps working.
-let registeredAlertRecipient = "";
+const queryRateLimits = new Map();
+
+function allowDeveloperQuery(userId) {
+  const now = Date.now();
+  const current = queryRateLimits.get(userId);
+  const entry = current && now < current.resetAt ? current : { count: 0, resetAt: now + 60000 };
+  if (entry.count >= 60) {return false;}
+  entry.count += 1;
+  queryRateLimits.set(userId, entry);
+  if (queryRateLimits.size > 1000) {
+    queryRateLimits.forEach(function (value, key) {
+      if (now >= value.resetAt) {queryRateLimits.delete(key);}
+    });
+    if (queryRateLimits.size > 1000) {
+      queryRateLimits.delete(queryRateLimits.keys().next().value);
+    }
+  }
+  return true;
+}
 
 // ─── Clerk session-token verification ─────────────────────────────────────────
 // Production security: instead of trusting the X-Clerk-User-Id header, verify the
@@ -92,12 +93,9 @@ let registeredAlertRecipient = "";
 // signed `sub` claim. The issuer is the Clerk Frontend API origin, which is
 // base64-encoded inside the publishable key (or set explicitly via env).
 //
-// When no real Clerk instance is configured (placeholder/empty key, e.g. CI and
-// local memory-store runs), verification is disabled and we fall back to trusting
-// the header so the prototype/tests keep working. Set
-// WATCHTOWER_TRUST_USER_HEADER=true to force the header fallback even when a real
-// key is present (useful for header-only API tests).
+// Header trust is only for local tests. Production requires token verification.
 const TRUST_USER_HEADER = safeString(process.env.WATCHTOWER_TRUST_USER_HEADER).trim() === "true";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 function resolveClerkIssuer() {
   const explicit = safeString(process.env.CLERK_JWT_ISSUER).trim();
@@ -117,12 +115,19 @@ const CLERK_ISSUER = resolveClerkIssuer();
 let clerkJwks = null;
 if (CLERK_ISSUER) {
   try {
-    clerkJwks = createRemoteJWKSet(new URL(CLERK_ISSUER + "/.well-known/jwks.json"));
+    const jwksUrl = new URL(CLERK_ISSUER + "/.well-known/jwks.json");
+    if (jwksUrl.protocol !== "https:") {
+      throw new Error("Clerk JWKS issuer must use HTTPS");
+    }
+    clerkJwks = createRemoteJWKSet(jwksUrl);
   } catch (error) {
     console.error("[prototype_3] Could not initialize Clerk JWKS:", error.message);
   }
 }
 const CLERK_VERIFICATION_ENABLED = Boolean(clerkJwks);
+if (IS_PRODUCTION && (!CLERK_VERIFICATION_ENABLED || TRUST_USER_HEADER)) {
+  throw new Error("Production requires Clerk JWT verification and forbids trusting user headers");
+}
 
 /**
  * Verify a Clerk session JWT and return its subject (the Clerk user id).
@@ -133,7 +138,8 @@ async function verifyClerkToken(token) {
   if (!clerkJwks || !token) {return "";}
   try {
     const { payload } = await jwtVerify(token, clerkJwks, { issuer: CLERK_ISSUER });
-    return safeString(payload && payload.sub).trim();
+    if (!payload || !Number.isInteger(payload.exp)) {return "";}
+    return safeString(payload.sub).trim();
   } catch (error) {
     console.warn("[prototype_3] Clerk token verification failed:", error.message);
     return "";
@@ -267,10 +273,10 @@ function detectPiiFields(eventRecord) {
 
 function getAllowedCorsOrigin(origin) {
   const configured = safeString(process.env.CORS_ALLOWED_ORIGINS).trim();
-  if (!configured || configured === "*") {return "*";}
+  if (!origin || !configured) {return "";}
   const allowedOrigins = configured.split(",").map(function (value) {
     return value.trim();
-  }).filter(Boolean);
+  }).filter(function (value) { return Boolean(value) && value !== "*"; });
   return allowedOrigins.indexOf(origin) !== -1 ? origin : "";
 }
 
@@ -287,6 +293,21 @@ function sendJson(res, status, payload, req) {
   applyCors(res, req);
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(payload));
+}
+
+function sendRequestError(res, req, error, fallbackMessage) {
+  const status = error && error.statusCode;
+  if (status === 400 || status === 413) {
+    sendJson(res, status, { error: error.message }, req);
+  } else {
+    console.error("[prototype_3] " + fallbackMessage + ":", error);
+    sendJson(res, 500, { error: fallbackMessage }, req);
+  }
+}
+
+function isWithin(root, target) {
+  const relative = path.relative(root, target);
+  return relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
 }
 
 /**
@@ -368,18 +389,32 @@ async function requireCurrentUser(request, response) {
 function readJsonBody(req) {
   return new Promise(function (resolve, reject) {
     const chunks = [];
-    req.on("data", c => chunks.push(c));
+    let totalBytes = 0;
+    let tooLarge = false;
+    req.on("data", c => {
+      totalBytes += c.length;
+      if (totalBytes > 1024 * 1024) {
+        tooLarge = true;
+        return;
+      }
+      chunks.push(c);
+    });
     req.on("end", () => {
+      if (tooLarge) {
+        const error = new Error("Request body too large");
+        error.statusCode = 413;
+        reject(error);
+        return;
+      }
       try { resolve(JSON.parse(Buffer.concat(chunks).toString() || "{}")); }
-      catch (e) { reject(e); }
+      catch (_error) {
+        const error = new Error("Invalid JSON body");
+        error.statusCode = 400;
+        reject(error);
+      }
     });
     req.on("error", reject);
   });
-}
-
-function broadcastEvents(batch) {
-  const str = JSON.stringify(batch);
-  sseClients.forEach(c => c.write("data: " + str + "\n\n"));
 }
 
 function buildLatencySummary(events) {
@@ -986,48 +1021,6 @@ function getIncomingEvents(body) {
   return [body];
 }
 
-function isEmailLike(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeString(value).trim());
-}
-
-async function maybeSendErrorThresholdAlert() {
-  const now = Date.now();
-  const events = await eventStore.allEvents(MAX_EVENTS);
-  const evaluation = evaluateErrorThreshold(events, {
-    now: now,
-    threshold: ERROR_ALERT_THRESHOLD,
-    windowMs: ERROR_ALERT_WINDOW_MS,
-    cooldownMs: ALERT_COOLDOWN_MS,
-    lastSentAt: lastErrorAlertSentAt
-  });
-
-  if (!evaluation.shouldSend) {return;}
-
-  const recipients = [];
-  if (registeredAlertRecipient) {
-    recipients.push(registeredAlertRecipient);
-  }
-
-  // Clerk recipient discovery is a fallback source. Do not let a slow or failed
-  // Clerk lookup block an already registered dashboard recipient.
-  if (!recipients.length) {
-    try {
-      const clerkRecipients = await getClerkAlertRecipients(now);
-      clerkRecipients.forEach(function (recipient) {
-        if (recipients.indexOf(recipient) === -1) {
-          recipients.push(recipient);
-        }
-      });
-    } catch (error) {
-      console.warn("[mailer] Clerk alert recipient lookup skipped:", error.message);
-    }
-  }
-  if (!recipients.length) {return;}
-
-  lastErrorAlertSentAt = now;
-  sendAlert(evaluation.alert, recipients).catch(err => console.error("[mailer] Failed to send alert:", err));
-}
-
 /**
  * Read the configured temporary default ingest owner.
  *
@@ -1054,57 +1047,46 @@ function getDefaultIngestOwnerUserId() {
  *      resolveCurrentUserId). This is authoritative.
  *   2. DEFAULT_INGEST_OWNER_USER_ID - a temporary fallback for unauthenticated
  *      external SDK events. Not authoritative.
- *   3. None - the request stays anonymous and events keep whatever userId they
- *      carry (which may be null). Current behavior is preserved.
+ *   3. None - events remain anonymous. A client cannot assign an owner.
  *
  * @param {http.IncomingMessage} request - Incoming HTTP request.
- * @returns {Promise<{ownerUserId: string, authoritative: boolean}>} The owner
- *   to stamp and whether it came from an authenticated user.
+ * @returns {Promise<string>} The owner to stamp, or an empty string.
  */
 async function getIngestOwnerUserId(request) {
   const authedUserId = await resolveCurrentUserId(request);
   if (authedUserId) {
-    return { ownerUserId: authedUserId, authoritative: true };
+    return authedUserId;
   }
   const fallbackOwner = getDefaultIngestOwnerUserId();
   if (fallbackOwner) {
-    return { ownerUserId: fallbackOwner, authoritative: false };
+    return fallbackOwner;
   }
-  return { ownerUserId: "", authoritative: false };
+  return "";
 }
 
-async function ingestEventsBody(body, ownerUserId, options) {
-  const opts = options || {};
-  // When the owner is authoritative (an authenticated dashboard user) we stamp
-  // every event with their Clerk user id so a client cannot spoof another
-  // user's id. When the owner is only the temporary default fallback we fill in
-  // just the events that arrive without a userId, so the same-origin demo's own
-  // per-user tagging (and any future client-supplied owner) is preserved.
-  const fillOnlyMissing = Boolean(opts.fillOnlyMissing);
-  let arr = getIncomingEvents(body).filter(isValidEvent);
-  if (ownerUserId) {
-    arr = arr.map(function (event) {
-      if (fillOnlyMissing && event && event.userId) {
-        return event;
-      }
-      return Object.assign({}, event, { userId: ownerUserId });
-    });
+async function ingestEventsBody(body, ownerUserId, allowLocalPayloadOwner) {
+  const incoming = getIncomingEvents(body);
+  if (incoming.length > 100) {
+    const error = new Error("Too many events in one request");
+    error.statusCode = 413;
+    throw error;
   }
+  const arr = incoming.filter(isValidEvent).map(function (event) {
+    // The local ShopDemo bridge uses payload userId; never trust it on a
+    // remotely reachable server, where it could inject into another account.
+    const owner = ownerUserId || (allowLocalPayloadOwner ? event.userId : "");
+    return Object.assign({}, event, { userId: owner || null });
+  });
   const norm = await eventStore.insertEvents(arr);
   await eventStore.pruneOldest(MAX_EVENTS);
-
-  if (norm.length) {
-    broadcastEvents(norm);
-
-    if (norm.some(function (eventRecord) { return eventRecord.type === "error"; })) {
-      maybeSendErrorThresholdAlert().catch(err => console.error("[mailer] Failed to evaluate alert threshold:", err));
-    }
-  }
-
   return norm;
 }
 
 const server = http.createServer(async function (request, response) {
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
   const parsedUrl = new URL(request.url, "http://localhost");
   const pathname = parsedUrl.pathname;
   // The backend serves the frontend from src/frontend and the browser SDK from
@@ -1118,33 +1100,11 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "OPTIONS") {
     applyCors(response, request); response.writeHead(204); response.end(); return;
   }
-  if (request.method === "POST" && pathname === "/api/alert-recipient") {
-    try {
-      const body = await readJsonBody(request);
-      const email = safeString(body && body.email).trim();
-      if (!isEmailLike(email)) {
-        sendJson(response, 400, { error: "Valid email is required" }, request);
-        return;
-      }
-      registeredAlertRecipient = email;
-      console.log("[mailer] Registered alert recipient " + registeredAlertRecipient);
-      sendJson(response, 200, { ok: true }, request);
-    } catch (error) {
-      console.error("[prototype_3] Failed to register alert recipient:", error);
-      sendJson(response, 500, { error: "Failed to register alert recipient" }, request);
-    }
-    return;
-  }
   if (request.method === "POST" && pathname === "/api/users/sync") {
     try {
       const body = await readJsonBody(request);
-      // Prefer the verified token subject; fall back to the body/header id when
-      // verification is not enforced (prototype/tests).
-      const clerkUserId = (await resolveCurrentUserId(request)) || safeString(body && body.clerkUserId).trim();
-      if (!clerkUserId) {
-        sendJson(response, 400, { error: "clerkUserId is required" }, request);
-        return;
-      }
+      const clerkUserId = await requireCurrentUser(request, response);
+      if (!clerkUserId) {return;}
       const user = await eventStore.syncUser({
         clerkUserId: clerkUserId,
         email: safeString(body && body.email).trim(),
@@ -1155,8 +1115,7 @@ const server = http.createServer(async function (request, response) {
       });
       sendJson(response, 200, { ok: true, user: user }, request);
     } catch (error) {
-      console.error("[prototype_3] Failed to sync user:", error);
-      sendJson(response, 500, { error: "Failed to sync user" }, request);
+      sendRequestError(response, request, error, "Failed to sync user");
     }
     return;
   }
@@ -1168,13 +1127,10 @@ const server = http.createServer(async function (request, response) {
       // when present, else the temporary DEFAULT_INGEST_OWNER_USER_ID fallback,
       // else anonymous (user_id stays null).
       const owner = await getIngestOwnerUserId(request);
-      const norm = await ingestEventsBody(body, owner.ownerUserId || null, {
-        fillOnlyMissing: !owner.authoritative,
-      });
+      const norm = await ingestEventsBody(body, owner, !CLERK_VERIFICATION_ENABLED);
       sendJson(response, 200, { accepted: norm.length }, request);
     } catch (error) {
-      console.error("[prototype_3] Failed to ingest events:", error);
-      sendJson(response, 500, { error: "Failed to store events" }, request);
+      sendRequestError(response, request, error, "Failed to store events");
     }
     return;
   }
@@ -1185,9 +1141,7 @@ const server = http.createServer(async function (request, response) {
       // anonymous) so beacon-flushed events from the external test app are
       // attributed to the same demo owner.
       const owner = await getIngestOwnerUserId(request);
-      await ingestEventsBody(body, owner.ownerUserId || null, {
-        fillOnlyMissing: !owner.authoritative,
-      });
+      await ingestEventsBody(body, owner, !CLERK_VERIFICATION_ENABLED);
     } catch (_error) {
       // Beacon callers ignore response bodies, so keep this endpoint fail-closed.
     }
@@ -1239,22 +1193,31 @@ const server = http.createServer(async function (request, response) {
     try {
       const userId = await requireCurrentUser(request, response);
       if (!userId) {return;}
+      if (!allowDeveloperQuery(userId)) {
+        response.setHeader("Retry-After", "60");
+        sendJson(response, 429, { error: "Query rate limit exceeded" }, request);
+        return;
+      }
       const body = await readJsonBody(request);
+      if (!body || typeof body.query !== "string" || body.query.length > 2000) {
+        sendJson(response, 400, { error: "Query must be a string of at most 2000 characters" }, request);
+        return;
+      }
       const events = await eventStore.allEvents(MAX_EVENTS, { userId: userId });
       sendJson(response, 200, executeDeveloperQuery(body.query, events), request);
     } catch (error) {
-      console.error("[prototype_3] Failed to execute developer query:", error);
-      sendJson(response, 500, { error: "Failed to execute developer query" }, request);
+      sendRequestError(response, request, error, "Failed to execute developer query");
     }
     return;
   }
   if (request.method === "POST" && pathname === "/api/developer/feature-flags/evaluate") {
     try {
+      const userId = await requireCurrentUser(request, response);
+      if (!userId) {return;}
       const body = await readJsonBody(request);
       sendJson(response, 200, evaluateFeatureFlagsForIdentity(body), request);
     } catch (error) {
-      console.error("[prototype_3] Failed to evaluate feature flags:", error);
-      sendJson(response, 500, { error: "Failed to evaluate feature flags" }, request);
+      sendRequestError(response, request, error, "Failed to evaluate feature flags");
     }
     return;
   }
@@ -1278,13 +1241,6 @@ const server = http.createServer(async function (request, response) {
     }
     return;
   }
-  if (request.method === "GET" && pathname === "/api/events/stream") {
-    applyCors(response, request);
-    response.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
-    response.write(":\n\n"); sseClients.add(response);
-    request.on("close", () => sseClients.delete(response)); return;
-  }
-
   if (request.method === "GET" && pathname === "/") {
     response.writeHead(302, { Location: "/landing/" });
     response.end();
@@ -1299,7 +1255,7 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "GET" && pathname.indexOf("/landing/") === 0) {
     const requestedLanding = pathname.slice("/landing/".length);
     const landingPath = path.normalize(path.join(landingRoot, requestedLanding));
-    if (landingPath.indexOf(landingRoot) !== 0) {
+    if (!isWithin(landingRoot, landingPath)) {
       response.writeHead(403);
       response.end("Forbidden");
       return;
@@ -1329,7 +1285,7 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "GET" && pathname.indexOf("/login/") === 0) {
     const requestedLogin = pathname.slice("/login/".length);
     const loginPath = path.normalize(path.join(loginRoot, requestedLogin));
-    if (loginPath.indexOf(loginRoot) !== 0) {
+    if (!isWithin(loginRoot, loginPath)) {
       response.writeHead(403);
       response.end("Forbidden");
       return;
@@ -1348,7 +1304,7 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "GET" && pathname.indexOf("/sdk/") === 0) {
     const requestedSdk = pathname.slice("/sdk/".length);
     const sdkPath = path.normalize(path.join(sdkRoot, requestedSdk));
-    if (sdkPath.indexOf(sdkRoot) !== 0) {
+    if (!isWithin(sdkRoot, sdkPath)) {
       response.writeHead(403);
       response.end("Forbidden");
       return;
@@ -1372,7 +1328,7 @@ const server = http.createServer(async function (request, response) {
   if (request.method === "GET" && pathname.indexOf("/dashboard/") === 0) {
     const requestedDashboard = pathname.slice("/dashboard/".length);
     const dashboardPath = path.normalize(path.join(dashboardRoot, requestedDashboard));
-    if (dashboardPath.indexOf(dashboardRoot) !== 0) {
+    if (!isWithin(dashboardRoot, dashboardPath)) {
       response.writeHead(403);
       response.end("Forbidden");
       return;
@@ -1394,6 +1350,12 @@ const server = http.createServer(async function (request, response) {
   const root = frontendRoot;
   const file = pathname === "/" ? "/index.html" : pathname;
   const fPath = path.join(root, file);
+
+  if (!isWithin(root, fPath)) {
+    response.writeHead(403);
+    response.end("Forbidden");
+    return;
+  }
 
   function streamStaticFile(targetPath) {
     streamAbsoluteFile(response, targetPath);
@@ -1429,7 +1391,7 @@ const server = http.createServer(async function (request, response) {
   });
 });
 
-server.listen(PORT, function () {
+server.listen(PORT, CLERK_VERIFICATION_ENABLED ? "0.0.0.0" : "127.0.0.1", function () {
   console.log("Observability dashboard shell active at http://localhost:" + PORT);
   console.log("Prototype 3 event storage: " + eventStore.type + (eventStore.tableName ? " (" + eventStore.tableName + ")" : ""));
   if (CLERK_VERIFICATION_ENABLED) {

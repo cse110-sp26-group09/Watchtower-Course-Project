@@ -16,6 +16,8 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 
 # Generated Clerk config (contains publishable key from CLERK_PUBLISHABLE_KEY)
 src/frontend/auth/clerk-config.js

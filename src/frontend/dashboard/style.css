@@ -62,10 +62,35 @@ button {
 }
 
 button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 3px solid rgba(15, 139, 141, 0.24);
+  outline: 3px solid #0f8b8d;
   outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  left: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 svg {

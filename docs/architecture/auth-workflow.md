@@ -95,8 +95,8 @@ no password is ever stored.
 ### How data is scoped
 - Dashboard read routes (`GET /api/events`, `GET /api/stats`,
   `GET /api/developer/stream`, `GET /api/developer/insights`,
-  `POST /api/developer/query`) call `requireCurrentUser(...)`. With no
-  `X-Clerk-User-Id` header they return **401**.
+  `POST /api/developer/query`) call `requireCurrentUser(...)`. With no valid
+  Clerk token (or a trusted header in loopback-only prototype mode) they return **401**.
 - They load events with `eventStore.listEvents(limit, { userId })` /
   `eventStore.allEvents(limit, { userId })`, which filter
   `prototype3_events.user_id = <Clerk user id>`.
@@ -110,10 +110,11 @@ no password is ever stored.
 ### Monitored ShopDemo bridge (`/demo/`)
 - The demo is a same-origin stand-in for an external monitored app. Its SDK
   sends events to `POST /api/events` **without** the dashboard's Clerk header.
-- So the dashboard can show demo-generated events, `auth-guard.js` stores the
+- In local loopback-only prototype mode, the dashboard can show demo-generated events: `auth-guard.js` stores the
   signed-in Clerk id in `localStorage` (`watchtower_clerk_user_id`), and
   `demo/app.js` initializes the SDK with `userId = <that id>`. The id then rides
-  in the event payload and is persisted as `prototype3_events.user_id`.
+  in the event payload and is persisted as `prototype3_events.user_id`. A
+  remotely reachable server ignores this unverified owner id.
 - Open `/demo/` **after** signing in to the dashboard (or refresh it) so the id
   is present. A truly external app on another origin has no such id and ingests
   as anonymous (`user_id = null`) — which is the intended future "needs a
@@ -137,9 +138,9 @@ no password is ever stored.
   owner's Clerk user id. On ingest, when there is no authenticated user, the
   backend stamps anonymous events with this id so they land on that owner's
   scoped dashboard.
-- This is applied as a **fallback only**: it fills `user_id` for events that
-  arrive *without* one. Authenticated dashboard ingests still win and override
-  it, and the same-origin demo's own per-user tagging is preserved.
+- This is applied as a **fallback only** when no authenticated owner is present.
+  The server overwrites any client-supplied `userId` so public clients cannot
+  inject telemetry into another user's dashboard.
 - **This is temporary, for the prototype/live demo only.** It hard-codes the
   entire external app's traffic to one owner. The long-term solution is a
   per-app/project key system so each monitored app maps to the correct owner
@@ -217,8 +218,9 @@ backend. The dashboard stores **telemetry events only** — no credentials.
   **verified Clerk session JWT** (see "Trust model & token verification"), so it
   cannot be spoofed. The `X-Clerk-User-Id` header is only a fallback for
   unconfigured/test environments.
-- `POST /api/events`, `POST /api/beacon`, and `/api/events/stream` remain open so
-  external/SDK ingestion keeps working without a dashboard login.
+- `POST /api/events` and `POST /api/beacon` remain open so external SDK
+  ingestion works without a dashboard login. The unauthenticated global event
+  stream was removed; the dashboard refreshes its scoped data by polling.
 
 ### Remaining hardening (optional, defense-in-depth)
 - Token verification is enforced at the API layer. A further step is to push

@@ -19,8 +19,11 @@ CI starts the server automatically before running these — see
 |---|---|
 | `watchtower.spec.js` | Landing (`/landing/`), dashboard (`/dashboard`, stubbed Clerk), ShopDemo (`/demo/`), and `GET/POST /api/*` smoke tests. |
 | `api-events-filters.spec.js` | `GET /api/events` shape and `GET /api/developer/stream` session/search/limit/cursor filters. |
+| `security-boundaries.spec.js` | Authentication, ingestion limits, CORS/security headers, event ownership, and developer-query rate limits. |
+| `accessibility.spec.js` | Privacy-dialog focus trapping and focus restoration on landing and login. |
 
 > Dashboard tests stub Clerk client-side; they do not exercise real sign-in. API
-> specs authenticate as a single synthetic user via the `X-Clerk-User-Id` header.
+> specs authenticate as synthetic users via the `X-Clerk-User-Id` header on the
+> local loopback server. Production requires real Clerk JWT verification.
 
 See [`../README.md`](../README.md) for the full testing overview.
