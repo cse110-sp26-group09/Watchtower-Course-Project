@@ -94,3 +94,5 @@ data/**/*.db-journal
 *.sqlite-shm
 *.db
 *.db-journal
+
+.codex/skills/
