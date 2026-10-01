@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "jest": "^30.4.2",
+    "jest": "^30.5.2",
     "jsdoc": "^4.0.4"
   },
   "dependencies": {
