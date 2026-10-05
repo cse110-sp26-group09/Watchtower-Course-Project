@@ -78,7 +78,7 @@ See [`src/README.md`](src/README.md) for the source layout and [`docs/README.md`
 
 ## Getting Started
 
-**Prerequisites:** Node.js 18 or later and npm.
+**Prerequisites:** Node.js 22–24 and npm. Supabase's current JavaScript client requires Node.js 22 or later.
 
 1. **Clone the repository**
 
@@ -184,7 +184,7 @@ The end-to-end tests target a running server. Start it in one terminal (`npm sta
 
 ## Deployment
 
-- **Backend (Render):** the Render service runs `npm start`, which generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` and boots `src/backend/server.js`. Set `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` variables, and an explicit `CORS_ALLOWED_ORIGINS` value for external SDK clients under Render → Environment. Set `NODE_ENV=production` so startup rejects insecure authentication settings.
+- **Backend (Render):** the Render service runs `npm start`, which generates `clerk-config.js` from `CLERK_PUBLISHABLE_KEY` and boots `src/backend/server.js`. Set `CLERK_PUBLISHABLE_KEY`, the `SUPABASE_*` variables, and an explicit `CORS_ALLOWED_ORIGINS` value for external SDK clients under Render → Environment. Set `NODE_ENV=production` so startup rejects insecure authentication settings. Verify that any Render `NODE_VERSION` override selects Node.js 22–24; it takes precedence over the version range in `package.json`.
 - **Database (Supabase):** provision the `prototype3_events` and `app_users` tables (see above). The backend uses the service-role key server-side only.
 - **External test app (GitHub Pages):** a static page embeds the SDK pointed at the Render `/api/events` endpoint. GitHub Pages serves static files only and runs neither the backend nor the database.
 - **Clerk:** add `CLERK_PUBLISHABLE_KEY` to the backend environment; the publishable key is the only Clerk value exposed to the browser.

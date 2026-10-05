@@ -4,6 +4,9 @@
   "private": true,
   "description": "WatchTower - a lightweight observability web application that captures and displays user events, JavaScript errors, performance metrics, and feedback through a real-time dashboard.",
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
     "config:clerk": "node scripts/generate-clerk-config.js",
     "start": "npm run config:clerk && node src/backend/server.js",
@@ -13,13 +16,13 @@
     "docs:js": "jsdoc src/backend src/sdk src/shared -r -d docs/api"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
-    "jest": "^30.4.2",
+    "@playwright/test": "^1.63.0",
+    "jest": "^30.5.2",
     "jsdoc": "^4.0.4"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.2",
-    "dotenv": "^17.4.2",
-    "jose": "^6.2.3"
+    "@supabase/supabase-js": "^2.117.2",
+    "dotenv": "^18.0.4",
+    "jose": "^6.2.12"
   }
 }

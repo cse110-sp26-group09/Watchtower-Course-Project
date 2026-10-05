@@ -10,7 +10,7 @@ the documentation map, see [`docs/README.md`](README.md).
 
 ## Quick Start
 
-**Prerequisites:** Node.js 18+ (CI runs Node 24) and npm.
+**Prerequisites:** Node.js 22–24 (CI runs Node 24) and npm.
 
 1. **Clone the repo**
 
