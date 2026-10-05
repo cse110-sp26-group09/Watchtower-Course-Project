@@ -202,7 +202,8 @@ function getEventBreakdownKey(event) {
 }
 
 function buildLatencyByRoute(events) {
-  const routes = {};
+  // Event routes are untrusted keys; a null prototype avoids inherited names.
+  const routes = Object.create(null);
   (events || []).forEach(function (event) {
     const latency = getLatencyMs(event);
     if (!Number.isFinite(latency)) return;
@@ -217,7 +218,7 @@ function buildLatencyByRoute(events) {
       avg: Math.round(calculateAverage(routes[route])),
     };
     return summary;
-  }, {});
+  }, Object.create(null));
 }
 
 function buildFeedbackCounts(events) {
@@ -254,7 +255,7 @@ function buildEventBreakdown(events) {
 }
 
 function buildFeatureCounts(events) {
-  const counts = {};
+  const counts = Object.create(null);
   (events || []).forEach(function (event) {
     let featureName = "";
     if (event.type === "click") {
@@ -382,7 +383,7 @@ function buildAnalyticsSnapshot(events, options) {
     : 30000;
   const activeCutoff = nowMs - activeWindowMs;
   const activeSessions = new Set();
-  const errorsByVersion = {};
+  const errorsByVersion = Object.create(null);
   const recentErrors = [];
   let totalErrors = 0;
 

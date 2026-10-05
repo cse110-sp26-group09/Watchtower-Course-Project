@@ -34,6 +34,42 @@ test("ingestion rejects malformed and oversized requests", async ({ request }) =
   const template = { type: "custom", timestamp: new Date().toISOString(), data: {} };
   const batch = await request.post("/api/events", { data: { events: Array(101).fill(template) } });
   expect(batch.status()).toBe(413);
+
+  const deeplyNested = { type: "custom", data: {} };
+  let cursor = deeplyNested.data;
+  for (let i = 0; i < 70; i++) {
+    cursor.next = {};
+    cursor = cursor.next;
+  }
+  const nested = await request.post("/api/events", { data: deeplyNested });
+  expect(nested.status()).toBe(400);
+
+  const largeEvent = await request.post("/api/events", {
+    data: { type: "error", data: { stack: "x".repeat(17 * 1024) } },
+  });
+  expect(largeEvent.status()).toBe(413);
+});
+
+test("telemetry keys matching JavaScript prototype names do not break analytics", async ({ request }) => {
+  const owner = `prototype-key-${Date.now()}`;
+  const headers = { "X-Clerk-User-Id": owner };
+  const event = JSON.parse('{"type":"pageload","eventName":"__proto__","route":"__proto__","sessionId":"constructor","deployVersion":"constructor","data":{"duration":12,"__proto__":{"name":"safe"}}}');
+  const ingested = await request.post("/api/events", { headers, data: event });
+  expect(ingested.status()).toBe(200);
+
+  const stats = await request.get("/api/stats", { headers });
+  expect(stats.status()).toBe(200);
+  expect((await stats.json()).latencyByRoute["__proto__"].count).toBe(1);
+
+  const insights = await request.get("/api/developer/insights", { headers });
+  expect(insights.status()).toBe(200);
+  expect((await insights.json()).schemaRegistry.some((entry) => entry.eventName === "__proto__")).toBe(true);
+
+  const query = await request.post("/api/developer/query", {
+    headers,
+    data: { query: "select route, count(*) from events group by route" },
+  });
+  expect(query.status()).toBe(200);
 });
 
 test("responses set security headers and do not allow arbitrary origins", async ({ request }) => {

@@ -1,6 +1,27 @@
 # WatchTower security and maintainability review
 
-Reviewed September 24, 2026. The active application is a framework-free Node.js HTTP server (`src/backend/server.js`) that serves a static HTML/CSS/JavaScript dashboard and browser SDK. Clerk provides sign-in; the backend verifies Clerk JWTs when configured. Supabase/Postgres stores events and user profiles through `@supabase/supabase-js`, with an in-memory local fallback. The external GitHub Pages demo sends telemetry to the API. Historical prototypes under `archive/` are not part of `npm start`.
+## Follow-up review — October 4, 2026
+
+The working tree was clean before this review. A **live** npm registry audit found two vulnerable development dependencies that the machine's offline npm cache did not report. Both are patched in `package-lock.json`; a subsequent live audit reports **zero advisories**, including with development dependencies. The production-only audit also reported zero advisories before the update.
+
+### Findings fixed
+
+10. **Moderate — public telemetry could disable a dashboard's analytics views with prototype-key values.** An event with `route: "__proto__"` made `buildLatencyByRoute` throw `TypeError: routes[route].push is not a function` (`src/backend/event-store.js:206` before the fix). Similar untrusted keys were used in the server's schema, session, error, and query grouping maps (`src/backend/server.js:448`, `:503`, `:563`, `:741`, `:991`). Because public events can be assigned to the configured demo owner, an unauthenticated sender could trigger 500 responses on that owner's stats or insights endpoints. The affected dictionaries now have null prototypes, and the incoming event copy no longer uses a prototype-bearing target (`src/backend/server.js:1111`). Regression: `tests/e2e/security-boundaries.spec.js:53`. This fixes an availability failure; no cross-tenant data disclosure or global prototype mutation was demonstrated.
+11. **Moderate — individual public events could consume excessive retained storage.** The former 1 MiB request limit still allowed a single nearly 1 MiB event. With a 10,000-event retention cap, this could put substantial pressure on an in-memory instance or the database. Ingestion now rejects events over 16 KiB (`src/backend/server.js:1102`) and JSON deeper than 64 levels or more than 50,000 nodes (`src/backend/server.js:430`) before downstream traversal. Regression: `tests/e2e/security-boundaries.spec.js:20`. This may reject unusually large error stacks; SDK events observed by the existing tests remain accepted.
+12. **High advisory severity, development-only — `brace-expansion`.** Jest's transitive paths originally resolved 1.1.18 and 2.1.4, both within the [reported denial-of-service advisory range](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr). After integrating the Jest update from PR #208, the lockfile resolves patched 2.1.7 and 5.0.12. These packages are not imported by the production HTTP server; exploitability through an API request was not established.
+13. **Moderate advisory severity, development-only — `markdown-it`.** JSDoc resolved 14.2.0, within the [reported quadratic-time linkify range](https://github.com/advisories/GHSA-253c-mchw-3w2r). The lockfile now resolves 14.3.2. The application does not render caller-supplied Markdown at runtime.
+
+### Remaining exposure and verification
+
+Public ingestion still has no project credential or request-rate control. A caller can submit plausible small events to the configured demo owner, and a distributed caller can consume storage or processing capacity. The 16 KiB event limit reduces per-event amplification but does not authenticate the sender. A project-key ownership design and an edge or shared-store rate limit are still needed before treating the endpoint as a multi-tenant production service. The prior review's notes about service-role database access and deployment configuration also remain applicable.
+
+The local branch also combines the version bumps in Dependabot PRs #206–#211: `dotenv` 18.0.4, `jose` 6.2.12, Jest 30.5.2, Playwright 1.63.0, Supabase 2.117.2, and `markdown-it` 14.3.2. Supabase requires Node.js 22+, so `package.json`, `README.md`, and `docs/onboard.md` now declare Node.js 22–24; verify any higher-priority `NODE_VERSION` override in Render. These PRs remain open on GitHub until the repository connection permits their remote resolution.
+
+Verified against the final combined lockfile with `npm ci --ignore-scripts --offline=false`, 26 unit tests, 29 browser/API tests, JSDoc generation, and a live `npm audit --offline=false --audit-level=low` with zero advisories.
+
+## September 24 baseline review
+
+Reviewed September 24, 2026. The line numbers below refer to that review's code snapshot. The active application is a framework-free Node.js HTTP server (`src/backend/server.js`) that serves a static HTML/CSS/JavaScript dashboard and browser SDK. Clerk provides sign-in; the backend verifies Clerk JWTs when configured. Supabase/Postgres stores events and user profiles through `@supabase/supabase-js`, with an in-memory local fallback. The external GitHub Pages demo sends telemetry to the API. Historical prototypes under `archive/` are not part of `npm start`.
 
 The repository now installs cleanly, passes its unit and browser suites, and has **zero npm audit advisories** at the time of this review. The fixes below retain the dashboard's polling behavior and remove optional email delivery that the README described as locally validated but not deployed as a production flow.
 
