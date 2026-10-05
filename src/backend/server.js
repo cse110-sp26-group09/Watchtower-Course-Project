@@ -30,6 +30,7 @@ const {
 } = require("./server-helpers");
 
 const PORT = process.env.PORT || 3000;
+const MAX_EVENT_BYTES = 16 * 1024;
 const MAX_EVENTS = Number.isFinite(parseInt(process.env.MAX_EVENTS, 10))
   ? parseInt(process.env.MAX_EVENTS, 10)
   : 10000;
@@ -406,19 +407,45 @@ function readJsonBody(req) {
         reject(error);
         return;
       }
-      try { resolve(JSON.parse(Buffer.concat(chunks).toString() || "{}")); }
+      let body;
+      try { body = JSON.parse(Buffer.concat(chunks).toString() || "{}"); }
       catch (_error) {
         const error = new Error("Invalid JSON body");
         error.statusCode = 400;
         reject(error);
+        return;
       }
+      if (!hasSafeJsonComplexity(body)) {
+        const error = new Error("JSON body is too deeply nested or complex");
+        error.statusCode = 400;
+        reject(error);
+        return;
+      }
+      resolve(body);
     });
     req.on("error", reject);
   });
 }
 
+function hasSafeJsonComplexity(body) {
+  // Public telemetry is later traversed and serialized; bound that work first.
+  const pending = [{ value: body, depth: 0 }];
+  let nodes = 0;
+  while (pending.length) {
+    const entry = pending.pop();
+    if (++nodes > 50000 || entry.depth > 64) {return false;}
+    if (entry.value && typeof entry.value === "object") {
+      Object.keys(entry.value).forEach(function (key) {
+        pending.push({ value: entry.value[key], depth: entry.depth + 1 });
+      });
+    }
+  }
+  return true;
+}
+
 function buildLatencySummary(events) {
-  const routes = {};
+  // Telemetry fields become dictionary keys; never inherit Object.prototype.
+  const routes = Object.create(null);
   (events || []).forEach(function (e) {
     if (e.type === "pageload" && e.data && e.data.duration !== null && e.data.duration !== undefined) {
       if (!routes[e.route]) {routes[e.route] = [];}
@@ -439,13 +466,13 @@ function buildLatencySummary(events) {
       avg: Math.round(calculateAverage(routes[r]))
     };
     return acc;
-  }, {});
+  }, Object.create(null));
 }
 
 function getDashboardStats(events) {
   const sourceEvents = events || [];
   const activeSessions = new Set();
-  const errorsByVersion = {};
+  const errorsByVersion = Object.create(null);
   const recentErrors = [];
   let totalErrors = 0;
   const cutoff = Date.now() - ACTIVE_USER_WINDOW;
@@ -473,7 +500,7 @@ function getDashboardStats(events) {
 }
 
 function buildSchemaRegistry(events) {
-  const grouped = {};
+  const grouped = Object.create(null);
   events.forEach(function (e) {
     const name = e.eventName || deriveEventName(e);
     if (!grouped[name]) {
@@ -483,8 +510,8 @@ function buildSchemaRegistry(events) {
         firstSeen: e.timestamp,
         lastSeen: e.timestamp,
         malformedEvents: 0,
-        missingRequiredFields: {},
-        propertyMap: {}
+        missingRequiredFields: Object.create(null),
+        propertyMap: Object.create(null)
       };
     }
     const b = grouped[name];
@@ -497,13 +524,13 @@ function buildSchemaRegistry(events) {
         incrementMap(b.missingRequiredFields, field, 1);
       }
     });
-    const flat = flattenObject(e.data || {}, "", {});
+    const flat = flattenObject(e.data || {}, "", Object.create(null));
     if (e.type === "custom" && !flat.name && name === "custom") {
       b.malformedEvents += 1;
       incrementMap(b.missingRequiredFields, "data.name", 1);
     }
     Object.keys(flat).forEach(p => {
-      if (!b.propertyMap[p]) {b.propertyMap[p] = { types: {}, samples: 0 };}
+      if (!b.propertyMap[p]) {b.propertyMap[p] = { types: Object.create(null), samples: 0 };}
       const t = inferValueType(flat[p]);
       b.propertyMap[p].types[t] = (b.propertyMap[p].types[t] || 0) + 1;
       b.propertyMap[p].samples += 1;
@@ -533,7 +560,7 @@ function buildSchemaRegistry(events) {
 }
 
 function buildSessionReplayModel(events) {
-  const sessions = {};
+  const sessions = Object.create(null);
   events.forEach(function (e) {
     if (!sessions[e.sessionId]) {
       sessions[e.sessionId] = {
@@ -588,7 +615,7 @@ function buildSessionReplayModel(events) {
 
 function buildSdkDiagnostics(events) {
   const sdkEvents = events.filter(function (e) { return e.type === "sdk_diagnostic"; });
-  const versionCounts = {};
+  const versionCounts = Object.create(null);
   let dropped = 0;
   let retries = 0;
   let successes = 0;
@@ -641,7 +668,7 @@ function buildPerformanceInsights(events) {
   const inp = [];
   const apiLatency = [];
   const bundleCost = [];
-  const routeTransitions = {};
+  const routeTransitions = Object.create(null);
   events.forEach(function (e) {
     if (e.type === "pageload") {
       const duration = getNumericDataValue(e, ["duration", "loadComplete"]);
@@ -711,15 +738,15 @@ function getErrorSignature(e) {
 }
 
 function buildErrorMonitoring(events) {
-  const grouped = {};
+  const grouped = Object.create(null);
   events.filter(function (e) { return e.type === "error"; }).forEach(function (e) {
     const signature = getErrorSignature(e);
     if (!grouped[signature]) {
       grouped[signature] = {
         signature: signature,
         count: 0,
-        users: {},
-        sessions: {},
+        users: Object.create(null),
+        sessions: Object.create(null),
         release: e.deployVersion || "unknown",
         lastSeen: e.timestamp,
         stack: e.data && e.data.stack ? e.data.stack : "",
@@ -747,7 +774,7 @@ function buildErrorMonitoring(events) {
       linkedSessionReplay: Object.keys(group.sessions)[0] || ""
     };
   }).sort(function (a, b) { return b.count - a.count; });
-  const trendMap = {};
+  const trendMap = Object.create(null);
   events.filter(function (e) { return e.type === "error"; }).forEach(function (e) {
     const hour = new Date(parseTimestamp(e.timestamp) || Date.now()).toISOString().slice(0, 13) + ":00";
     incrementMap(trendMap, hour, 1);
@@ -789,9 +816,9 @@ function buildPipelineObservability(events) {
 }
 
 function buildIdentityResolution(events) {
-  const nodes = {};
-  const edges = {};
-  const sessionUsers = {};
+  const nodes = Object.create(null);
+  const edges = Object.create(null);
+  const sessionUsers = Object.create(null);
   const mergeHistory = [];
   events.forEach(function (e) {
     const sessionId = e.sessionId || "unknown-session";
@@ -801,7 +828,7 @@ function buildIdentityResolution(events) {
       const userNode = "user:" + e.userId;
       nodes[userNode] = { id: userNode, type: "user", label: e.userId, eventCount: (nodes[userNode] && nodes[userNode].eventCount || 0) + 1 };
       edges[sessionNode + "->" + userNode] = { from: sessionNode, to: userNode, type: "session_stitch", count: (edges[sessionNode + "->" + userNode] && edges[sessionNode + "->" + userNode].count || 0) + 1 };
-      if (!sessionUsers[sessionId]) {sessionUsers[sessionId] = {};}
+      if (!sessionUsers[sessionId]) {sessionUsers[sessionId] = Object.create(null);}
       sessionUsers[sessionId][e.userId] = true;
       if (e.type === "login") {mergeHistory.push({ timestamp: e.timestamp, sessionId: sessionId, userId: e.userId, action: "anonymous to authenticated" });}
     }
@@ -840,7 +867,7 @@ function evaluateFlagsForUser(userId, environment, country) {
 }
 
 function buildFeatureFlagInsights(events) {
-  const users = {};
+  const users = Object.create(null);
   events.forEach(function (e) {
     if (e.userId) {users[e.userId] = e.environment || "production";}
   });
@@ -861,7 +888,7 @@ function buildFeatureFlagInsights(events) {
 
 function buildGovernance(events) {
   const piiDetections = [];
-  const envCounts = {};
+  const envCounts = Object.create(null);
   events.forEach(function (e) {
     detectPiiFields(e).forEach(function (detection) { piiDetections.push(detection); });
     incrementMap(envCounts, e.environment || "production", 1);
@@ -961,14 +988,14 @@ function executeDeveloperQuery(queryText, events) {
   const filteredEvents = (events || []).filter(function (eventRecord) { return eventPassesWhere(eventRecord, whereClause); });
   let rows;
   if (groupByField) {
-    const groupedRows = {};
+    const groupedRows = Object.create(null);
     filteredEvents.forEach(function (eventRecord) {
       const groupValue = safeString(getEventColumnValue(eventRecord, groupByField)) || "unknown";
       if (!groupedRows[groupValue]) {groupedRows[groupValue] = { __events: [] };}
       groupedRows[groupValue].__events.push(eventRecord);
     });
     rows = Object.keys(groupedRows).map(function (groupValue) {
-      const row = {};
+      const row = Object.create(null);
       selectFields.forEach(function (f) {
         if (f.type === "count") {row[f.alias] = groupedRows[groupValue].__events.length;}
         else {row[f.alias] = f.field === groupByField ? groupValue : getEventColumnValue(groupedRows[groupValue].__events[0], f.field);}
@@ -978,7 +1005,7 @@ function executeDeveloperQuery(queryText, events) {
     });
   } else {
     rows = filteredEvents.map(function (eventRecord) {
-      const row = {};
+      const row = Object.create(null);
       selectFields.forEach(function (f) {
         if (f.type === "count") {row[f.alias] = 1;}
         else {row[f.alias] = getEventColumnValue(eventRecord, f.field);}
@@ -1071,11 +1098,17 @@ async function ingestEventsBody(body, ownerUserId, allowLocalPayloadOwner) {
     error.statusCode = 413;
     throw error;
   }
-  const arr = incoming.filter(isValidEvent).map(function (event) {
+  const validEvents = incoming.filter(isValidEvent);
+  if (validEvents.some(function (event) { return Buffer.byteLength(JSON.stringify(event)) > MAX_EVENT_BYTES; })) {
+    const error = new Error("Event exceeds 16 KiB limit");
+    error.statusCode = 413;
+    throw error;
+  }
+  const arr = validEvents.map(function (event) {
     // The local ShopDemo bridge uses payload userId; never trust it on a
     // remotely reachable server, where it could inject into another account.
     const owner = ownerUserId || (allowLocalPayloadOwner ? event.userId : "");
-    return Object.assign({}, event, { userId: owner || null });
+    return Object.assign(Object.create(null), event, { userId: owner || null });
   });
   const norm = await eventStore.insertEvents(arr);
   await eventStore.pruneOldest(MAX_EVENTS);
