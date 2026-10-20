@@ -1,5 +1,11 @@
 # WatchTower security and maintainability review
 
+## Follow-up review — October 20, 2026
+
+14. **Moderate advisory severity, development-only — `sprintf-js`.** A live audit found [GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) in `sprintf-js` 1.0.3. It entered only through Jest's coverage loader: `jest → @jest/transform → babel-plugin-istanbul → @istanbuljs/load-nyc-config → js-yaml 3 → argparse 1 → sprintf-js`. The advisory has no patched `sprintf-js` release. A scoped npm override in `package.json` now makes that loader use `js-yaml` 4.3.2, which retains the `.load` API the loader calls and removes the vulnerable chain. This dependency is not loaded by the production server; no API-reachable exploit was demonstrated.
+
+Verification on current `main` plus this fix: `npm ci` and a live `npm audit --offline=false --audit-level=low` report zero advisories; 26 unit tests passed with coverage enabled, and all 29 browser/API tests passed against an isolated in-memory server. The earlier security and six-dependency update was merged as PR #212. Of the original six Dependabot PRs, #206 was merged, #207–#210 were closed, and #211 is still open even though its `markdown-it` 14.3.2 update is already present on `main`.
+
 ## Follow-up review — October 4, 2026
 
 The working tree was clean before this review. A **live** npm registry audit found two vulnerable development dependencies that the machine's offline npm cache did not report. Both are patched in `package-lock.json`; a subsequent live audit reports **zero advisories**, including with development dependencies. The production-only audit also reported zero advisories before the update.
