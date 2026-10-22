@@ -16,7 +16,7 @@
     "docs:js": "jsdoc src/backend src/sdk src/shared -r -d docs/api"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
     "jest": "^30.5.2",
     "jsdoc": "^4.0.4"
   },
