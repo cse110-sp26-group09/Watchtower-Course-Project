@@ -223,7 +223,7 @@ WatchTower is the CSE 110 (Spring 2026) Team 09 course project. Roles:
 | Documentation / Communication / Requirements Support | Josh |
 | Research / QA / AI Tools Support | Woosik |
 | Frontend Prototype Support | Alex |
-| Frontend Components / Styling Support | Hemendra |
+| Frontend / Backend Components | Hemendra |
 
 - **Team status video:** [YouTube](https://youtu.be/9Bn4ElbA7Js)
 - **Task tracking:** [Google Sheets](https://docs.google.com/spreadsheets/d/1YbTkdP8IoodHzIj99lgunic5pRqk6BzqM248CaaaCRw/)
